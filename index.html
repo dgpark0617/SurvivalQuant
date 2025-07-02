@@ -15,27 +15,92 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #ffffff;
             min-height: 100vh;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+        
+        .section {
+            background: #ffffff;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        
+        .links-section {
+            grid-column: 1;
+        }
+        
+        .ads-section {
+            background: #f8f9fa;
+            min-height: 200px;
+            border-style: dashed;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #333;
+            color: #6c757d;
         }
         
-        .container {
-            text-align: center;
-            background: #ffffff;
-            border: 2px solid #e0e0e0;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-            max-width: 600px;
-            width: 90%;
+        .future-section {
+            background: #f1f3f4;
+            min-height: 150px;
+            border-style: dashed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+        }
+        
+        @media (min-width: 768px) {
+            .main-container {
+                grid-template-columns: 2fr 1fr;
+                grid-template-areas: 
+                    "header header"
+                    "links ads"
+                    "games utilities";
+            }
+            
+            .header-section { grid-area: header; }
+            .links-section { grid-area: links; }
+            .ads-section { grid-area: ads; }
+            .games-section { grid-area: games; }
+            .utilities-section { grid-area: utilities; }
         }
         
         h1 {
             font-size: 2.5rem;
             margin-bottom: 20px;
             font-weight: 300;
+        }
+        
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            font-weight: 400;
+            color: #333;
+        }
+        
+        h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: #555;
         }
         
         .url-display {
@@ -113,46 +178,74 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🚀 SurvivalQuant</h1>
-        
-        <div class="url-display" id="urlDisplay">
-            https://dgpark0617.github.io/SurvivalQuant/
-        </div>
-        <button class="copy-btn" onclick="copyToClipboard()">
-            📋 URL 복사하기
-        </button>
-        <div class="success-message" id="successMessage">
-            ✅ URL이 클립보드에 복사되었습니다!
+    <div class="main-container">
+        <!-- 헤더 섹션 -->
+        <div class="section header-section">
+            <h1>🚀 SurvivalQuant</h1>
+            <p>EconomicEden의 모든 플랫폼과 서비스를 한 곳에서</p>
         </div>
         
-        <div class="link-display">
-            <a href="https://www.bybit.com/copyMt5/trade-center/detail?providerMark=xkc2wsLqVomphpP%2FtV6RRQ%3D%3D" target="_blank">
-                🌟 EconomicEden
-            </a>
+        <!-- 링크 섹션 -->
+        <div class="section links-section">
+            <h2>🔗 주요 링크</h2>
+            
+            <div class="url-display" id="urlDisplay">
+                https://dgpark0617.github.io/SurvivalQuant/
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard()">
+                📋 URL 복사하기
+            </button>
+            <div class="success-message" id="successMessage">
+                ✅ URL이 클립보드에 복사되었습니다!
+            </div>
+            
+            <div class="link-display">
+                <a href="https://www.bybit.com/copyMt5/trade-center/detail?providerMark=xkc2wsLqVomphpP%2FtV6RRQ%3D%3D" target="_blank">
+                    🌟 EconomicEden
+                </a>
+            </div>
+            
+            <div class="link-display">
+                <a href="https://m.blog.naver.com/economic_eden?tab=1" target="_blank">
+                    📖 개발블로그
+                </a>
+            </div>
+            
+            <div class="link-display">
+                <a href="https://youtube.com/@economiceden?si=OLHH8h2MZep0oAYA" target="_blank">
+                    📺 유튜브
+                </a>
+            </div>
+            
+            <div class="link-display">
+                <a href="https://cryptoinvest.cafe24.com:8080/m/dashboard" target="_blank">
+                    💰 크립토 대시보드
+                </a>
+            </div>
         </div>
         
-        <div class="link-display">
-            <a href="https://m.blog.naver.com/economic_eden?tab=1" target="_blank">
-                📖 개발블로그
-            </a>
+        <!-- 광고 섹션 -->
+        <div class="section ads-section">
+            <div>
+                <h3>📺 광고 공간</h3>
+                <p>YouTube 애드센스 및 광고가 표시될 예정입니다</p>
+            </div>
         </div>
         
-        <div class="link-display">
-            <a href="https://youtube.com/@economiceden?si=OLHH8h2MZep0oAYA" target="_blank">
-                📺 유튜브
-            </a>
+        <!-- 게임 섹션 -->
+        <div class="section future-section games-section">
+            <div>
+                <h3>🎮 미니 게임</h3>
+                <p>간단한 게임들이 추가될 예정입니다</p>
+            </div>
         </div>
         
-        <div class="link-display">
-            <a href="https://cryptoinvest.cafe24.com:8080/m/dashboard" target="_blank">
-                💰 크립토 대시보드
-            </a>
-        </div>
-        
-        <div class="description">
-            <p>GitHub Pages로 호스팅되는 간단한 웹사이트입니다.</p>
-            <p>위의 URL을 통해 외부에서 접근할 수 있습니다.</p>
+        <!-- 유틸리티 섹션 -->
+        <div class="section future-section utilities-section">
+            <div>
+                <h3>🛠️ 유틸리티</h3>
+                <p>유용한 도구들이 추가될 예정입니다</p>
+            </div>
         </div>
     </div>
 
