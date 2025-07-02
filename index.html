@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -904,42 +904,67 @@
         }
         
         // 실시간 차트 업데이트 (24시간 변화율 사용)
+        let lastUpdateTime = 0;
+        let coinDataBuffer = new Map(); // 코인별 최신 데이터 버퍼
+        
         function updateRealTimeChart(chart, tickerData, initialPriceData) {
             const coinIndex = initialPriceData.findIndex(coin => coin.market === tickerData.code);
-            if (coinIndex === -1) return;
+            if (coinIndex === -1) {
+                console.log(`⚠️ 알 수 없는 코인: ${tickerData.code}`);
+                return;
+            }
             
             // 24시간 변화율 사용 (더 안정적)
             const changePercent = tickerData.signed_change_rate * 100;
             
-            // 현재 시간 라벨
+            // 코인 데이터 버퍼에 저장
+            coinDataBuffer.set(coinIndex, changePercent);
+            
+            console.log(`🔄 ${tickerData.code}: ${changePercent.toFixed(3)}% 수신`);
+            
+            // 5초마다 차트 업데이트
+            const now = Date.now();
+            if (now - lastUpdateTime > 5000) {
+                updateChartDisplay(chart);
+                lastUpdateTime = now;
+            }
+        }
+        
+        // 차트 화면 업데이트
+        function updateChartDisplay(chart) {
             const now = new Date();
             const timeLabel = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
             
-            // 차트 데이터 업데이트 (5초마다만)
-            if (chart.data.labels.length === 0 || chart.data.labels[chart.data.labels.length - 1] !== timeLabel) {
-                chart.data.labels.push(timeLabel);
-                
-                // 각 코인별 데이터 추가 (해당 코인만 업데이트, 나머지는 이전 값 유지)
-                for (let i = 0; i < 11; i++) {
-                    if (i === coinIndex) {
-                        chart.data.datasets[i].data.push(changePercent);
-                    } else {
-                        const lastValue = chart.data.datasets[i].data[chart.data.datasets[i].data.length - 1] || 0;
-                        chart.data.datasets[i].data.push(lastValue);
-                    }
+            console.log(`📊 차트 업데이트: ${timeLabel}`);
+            
+            // 시간 라벨 추가
+            chart.data.labels.push(timeLabel);
+            
+            // 모든 코인 데이터 추가
+            for (let i = 0; i < 11; i++) {
+                if (coinDataBuffer.has(i)) {
+                    // 버퍼에 있는 최신 데이터 사용
+                    chart.data.datasets[i].data.push(coinDataBuffer.get(i));
+                } else {
+                    // 이전 값 유지
+                    const lastValue = chart.data.datasets[i].data[chart.data.datasets[i].data.length - 1] || 0;
+                    chart.data.datasets[i].data.push(lastValue);
                 }
-                
-                // 50개 데이터 포인트 유지
-                if (chart.data.labels.length > 50) {
-                    chart.data.labels.shift();
-                    chart.data.datasets.forEach(dataset => dataset.data.shift());
-                }
-                
-                chart.update('none');
-                
-                const coinName = tickerData.code.replace('KRW-', '');
-                console.log(`📊 ${timeLabel} - ${coinName}: ${changePercent.toFixed(3)}% (24h 변화율)`);
             }
+            
+            // 50개 데이터 포인트 유지
+            if (chart.data.labels.length > 50) {
+                chart.data.labels.shift();
+                chart.data.datasets.forEach(dataset => dataset.data.shift());
+            }
+            
+            chart.update('none');
+            
+            // 버퍼에 있는 데이터 로그 출력
+            const bufferInfo = Array.from(coinDataBuffer.entries())
+                .map(([index, value]) => `${chart.data.datasets[index].label}: ${value.toFixed(3)}%`)
+                .join(', ');
+            console.log(`📈 ${timeLabel} 업데이트 완료 - ${bufferInfo}`);
         }
         
         // 실제 업비트 데이터 로드
