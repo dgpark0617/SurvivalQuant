@@ -529,17 +529,13 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
             '#F472B6', '#A78BFA', '#FB7185', '#34D399', '#FBBF24', '#60A5FA'
         ];
         
-        // 매우 간단한 테스트 차트 생성
+                // 실제 업비트 차트 바로 시작
         function initializeUpbitChart() {
-            console.log('=== 차트 테스트 시작 ===');
+            console.log('=== 실제 업비트 차트 시작 ===');
             
-            // 5초 후에 차트 영역을 실제 차트로 교체
-            setTimeout(() => {
-                console.log('차트 영역 교체 시도...');
-                
-                                 // ID로 차트 영역 찾기
-                const chartArea = document.getElementById('chartPlaceholder');
-                console.log('찾은 차트 영역:', chartArea);
+            // 바로 차트 영역을 실제 차트로 교체
+            const chartArea = document.getElementById('chartPlaceholder');
+            console.log('찾은 차트 영역:', chartArea);
                  if (chartArea) {
                      // Chart.js 사용 가능한지 확인
                      if (typeof Chart !== 'undefined') {
@@ -740,8 +736,8 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
                          
                          console.log('✅ 업비트 스타일 차트 생성 성공!');
                          
-                         // 실시간 데이터 시뮬레이션 시작
-                         startRealTimeSimulation(upbitChart);
+                         // 바로 실제 업비트 API 연결
+                         tryConnectRealUpbitAPI(upbitChart);
                          
                      } else {
                          console.error('Chart.js 라이브러리 없음');
@@ -750,7 +746,6 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
                  } else {
                      console.error('차트 영역을 찾을 수 없음');
                  }
-            }, 5000);
         }
         
         // 업비트 마켓 리스트 가져오기
@@ -769,57 +764,7 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
             return await response.json();
         }
         
-        // 실시간 데이터 시뮬레이션 함수
-        function startRealTimeSimulation(chart) {
-            let timeIndex = 0;
-            const maxDataPoints = 50; // 50개 데이터 포인트 유지
-            
-            console.log('🚀 실시간 데이터 시뮬레이션 시작!');
-            
-            // 5초마다 새로운 데이터 추가
-            const interval = setInterval(() => {
-                timeIndex++;
-                
-                // 현재 시간 라벨 (시:분:초)
-                const now = new Date();
-                const timeLabel = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-                
-                // 안정적인 변화율 생성 (-1% ~ +1%)
-                const changes = [];
-                for (let i = 0; i < 11; i++) {
-                    changes.push((Math.random() - 0.5) * 2); // -1% ~ +1%
-                }
-                
-                // 차트에 새 데이터 추가
-                chart.data.labels.push(timeLabel);
-                for (let i = 0; i < 11; i++) {
-                    chart.data.datasets[i].data.push(changes[i]);
-                }
-                
-                // 데이터 포인트 제한 (50개 유지)
-                if (chart.data.labels.length > maxDataPoints) {
-                    chart.data.labels.shift();
-                    chart.data.datasets.forEach(dataset => dataset.data.shift());
-                }
-                
-                // 차트 업데이트
-                chart.update('none'); // 애니메이션 없이 빠른 업데이트
-                
-                console.log(`📊 ${timeLabel} - BTC: ${changes[0].toFixed(3)}%, ETH: ${changes[1].toFixed(3)}%, XRP: ${changes[2].toFixed(3)}%`);
-                
-                // 30초 후 시뮬레이션 종료
-                if (timeIndex >= 6) { // 6 * 5초 = 30초
-                    clearInterval(interval);
-                    console.log('⏹️ 실시간 시뮬레이션 종료 (30초 완료)');
-                    
-                    // 실제 업비트 API 연결 시도
-                    tryConnectRealUpbitAPI(chart);
-                }
-                
-            }, 5000); // 5초마다 실행
-            
-            console.log('⏰ 5초마다 새로운 데이터가 추가됩니다...');
-        }
+
         
         // 실제 업비트 API 연결
         async function tryConnectRealUpbitAPI(chart) {
@@ -831,141 +776,94 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
                 
                 console.log('📊 타겟 코인 11개 설정 완료');
                 
-                // 2. 현재 가격 및 24시간 변화율 정보 가져오기
+                // 2. 현재 가격 및 24시간 변화율 정보 가져오기 (전체 한 번에)
                 const marketCodes = targetCoins.join(',');
                 const priceResponse = await fetch(`https://api.upbit.com/v1/ticker?markets=${marketCodes}`);
                 const priceData = await priceResponse.json();
                 
-                console.log('💰 현재 가격 정보 로드 완료:', priceData.length, '개');
+                console.log('💰 전체 코인 가격 정보 한 번에 로드 완료:', priceData.length, '개');
+                console.log('📋 로드된 코인들:', priceData.map(coin => coin.market));
                 
                 // 3. 차트 데이터 초기화 (24시간 변화율 사용)
                 const coinNames = priceData.map(coin => coin.market.replace('KRW-', ''));
                 
                 // 차트 레이블과 데이터셋 업데이트
                 for (let i = 0; i < Math.min(11, priceData.length); i++) {
-                    chart.data.datasets[i].label = `${coinNames[i]} (실제)`;
+                    chart.data.datasets[i].label = `${coinNames[i]}`;
                 }
                 
                 console.log('🎯 실제 코인 데이터로 전환:', coinNames);
                 
-                // 4. WebSocket 연결
-                connectRealTimeWebSocket(chart, priceData);
+                // 4. 첫 번째 데이터 포인트 추가
+                addInitialDataPoint(chart, priceData);
+                
+                // 5. 정기적으로 전체 가격 업데이트 (5초마다)
+                startPeriodicPriceUpdate(chart, targetCoins);
                 
             } catch (error) {
                 console.error('❌ 실제 API 연결 실패:', error);
-                console.log('💡 시뮬레이션 모드로 계속 진행됩니다.');
+                alert('업비트 API 연결에 실패했습니다. 네트워크를 확인해주세요.');
             }
         }
         
-        // 실시간 WebSocket 연결
-        function connectRealTimeWebSocket(chart, initialPriceData) {
-            console.log('🔗 WebSocket 연결 시작...');
-            
-            const ws = new WebSocket('wss://api.upbit.com/websocket/v1');
-            
-            ws.onopen = () => {
-                console.log('✅ WebSocket 연결 성공!');
-                
-                // 구독 메시지 전송
-                const subscription = [
-                    { ticket: 'upbit-realtime' },
-                    { 
-                        type: 'ticker', 
-                        codes: initialPriceData.map(coin => coin.market),
-                        isOnlyRealtime: true 
-                    }
-                ];
-                
-                ws.send(JSON.stringify(subscription));
-                console.log('📡 실시간 데이터 구독 시작');
-            };
-            
-            ws.onmessage = (event) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    try {
-                        const data = JSON.parse(reader.result);
-                        updateRealTimeChart(chart, data, initialPriceData);
-                    } catch (error) {
-                        console.error('데이터 파싱 오류:', error);
-                    }
-                };
-                reader.readAsText(event.data);
-            };
-            
-            ws.onerror = (error) => {
-                console.error('❌ WebSocket 오류:', error);
-            };
-            
-            ws.onclose = () => {
-                console.log('🔌 WebSocket 연결 종료 - 5초 후 재연결');
-                setTimeout(() => connectRealTimeWebSocket(chart, initialPriceData), 5000);
-            };
-        }
-        
-        // 실시간 차트 업데이트 (24시간 변화율 사용)
-        let lastUpdateTime = 0;
-        let coinDataBuffer = new Map(); // 코인별 최신 데이터 버퍼
-        
-        function updateRealTimeChart(chart, tickerData, initialPriceData) {
-            const coinIndex = initialPriceData.findIndex(coin => coin.market === tickerData.code);
-            if (coinIndex === -1) {
-                console.log(`⚠️ 알 수 없는 코인: ${tickerData.code}`);
-                return;
-            }
-            
-            // 24시간 변화율 사용 (더 안정적)
-            const changePercent = tickerData.signed_change_rate * 100;
-            
-            // 코인 데이터 버퍼에 저장
-            coinDataBuffer.set(coinIndex, changePercent);
-            
-            console.log(`🔄 ${tickerData.code}: ${changePercent.toFixed(3)}% 수신`);
-            
-            // 5초마다 차트 업데이트
-            const now = Date.now();
-            if (now - lastUpdateTime > 5000) {
-                updateChartDisplay(chart);
-                lastUpdateTime = now;
-            }
-        }
-        
-        // 차트 화면 업데이트
-        function updateChartDisplay(chart) {
+        // 첫 번째 데이터 포인트 추가
+        function addInitialDataPoint(chart, priceData) {
             const now = new Date();
             const timeLabel = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
             
-            console.log(`📊 차트 업데이트: ${timeLabel}`);
-            
-            // 시간 라벨 추가
             chart.data.labels.push(timeLabel);
             
-            // 모든 코인 데이터 추가
-            for (let i = 0; i < 11; i++) {
-                if (coinDataBuffer.has(i)) {
-                    // 버퍼에 있는 최신 데이터 사용
-                    chart.data.datasets[i].data.push(coinDataBuffer.get(i));
-                } else {
-                    // 이전 값 유지
-                    const lastValue = chart.data.datasets[i].data[chart.data.datasets[i].data.length - 1] || 0;
-                    chart.data.datasets[i].data.push(lastValue);
-                }
+            for (let i = 0; i < Math.min(11, priceData.length); i++) {
+                const changePercent = priceData[i].signed_change_rate * 100;
+                chart.data.datasets[i].data.push(changePercent);
             }
             
-            // 50개 데이터 포인트 유지
-            if (chart.data.labels.length > 50) {
-                chart.data.labels.shift();
-                chart.data.datasets.forEach(dataset => dataset.data.shift());
-            }
-            
-            chart.update('none');
-            
-            // 버퍼에 있는 데이터 로그 출력
-            const bufferInfo = Array.from(coinDataBuffer.entries())
-                .map(([index, value]) => `${chart.data.datasets[index].label}: ${value.toFixed(3)}%`)
-                .join(', ');
-            console.log(`📈 ${timeLabel} 업데이트 완료 - ${bufferInfo}`);
+            chart.update();
+            console.log('📊 첫 번째 데이터 포인트 추가 완료');
         }
+        
+        // 정기적으로 전체 가격 업데이트
+        function startPeriodicPriceUpdate(chart, targetCoins) {
+            console.log('⏰ 5초마다 전체 코인 가격 업데이트 시작');
+            
+            setInterval(async () => {
+                try {
+                    // 전체 코인 가격을 한 번에 가져오기
+                    const marketCodes = targetCoins.join(',');
+                    const response = await fetch(`https://api.upbit.com/v1/ticker?markets=${marketCodes}`);
+                    const priceData = await response.json();
+                    
+                    console.log(`💰 전체 ${priceData.length}개 코인 가격 업데이트 완료`);
+                    
+                    // 현재 시간
+                    const now = new Date();
+                    const timeLabel = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                    
+                    // 차트에 새 데이터 추가
+                    chart.data.labels.push(timeLabel);
+                    
+                    for (let i = 0; i < Math.min(11, priceData.length); i++) {
+                        const changePercent = priceData[i].signed_change_rate * 100;
+                        chart.data.datasets[i].data.push(changePercent);
+                        console.log(`${priceData[i].market}: ${changePercent.toFixed(3)}%`);
+                    }
+                    
+                    // 50개 데이터 포인트 유지
+                    if (chart.data.labels.length > 50) {
+                        chart.data.labels.shift();
+                        chart.data.datasets.forEach(dataset => dataset.data.shift());
+                    }
+                    
+                    chart.update('none');
+                    console.log(`� ${timeLabel} 차트 업데이트 완료`);
+                    
+                } catch (error) {
+                    console.error('❌ 가격 업데이트 실패:', error);
+                }
+            }, 5000); // 5초마다 실행
+        }
+        
+
         
         // 실제 업비트 데이터 로드
         async function loadRealUpbitData() {
