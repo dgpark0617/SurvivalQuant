@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SurvivalQuant</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -41,6 +43,143 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
+            padding: 15px 30px;
+        }
+        
+        .chart-section {
+            background: #ffffff;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+        
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .control-btn:hover {
+            background: #e9ecef;
+        }
+        
+        .control-btn.active:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 4px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-item.positive {
+            border-left-color: #28a745;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        }
+        
+        .stat-item.negative {
+            border-left-color: #dc3545;
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-change {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .positive .stat-change {
+            color: #28a745;
+        }
+        
+        .negative .stat-change {
+            color: #dc3545;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            font-size: 1.1rem;
+            color: #666;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: pulse 1.5s infinite;
         }
         
         .links-section {
@@ -72,11 +211,13 @@
                 grid-template-columns: 2fr 1fr;
                 grid-template-areas: 
                     "header header"
+                    "chart chart"
                     "links ads"
                     "games utilities";
             }
             
             .header-section { grid-area: header; }
+            .chart-section { grid-area: chart; }
             .links-section { grid-area: links; }
             .ads-section { grid-area: ads; }
             .games-section { grid-area: games; }
@@ -84,9 +225,9 @@
         }
         
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-            font-weight: 300;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            font-weight: 400;
         }
         
         h2 {
@@ -212,7 +353,29 @@
         <!-- 헤더 섹션 -->
         <div class="section header-section">
             <h1>🚀 SurvivalQuant</h1>
-            <p>EconomicEden의 모든 플랫폼과 서비스를 한 곳에서</p>
+            <p>EconomicEden - 실시간 코인 차트 및 투자 도구</p>
+        </div>
+        
+        <!-- 업비트 실시간 차트 섹션 -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">📊 업비트 실시간 코인 변화율</h2>
+                <div class="chart-controls">
+                    <button class="control-btn active" id="changeBtn" onclick="switchMode('change')">변화율 (%)</button>
+                    <button class="control-btn" id="priceBtn" onclick="switchMode('price')">실제 가격</button>
+                    <button class="control-btn" id="topBtn" onclick="toggleTopCoins()">Top 20</button>
+                    <button class="control-btn" id="resetBtn" onclick="resetChart()">차트 리셋</button>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="upbitChart"></canvas>
+                <div id="loadingMessage" class="loading">업비트 데이터 로딩 중</div>
+            </div>
+            
+            <div class="stats-container" id="statsContainer">
+                <!-- 통계 정보가 여기에 동적으로 추가됩니다 -->
+            </div>
         </div>
         
         <!-- 링크 섹션 -->
@@ -282,6 +445,7 @@
     </div>
 
     <script>
+        // 기존 URL 복사 기능
         function copyToClipboard() {
             const urlText = document.getElementById('urlDisplay').textContent;
             navigator.clipboard.writeText(urlText).then(function() {
@@ -293,11 +457,410 @@
             });
         }
         
-        // 실제 GitHub 사용자명으로 URL 업데이트 (필요시)
+        // 업비트 차트 관련 변수들
+        let upbitChart = null;
+        let upbitWebSocket = null;
+        let coinData = new Map();
+        let displayMode = 'change'; // 'change' or 'price'
+        let showTopOnly = false;
+        let baselinePrices = new Map(); // 기준가격 저장
+        let chartStartTime = null;
+        
+        // 색상 팔레트 (200개 코인을 위한 다양한 색상)
+        const colorPalette = [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+            '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384', '#36A2EB', '#FFCE56',
+            '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5A2B',
+            '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1', '#14B8A6',
+            '#F472B6', '#A78BFA', '#FB7185', '#34D399', '#FBBF24', '#60A5FA'
+        ];
+        
+        // 차트 초기화
+        async function initializeUpbitChart() {
+            try {
+                console.log('업비트 차트 초기화 시작...');
+                
+                // 1. 모든 원화 마켓 가져오기
+                const markets = await getUpbitMarkets();
+                console.log(`총 ${markets.length}개 코인 발견`);
+                
+                // 2. 초기 가격 데이터 가져오기
+                const initialPrices = await getCurrentPrices(markets);
+                chartStartTime = new Date();
+                
+                // 3. 기준가격 설정
+                initialPrices.forEach(coin => {
+                    baselinePrices.set(coin.market, coin.trade_price);
+                    coinData.set(coin.market, {
+                        prices: [coin.trade_price],
+                        changes: [0], // 초기에는 변화율 0
+                        timestamps: [chartStartTime],
+                        name: coin.market.replace('KRW-', ''),
+                        basePrice: coin.trade_price
+                    });
+                });
+                
+                // 4. 차트 생성
+                createChart();
+                
+                // 5. WebSocket 연결
+                connectWebSocket(markets);
+                
+                // 6. 로딩 메시지 숨기기
+                document.getElementById('loadingMessage').style.display = 'none';
+                
+                // 7. 통계 정보 업데이트
+                updateStats();
+                
+                console.log('업비트 차트 초기화 완료!');
+                
+            } catch (error) {
+                console.error('차트 초기화 실패:', error);
+                document.getElementById('loadingMessage').innerHTML = '❌ 데이터 로딩 실패';
+            }
+        }
+        
+        // 업비트 마켓 리스트 가져오기
+        async function getUpbitMarkets() {
+            const response = await fetch('https://api.upbit.com/v1/market/all');
+            const markets = await response.json();
+            return markets
+                .filter(market => market.market.startsWith('KRW-'))
+                .map(market => market.market);
+        }
+        
+        // 현재 가격 데이터 가져오기
+        async function getCurrentPrices(markets) {
+            const marketString = markets.join(',');
+            const response = await fetch(`https://api.upbit.com/v1/ticker?markets=${marketString}`);
+            return await response.json();
+        }
+        
+        // Chart.js 차트 생성
+        function createChart() {
+            const ctx = document.getElementById('upbitChart').getContext('2d');
+            
+            upbitChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                                displayFormats: {
+                                    minute: 'HH:mm'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: '시간'
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: displayMode === 'change' ? '변화율 (%)' : '가격 (원)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const coin = context.dataset.label;
+                                    const value = context.parsed.y;
+                                    if (displayMode === 'change') {
+                                        return `${coin}: ${value.toFixed(2)}%`;
+                                    } else {
+                                        return `${coin}: ${value.toLocaleString()}원`;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 0
+                        },
+                        line: {
+                            borderWidth: 1.5,
+                            tension: 0.1
+                        }
+                    }
+                }
+            });
+        }
+        
+        // WebSocket 연결
+        function connectWebSocket(markets) {
+            upbitWebSocket = new WebSocket('wss://api.upbit.com/websocket/v1');
+            
+            upbitWebSocket.onopen = () => {
+                console.log('WebSocket 연결됨');
+                const subscription = [{
+                    ticket: 'upbit-chart',
+                    type: 'ticker',
+                    codes: markets
+                }];
+                upbitWebSocket.send(JSON.stringify(subscription));
+            };
+            
+            upbitWebSocket.onmessage = (event) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    try {
+                        const data = JSON.parse(reader.result);
+                        updateCoinData(data);
+                    } catch (error) {
+                        console.error('WebSocket 데이터 파싱 오류:', error);
+                    }
+                };
+                reader.readAsText(event.data);
+            };
+            
+            upbitWebSocket.onerror = (error) => {
+                console.error('WebSocket 오류:', error);
+            };
+            
+            upbitWebSocket.onclose = () => {
+                console.log('WebSocket 연결 종료');
+                // 5초 후 재연결 시도
+                setTimeout(() => {
+                    if (markets) {
+                        connectWebSocket(markets);
+                    }
+                }, 5000);
+            };
+        }
+        
+        // 코인 데이터 업데이트
+        function updateCoinData(tickerData) {
+            const symbol = tickerData.code;
+            const currentPrice = tickerData.trade_price;
+            const now = new Date();
+            
+            if (coinData.has(symbol)) {
+                const data = coinData.get(symbol);
+                const basePrice = data.basePrice;
+                
+                // 로그 기반 변화율 계산 (기준가격 대비)
+                const changePercent = ((currentPrice - basePrice) / basePrice) * 100;
+                
+                // 데이터 추가
+                data.prices.push(currentPrice);
+                data.changes.push(changePercent);
+                data.timestamps.push(now);
+                
+                // 200개 데이터 포인트 유지
+                if (data.prices.length > 200) {
+                    data.prices.shift();
+                    data.changes.shift();
+                    data.timestamps.shift();
+                }
+                
+                // 차트 업데이트 (1초마다)
+                throttledUpdateChart(symbol, data);
+            }
+        }
+        
+        // 차트 업데이트 쓰로틀링
+        let lastChartUpdate = 0;
+        let updateQueue = new Set();
+        
+        function throttledUpdateChart(symbol, data) {
+            updateQueue.add(symbol);
+            
+            const now = Date.now();
+            if (now - lastChartUpdate > 1000) { // 1초마다 업데이트
+                batchUpdateChart();
+                lastChartUpdate = now;
+            }
+        }
+        
+        function batchUpdateChart() {
+            if (!upbitChart) return;
+            
+            // 표시할 코인 필터링
+            const coinsToShow = getDisplayCoins();
+            
+            // 기존 datasets 정리
+            upbitChart.data.datasets = [];
+            
+            // 선택된 코인들만 차트에 추가
+            coinsToShow.forEach((symbol, index) => {
+                const data = coinData.get(symbol);
+                if (data && data.timestamps.length > 1) {
+                    const color = colorPalette[index % colorPalette.length];
+                    const values = displayMode === 'change' ? data.changes : data.prices;
+                    
+                    upbitChart.data.datasets.push({
+                        label: data.name,
+                        data: data.timestamps.map((time, idx) => ({
+                            x: time,
+                            y: values[idx]
+                        })),
+                        borderColor: color,
+                        backgroundColor: color + '20',
+                        borderWidth: 1.5,
+                        fill: false,
+                        tension: 0.1
+                    });
+                }
+            });
+            
+            upbitChart.update('none');
+            updateStats();
+            updateQueue.clear();
+        }
+        
+        // 표시할 코인 선택
+        function getDisplayCoins() {
+            let coins = Array.from(coinData.entries())
+                .filter(([symbol, data]) => data.timestamps.length > 1)
+                .map(([symbol, data]) => ({
+                    symbol,
+                    change: data.changes[data.changes.length - 1] || 0,
+                    price: data.prices[data.prices.length - 1] || 0
+                }));
+            
+            if (showTopOnly) {
+                // 변화율 절댓값 기준 상위 20개
+                coins = coins
+                    .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+                    .slice(0, 20);
+            }
+            
+            return coins.map(coin => coin.symbol);
+        }
+        
+        // 통계 정보 업데이트
+        function updateStats() {
+            const statsContainer = document.getElementById('statsContainer');
+            
+            const coins = Array.from(coinData.entries())
+                .map(([symbol, data]) => ({
+                    symbol,
+                    name: data.name,
+                    change: data.changes[data.changes.length - 1] || 0,
+                    price: data.prices[data.prices.length - 1] || 0
+                }))
+                .filter(coin => coin.change !== 0);
+            
+            // 상위 5개, 하위 5개 추출
+            const sortedByChange = [...coins].sort((a, b) => b.change - a.change);
+            const topGainers = sortedByChange.slice(0, 5);
+            const topLosers = sortedByChange.slice(-5).reverse();
+            
+            let statsHTML = '';
+            
+            // 상승 상위 5개
+            statsHTML += '<h3 style="grid-column: 1 / -1; margin: 10px 0; color: #28a745;">📈 상승률 Top 5</h3>';
+            topGainers.forEach(coin => {
+                statsHTML += `
+                    <div class="stat-item positive">
+                        <div class="stat-label">${coin.name}</div>
+                        <div class="stat-value">${coin.price.toLocaleString()}원</div>
+                        <div class="stat-change">+${coin.change.toFixed(2)}%</div>
+                    </div>
+                `;
+            });
+            
+            // 하락 상위 5개
+            statsHTML += '<h3 style="grid-column: 1 / -1; margin: 10px 0; color: #dc3545;">📉 하락률 Top 5</h3>';
+            topLosers.forEach(coin => {
+                statsHTML += `
+                    <div class="stat-item negative">
+                        <div class="stat-label">${coin.name}</div>
+                        <div class="stat-value">${coin.price.toLocaleString()}원</div>
+                        <div class="stat-change">${coin.change.toFixed(2)}%</div>
+                    </div>
+                `;
+            });
+            
+            statsContainer.innerHTML = statsHTML;
+        }
+        
+        // 모드 전환 (변화율/가격)
+        function switchMode(mode) {
+            displayMode = mode;
+            
+            // 버튼 활성화 상태 변경
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(mode + 'Btn').classList.add('active');
+            
+            // Y축 라벨 변경
+            if (upbitChart) {
+                upbitChart.options.scales.y.title.text = 
+                    displayMode === 'change' ? '변화율 (%)' : '가격 (원)';
+                batchUpdateChart();
+            }
+        }
+        
+        // Top 20 토글
+        function toggleTopCoins() {
+            showTopOnly = !showTopOnly;
+            const btn = document.getElementById('topBtn');
+            btn.textContent = showTopOnly ? '전체 보기' : 'Top 20';
+            btn.classList.toggle('active');
+            
+            if (upbitChart) {
+                batchUpdateChart();
+            }
+        }
+        
+        // 차트 리셋
+        function resetChart() {
+            chartStartTime = new Date();
+            
+            // 모든 코인의 기준가격을 현재가격으로 리셋
+            coinData.forEach((data, symbol) => {
+                if (data.prices.length > 0) {
+                    const currentPrice = data.prices[data.prices.length - 1];
+                    data.basePrice = currentPrice;
+                    data.prices = [currentPrice];
+                    data.changes = [0];
+                    data.timestamps = [chartStartTime];
+                }
+            });
+            
+            if (upbitChart) {
+                batchUpdateChart();
+            }
+        }
+        
+        // 페이지 로드 시 차트 초기화
         document.addEventListener('DOMContentLoaded', function() {
-            // 여기서 실제 GitHub 사용자명을 확인했다면 업데이트 가능
+            // GitHub URL 업데이트 (기존 기능)
             // const actualUrl = 'https://실제사용자명.github.io/SurvivalQuant/';
             // document.getElementById('urlDisplay').textContent = actualUrl;
+            
+            // 업비트 차트 초기화
+            initializeUpbitChart();
+        });
+        
+        // 페이지 언로드 시 WebSocket 연결 종료
+        window.addEventListener('beforeunload', function() {
+            if (upbitWebSocket) {
+                upbitWebSocket.close();
+            }
         });
     </script>
 </body>
