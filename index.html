@@ -175,6 +175,36 @@
             color: #004499;
             text-decoration: underline;
         }
+        
+        .section-link {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+            position: relative;
+            height: 100%;
+            width: 100%;
+        }
+        
+        .section-link:hover {
+            transform: translateY(-2px);
+            color: #333;
+        }
+        
+        .link-arrow {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+        
+        .section-link:hover .link-arrow {
+            opacity: 1;
+            transform: translateX(5px);
+        }
     </style>
 </head>
 <body>
@@ -234,18 +264,20 @@
         
         <!-- 게임 섹션 -->
         <div class="section future-section games-section">
-            <div>
+            <a href="games/" class="section-link">
                 <h3>🎮 미니 게임</h3>
-                <p>간단한 게임들이 추가될 예정입니다</p>
-            </div>
+                <p>재미있는 게임들을 즐겨보세요!</p>
+                <div class="link-arrow">→</div>
+            </a>
         </div>
         
         <!-- 유틸리티 섹션 -->
         <div class="section future-section utilities-section">
-            <div>
+            <a href="utilities/" class="section-link">
                 <h3>🛠️ 유틸리티</h3>
-                <p>유용한 도구들이 추가될 예정입니다</p>
-            </div>
+                <p>유용한 도구들을 사용해보세요!</p>
+                <div class="link-arrow">→</div>
+            </a>
         </div>
     </div>
 

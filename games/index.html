@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>미니 게임 - SurvivalQuant</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            color: #333;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+        }
+        
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .game-card {
+            background: #ffffff;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+        
+        .game-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .game-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .game-description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .play-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .play-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .simple-game {
+            margin-top: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            margin: 20px auto;
+        }
+        
+        .cell {
+            aspect-ratio: 1;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .cell:hover {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+        
+        .cell.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        
+        .game-controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .reset-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .reset-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        
+        .game-status {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 15px 0;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <a href="../" class="back-btn">← 메인으로 돌아가기</a>
+                <h1>🎮 미니 게임</h1>
+                <p>재미있는 게임들을 즐겨보세요!</p>
+            </div>
+
+            <div class="games-grid">
+                <div class="game-card">
+                    <div class="game-icon">🎯</div>
+                    <h3 class="game-title">틱택토</h3>
+                    <p class="game-description">클래식한 3x3 틱택토 게임입니다. 상대방보다 먼저 한 줄을 완성하세요!</p>
+                    <button class="play-btn" @click="showTicTacToe = !showTicTacToe">
+                        {{ showTicTacToe ? '게임 숨기기' : '지금 플레이' }}
+                    </button>
+                </div>
+
+                <div class="game-card">
+                    <div class="game-icon">🔢</div>
+                    <h3 class="game-title">숫자 맞추기</h3>
+                    <p class="game-description">1부터 100 사이의 숫자를 맞춰보세요. 몇 번만에 맞출 수 있을까요?</p>
+                    <button class="play-btn" @click="showNumberGuess = !showNumberGuess">
+                        {{ showNumberGuess ? '게임 숨기기' : '지금 플레이' }}
+                    </button>
+                </div>
+
+                <div class="game-card">
+                    <div class="game-icon">🧠</div>
+                    <h3 class="game-title">기억력 게임</h3>
+                    <p class="game-description">순서대로 나타나는 패턴을 기억하고 따라해보세요!</p>
+                    <button class="play-btn" @click="alert('곧 추가될 예정입니다!')">
+                        Coming Soon
+                    </button>
+                </div>
+            </div>
+
+            <!-- 틱택토 게임 -->
+            <div v-if="showTicTacToe" class="simple-game">
+                <h2 style="text-align: center; margin-bottom: 20px;">🎯 틱택토 게임</h2>
+                <div class="game-status">
+                    {{ gameStatus }}
+                </div>
+                <div class="game-board">
+                    <div 
+                        v-for="(cell, index) in board" 
+                        :key="index"
+                        @click="makeMove(index)"
+                        class="cell"
+                        :class="{ disabled: cell !== '' || gameWon }"
+                    >
+                        {{ cell }}
+                    </div>
+                </div>
+                <div class="game-controls">
+                    <button @click="resetGame" class="reset-btn">게임 리셋</button>
+                </div>
+            </div>
+
+            <!-- 숫자 맞추기 게임 -->
+            <div v-if="showNumberGuess" class="simple-game">
+                <h2 style="text-align: center; margin-bottom: 20px;">🔢 숫자 맞추기 게임</h2>
+                <div style="text-align: center;">
+                    <p>1부터 100 사이의 숫자를 생각했습니다!</p>
+                    <p>시도 횟수: {{ attempts }}</p>
+                    <div style="margin: 20px 0;">
+                        <input 
+                            v-model.number="guess" 
+                            type="number" 
+                            min="1" 
+                            max="100"
+                            @keyup.enter="checkGuess"
+                            style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 1rem; width: 200px;"
+                            placeholder="숫자를 입력하세요"
+                        >
+                        <button @click="checkGuess" class="play-btn" style="margin-left: 10px;">확인</button>
+                    </div>
+                    <div v-if="message" class="game-status">{{ message }}</div>
+                    <button v-if="numberGameWon" @click="resetNumberGame" class="reset-btn">새 게임</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    showTicTacToe: false,
+                    showNumberGuess: false,
+                    // 틱택토 게임 상태
+                    board: ['', '', '', '', '', '', '', '', ''],
+                    currentPlayer: 'X',
+                    gameWon: false,
+                    // 숫자 맞추기 게임 상태
+                    secretNumber: Math.floor(Math.random() * 100) + 1,
+                    guess: null,
+                    attempts: 0,
+                    message: '',
+                    numberGameWon: false
+                }
+            },
+            computed: {
+                gameStatus() {
+                    if (this.gameWon) {
+                        return `🎉 플레이어 ${this.currentPlayer === 'X' ? 'O' : 'X'} 승리!`;
+                    }
+                    if (this.board.every(cell => cell !== '')) {
+                        return '🤝 무승부!';
+                    }
+                    return `현재 플레이어: ${this.currentPlayer}`;
+                }
+            },
+            methods: {
+                makeMove(index) {
+                    if (this.board[index] === '' && !this.gameWon) {
+                        this.board[index] = this.currentPlayer;
+                        if (this.checkWin()) {
+                            this.gameWon = true;
+                        } else {
+                            this.currentPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
+                        }
+                    }
+                },
+                checkWin() {
+                    const winPatterns = [
+                        [0, 1, 2], [3, 4, 5], [6, 7, 8], // 가로
+                        [0, 3, 6], [1, 4, 7], [2, 5, 8], // 세로
+                        [0, 4, 8], [2, 4, 6] // 대각선
+                    ];
+                    
+                    return winPatterns.some(pattern => {
+                        return pattern.every(index => {
+                            return this.board[index] === this.currentPlayer;
+                        });
+                    });
+                },
+                resetGame() {
+                    this.board = ['', '', '', '', '', '', '', '', ''];
+                    this.currentPlayer = 'X';
+                    this.gameWon = false;
+                },
+                checkGuess() {
+                    if (this.guess === null || this.guess < 1 || this.guess > 100) {
+                        this.message = '1부터 100 사이의 숫자를 입력해주세요!';
+                        return;
+                    }
+                    
+                    this.attempts++;
+                    
+                    if (this.guess === this.secretNumber) {
+                        this.message = `🎉 정답입니다! ${this.attempts}번 만에 맞추셨네요!`;
+                        this.numberGameWon = true;
+                    } else if (this.guess < this.secretNumber) {
+                        this.message = '📈 더 큰 숫자입니다!';
+                    } else {
+                        this.message = '📉 더 작은 숫자입니다!';
+                    }
+                    
+                    this.guess = null;
+                },
+                resetNumberGame() {
+                    this.secretNumber = Math.floor(Math.random() * 100) + 1;
+                    this.guess = null;
+                    this.attempts = 0;
+                    this.message = '';
+                    this.numberGameWon = false;
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
