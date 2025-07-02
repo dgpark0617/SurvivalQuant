@@ -537,45 +537,121 @@
             setTimeout(() => {
                 console.log('차트 영역 교체 시도...');
                 
-                const chartArea = document.querySelector('div[style*="여기에 차트가 표시됩니다"]');
-                if (chartArea) {
-                    // Chart.js 사용 가능한지 확인
-                    if (typeof Chart !== 'undefined') {
-                        // 차트 영역을 Canvas로 교체
-                        chartArea.innerHTML = '<canvas id="realChart" width="800" height="400"></canvas>';
-                        
-                        const canvas = document.getElementById('realChart');
-                        const ctx = canvas.getContext('2d');
-                        
-                        // 매우 간단한 차트 생성
-                        new Chart(ctx, {
-                            type: 'line',
-                            data: {
-                                labels: ['1분', '2분', '3분', '4분', '5분'],
-                                datasets: [{
-                                    label: '비트코인 테스트',
-                                    data: [100, 105, 98, 110, 108],
-                                    borderColor: '#ff6b6b',
-                                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                                    borderWidth: 3,
-                                    fill: true
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false
-                            }
-                        });
-                        
-                        console.log('✅ 테스트 차트 생성 성공!');
-                        
-                    } else {
-                        console.error('Chart.js 라이브러리 없음');
-                        chartArea.innerHTML = '❌ Chart.js 라이브러리가 로드되지 않았습니다';
-                    }
-                } else {
-                    console.error('차트 영역을 찾을 수 없음');
-                }
+                                 const chartArea = document.querySelector('div[style*="여기에 차트가 표시됩니다"]');
+                 if (chartArea) {
+                     // Chart.js 사용 가능한지 확인
+                     if (typeof Chart !== 'undefined') {
+                         // 차트 영역을 Canvas로 교체
+                         chartArea.innerHTML = '<canvas id="realChart" style="width: 100%; height: 400px;"></canvas>';
+                         
+                         const canvas = document.getElementById('realChart');
+                         const ctx = canvas.getContext('2d');
+                         
+                         // 업비트 스타일의 실시간 차트 생성
+                         const upbitChart = new Chart(ctx, {
+                             type: 'line',
+                             data: {
+                                 labels: [],
+                                 datasets: [
+                                     {
+                                         label: 'BTC (비트코인)',
+                                         data: [],
+                                         borderColor: '#f39c12',
+                                         backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                                         borderWidth: 3,
+                                         fill: true,
+                                         tension: 0.4,
+                                         pointRadius: 4,
+                                         pointBackgroundColor: '#f39c12'
+                                     },
+                                     {
+                                         label: 'ETH (이더리움)',
+                                         data: [],
+                                         borderColor: '#3498db',
+                                         backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                                         borderWidth: 3,
+                                         fill: true,
+                                         tension: 0.4,
+                                         pointRadius: 4,
+                                         pointBackgroundColor: '#3498db'
+                                     },
+                                     {
+                                         label: 'ADA (에이다)',
+                                         data: [],
+                                         borderColor: '#e74c3c',
+                                         backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                         borderWidth: 3,
+                                         fill: true,
+                                         tension: 0.4,
+                                         pointRadius: 4,
+                                         pointBackgroundColor: '#e74c3c'
+                                     }
+                                 ]
+                             },
+                             options: {
+                                 responsive: true,
+                                 maintainAspectRatio: false,
+                                 animation: {
+                                     duration: 1000,
+                                     easing: 'easeInOutQuart'
+                                 },
+                                 scales: {
+                                     x: {
+                                         title: {
+                                             display: true,
+                                             text: '시간 경과 (5초 간격)',
+                                             font: { size: 14, weight: 'bold' }
+                                         },
+                                         grid: { display: true, color: 'rgba(0,0,0,0.1)' }
+                                     },
+                                     y: {
+                                         title: {
+                                             display: true,
+                                             text: '변화율 (%)',
+                                             font: { size: 14, weight: 'bold' }
+                                         },
+                                         grid: { display: true, color: 'rgba(0,0,0,0.1)' },
+                                         beginAtZero: true
+                                     }
+                                 },
+                                 plugins: {
+                                     legend: {
+                                         display: true,
+                                         position: 'top',
+                                         labels: {
+                                             usePointStyle: true,
+                                             font: { size: 12, weight: 'bold' }
+                                         }
+                                     },
+                                     tooltip: {
+                                         mode: 'index',
+                                         intersect: false,
+                                         backgroundColor: 'rgba(0,0,0,0.8)',
+                                         titleColor: '#fff',
+                                         bodyColor: '#fff',
+                                         borderColor: '#fff',
+                                         borderWidth: 1
+                                     }
+                                 },
+                                 interaction: {
+                                     mode: 'index',
+                                     intersect: false
+                                 }
+                             }
+                         });
+                         
+                         console.log('✅ 업비트 스타일 차트 생성 성공!');
+                         
+                         // 실시간 데이터 시뮬레이션 시작
+                         startRealTimeSimulation(upbitChart);
+                         
+                     } else {
+                         console.error('Chart.js 라이브러리 없음');
+                         chartArea.innerHTML = '❌ Chart.js 라이브러리가 로드되지 않았습니다';
+                     }
+                 } else {
+                     console.error('차트 영역을 찾을 수 없음');
+                 }
             }, 5000);
         }
         
@@ -595,7 +671,75 @@
             return await response.json();
         }
         
-        // 기존 복잡한 함수들 제거하고 단순화
+        // 실시간 데이터 시뮬레이션 함수
+        function startRealTimeSimulation(chart) {
+            let timeIndex = 0;
+            const maxDataPoints = 50; // 50개 데이터 포인트 유지
+            
+            // 초기 기준값 설정
+            const basePrices = {
+                BTC: 100000000, // 1억원 (비트코인 기준)
+                ETH: 5000000,   // 500만원 (이더리움 기준)  
+                ADA: 1000       // 1천원 (에이다 기준)
+            };
+            
+            console.log('🚀 실시간 데이터 시뮬레이션 시작!');
+            
+            // 5초마다 새로운 데이터 추가
+            const interval = setInterval(() => {
+                timeIndex++;
+                
+                // 랜덤한 변화율 생성 (-5% ~ +5%)
+                const btcChange = (Math.random() - 0.5) * 10; // -5% ~ +5%
+                const ethChange = (Math.random() - 0.5) * 8;  // -4% ~ +4%
+                const adaChange = (Math.random() - 0.5) * 12; // -6% ~ +6%
+                
+                // 시간 라벨 추가 (분:초 형식)
+                const minutes = Math.floor(timeIndex * 5 / 60);
+                const seconds = (timeIndex * 5) % 60;
+                const timeLabel = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                // 차트에 새 데이터 추가
+                chart.data.labels.push(timeLabel);
+                chart.data.datasets[0].data.push(btcChange);
+                chart.data.datasets[1].data.push(ethChange);
+                chart.data.datasets[2].data.push(adaChange);
+                
+                // 데이터 포인트 제한 (50개 유지)
+                if (chart.data.labels.length > maxDataPoints) {
+                    chart.data.labels.shift();
+                    chart.data.datasets[0].data.shift();
+                    chart.data.datasets[1].data.shift();
+                    chart.data.datasets[2].data.shift();
+                }
+                
+                // 차트 업데이트
+                chart.update('none'); // 애니메이션 없이 빠른 업데이트
+                
+                console.log(`📊 ${timeLabel} - BTC: ${btcChange.toFixed(2)}%, ETH: ${ethChange.toFixed(2)}%, ADA: ${adaChange.toFixed(2)}%`);
+                
+                // 10분 후 시뮬레이션 종료
+                if (timeIndex >= 120) { // 120 * 5초 = 10분
+                    clearInterval(interval);
+                    console.log('⏹️ 실시간 시뮬레이션 종료 (10분 완료)');
+                    
+                    // 실제 업비트 API 연결 시도
+                    tryConnectRealUpbitAPI(chart);
+                }
+                
+            }, 5000); // 5초마다 실행
+            
+            console.log('⏰ 5초마다 새로운 데이터가 추가됩니다...');
+        }
+        
+        // 실제 업비트 API 연결 시도 (나중에 구현)
+        function tryConnectRealUpbitAPI(chart) {
+            console.log('🔄 실제 업비트 API 연결 시도...');
+            
+            // 여기에 나중에 실제 업비트 WebSocket 연결 코드 추가
+            // 현재는 시뮬레이션 계속 진행
+            console.log('💡 아직 시뮬레이션 모드로 계속 진행됩니다.');
+        }
         
         // 실제 업비트 데이터 로드
         async function loadRealUpbitData() {
