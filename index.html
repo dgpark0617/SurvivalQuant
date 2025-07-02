@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurvivalQuant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+        
+        .url-display {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 20px 0;
+            word-break: break-all;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .url-display:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .copy-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+        
+        .copy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(238, 90, 36, 0.4);
+        }
+        
+        .description {
+            margin-top: 20px;
+            font-size: 1rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        
+        .success-message {
+            display: none;
+            color: #2ecc71;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 SurvivalQuant</h1>
+        <div class="url-display" id="urlDisplay">
+            https://[사용자명].github.io/SurvivalQuant/
+        </div>
+        <button class="copy-btn" onclick="copyToClipboard()">
+            📋 URL 복사하기
+        </button>
+        <div class="success-message" id="successMessage">
+            ✅ URL이 클립보드에 복사되었습니다!
+        </div>
+        <div class="description">
+            <p>GitHub Pages로 호스팅되는 간단한 웹사이트입니다.</p>
+            <p>위의 URL을 통해 외부에서 접근할 수 있습니다.</p>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard() {
+            const urlText = document.getElementById('urlDisplay').textContent;
+            navigator.clipboard.writeText(urlText).then(function() {
+                const successMessage = document.getElementById('successMessage');
+                successMessage.style.display = 'block';
+                setTimeout(() => {
+                    successMessage.style.display = 'none';
+                }, 3000);
+            });
+        }
+        
+        // 실제 GitHub 사용자명으로 URL 업데이트 (필요시)
+        document.addEventListener('DOMContentLoaded', function() {
+            // 여기서 실제 GitHub 사용자명을 확인했다면 업데이트 가능
+            // const actualUrl = 'https://실제사용자명.github.io/SurvivalQuant/';
+            // document.getElementById('urlDisplay').textContent = actualUrl;
+        });
+    </script>
+</body>
+</html>
