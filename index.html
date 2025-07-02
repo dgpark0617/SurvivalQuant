@@ -103,12 +103,21 @@
         
         .chart-container {
             position: relative;
-            height: 400px;
+            height: 450px;
             width: 100%;
-            background: #f8f9fa;
+            background: #ffffff;
+            border: 3px solid #007bff;
             border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 20px rgba(0, 123, 255, 0.2);
+        }
+        
+        #upbitChart {
+            width: 100% !important;
+            height: 400px !important;
+            background: #fafafa;
+            border: 1px solid #ddd;
         }
         
         .stats-container {
@@ -368,8 +377,13 @@
             </div>
             
             <div class="chart-container">
-                <canvas id="upbitChart"></canvas>
-                <div id="loadingMessage" class="loading">업비트 데이터 로딩 중</div>
+                <div style="text-align: center; margin-bottom: 15px; font-weight: bold; color: #007bff;">
+                    🚨 차트 표시 영역 🚨
+                </div>
+                <canvas id="upbitChart" style="border: 2px dashed #ff6b6b; background: #f0f8ff;"></canvas>
+                <div id="loadingMessage" class="loading" style="color: #007bff; font-weight: bold;">
+                    📊 차트 초기화 중...
+                </div>
             </div>
             
             <div class="stats-container" id="statsContainer">
@@ -474,18 +488,44 @@
             '#F472B6', '#A78BFA', '#FB7185', '#34D399', '#FBBF24', '#60A5FA'
         ];
         
-        // 차트 초기화 (간단한 버전)
+        // 차트 초기화 (최우선 단순 버전)
         function initializeUpbitChart() {
-            console.log('업비트 차트 초기화 시작...');
+            console.log('=== 차트 초기화 시작 ===');
             
+            // 1단계: 기본 요소 확인
+            const loadingMsg = document.getElementById('loadingMessage');
+            const canvas = document.getElementById('upbitChart');
+            
+            if (!loadingMsg) {
+                console.error('로딩 메시지 요소 없음');
+                return;
+            }
+            
+            if (!canvas) {
+                console.error('Canvas 요소 없음');
+                loadingMsg.innerHTML = '❌ Canvas 요소를 찾을 수 없습니다';
+                return;
+            }
+            
+            console.log('✅ 기본 요소 확인 완료');
+            loadingMsg.innerHTML = '📊 차트 생성 중...';
+            
+            // 2단계: Chart.js 확인
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js 라이브러리 없음');
+                loadingMsg.innerHTML = '❌ Chart.js 라이브러리가 로드되지 않았습니다';
+                return;
+            }
+            
+            console.log('✅ Chart.js 라이브러리 확인 완료');
+            
+            // 3단계: 차트 생성 시도
             try {
-                // 먼저 테스트 차트 생성
                 createChart();
-                console.log('초기 테스트 차트 생성 완료');
-                
+                console.log('✅ 차트 생성 성공');
             } catch (error) {
-                console.error('차트 초기화 실패:', error);
-                document.getElementById('loadingMessage').innerHTML = '❌ 차트 생성 실패: ' + error.message;
+                console.error('❌ 차트 생성 실패:', error);
+                loadingMsg.innerHTML = '❌ 차트 생성 실패: ' + error.message;
             }
         }
         
@@ -505,149 +545,77 @@
             return await response.json();
         }
         
-        // Chart.js 차트 생성
+        // Chart.js 차트 생성 (최우선 단순 버전)
         function createChart() {
-            console.log('차트 생성 함수 호출됨');
+            console.log('=== 차트 생성 시작 ===');
             
-            // Chart.js 로드 확인
-            if (typeof Chart === 'undefined') {
-                console.error('Chart.js가 로드되지 않았습니다!');
-                document.getElementById('loadingMessage').innerHTML = '❌ Chart.js 라이브러리 로드 실패';
-                return;
-            }
-            
-            // Canvas 요소 확인
             const canvas = document.getElementById('upbitChart');
-            if (!canvas) {
-                console.error('Canvas 요소를 찾을 수 없습니다!');
-                document.getElementById('loadingMessage').innerHTML = '❌ Canvas 요소 없음';
-                return;
-            }
-            
-            console.log('Canvas 요소 확인됨:', canvas);
-            
-            // Canvas 크기 명시적 설정
-            canvas.width = 800;
-            canvas.height = 350;
-            canvas.style.width = '100%';
-            canvas.style.height = '350px';
-            
             const ctx = canvas.getContext('2d');
-            console.log('Context 생성됨:', ctx);
             
-            // 간단한 테스트 데이터
-            const testData = [
+            console.log('Canvas:', canvas);
+            console.log('Context:', ctx);
+            
+            // 매우 간단한 테스트 데이터
+            const simpleData = [
                 {x: 0, y: 0},
-                {x: 10, y: 1.5},
-                {x: 20, y: -0.8},
-                {x: 30, y: 2.1},
-                {x: 40, y: -1.2},
-                {x: 50, y: 0.9}
+                {x: 1, y: 2},
+                {x: 2, y: -1},
+                {x: 3, y: 3},
+                {x: 4, y: 1}
             ];
             
-            try {
-                upbitChart = new Chart(ctx, {
+            upbitChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     datasets: [{
-                        label: 'BTC 테스트',
-                        data: testData,
+                        label: '테스트 차트',
+                        data: simpleData,
                         borderColor: '#FF6384',
-                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.1,
-                        pointRadius: 1
-                    }, {
-                        label: 'ETH 테스트',
-                        data: testData.map(point => ({
-                            x: point.x,
-                            y: point.y + Math.random() - 0.5
-                        })),
-                        borderColor: '#36A2EB',
-                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.1,
-                        pointRadius: 1
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#FF6384'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: {
-                        duration: 0 // 애니메이션 비활성화
-                    },
-                    interaction: {
-                        mode: 'index',
-                        intersect: false,
-                    },
                     scales: {
                         x: {
                             type: 'linear',
                             title: {
                                 display: true,
-                                text: '시간 경과 (5초 단위)'
-                            },
-                            grid: {
-                                display: true
+                                text: '시간'
                             }
                         },
                         y: {
-                            beginAtZero: false,
                             title: {
                                 display: true,
-                                text: displayMode === 'change' ? '변화율 (%)' : '가격 (원)'
-                            },
-                            grid: {
-                                display: true
+                                text: '값'
                             }
                         }
                     },
                     plugins: {
                         legend: {
                             display: true,
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,
-                                pointStyle: 'line'
-                            }
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function(context) {
-                                    const coin = context.dataset.label;
-                                    const value = context.parsed.y;
-                                    if (displayMode === 'change') {
-                                        return `${coin}: ${value.toFixed(2)}%`;
-                                    } else {
-                                        return `${coin}: ${value.toLocaleString()}원`;
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    elements: {
-                        point: {
-                            radius: 1
-                        },
-                        line: {
-                            borderWidth: 2,
-                            tension: 0.1
+                            position: 'top'
                         }
                     }
                 }
             });
             
-            console.log('차트 생성 완료:', upbitChart);
+            console.log('✅ 차트 생성 성공!', upbitChart);
             
-            // 5초 후 실제 업비트 데이터 로드 시작
-            setTimeout(() => {
-                console.log('실제 업비트 데이터 로딩 시작...');
-                loadRealUpbitData();
-            }, 5000);
+            // 로딩 메시지 숨기기
+            const loadingMsg = document.getElementById('loadingMessage');
+            if (loadingMsg) {
+                loadingMsg.style.display = 'none';
+            }
+            
+            // 성공 메시지 표시
+            console.log('🎉 차트가 성공적으로 표시되었습니다!');
         }
         
         // 실제 업비트 데이터 로드
