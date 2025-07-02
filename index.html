@@ -366,7 +366,7 @@
         <!-- 바이낸스 실시간 차트 섹션 -->
         <div class="chart-section">
             <div class="chart-header">
-                <h2 class="chart-title">📊 바이낸스 실시간 코인 변화율</h2>
+                <h2 class="chart-title">📊 바이낸스 실시간 코인 차트</h2>
                 <div class="chart-controls">
                     <button class="control-btn active" id="changeBtn" onclick="switchMode('change')">변화율 (%)</button>
                     <button class="control-btn" id="priceBtn" onclick="switchMode('price')">실제 가격</button>
@@ -467,8 +467,9 @@
         // 차트 관련 변수들
         let cryptoChart = null;
         let displayMode = 'change'; // 'change' or 'price'
-        let chartStartTime = null;
-        let coinData = new Map();
+        let coinData = new Map(); // 각 코인의 가격 데이터와 기준가격 저장
+        let basePrices = new Map(); // 최초 수집 시점의 기준가격
+        let isFirstCollection = true; // 최초 수집 여부
         
         // 바이낸스 실시간 차트 초기화
         function initializeCryptoChart() {
@@ -651,10 +652,10 @@
                                 color: 'rgba(0,0,0,0.1)',
                                 backgroundColor: '#ffffff'
                             },
-                            min: -2,
-                            max: 2,
+                            min: -5,
+                            max: 5,
                             ticks: {
-                                stepSize: 0.5
+                                stepSize: 1
                             }
                         }
                     }
@@ -721,29 +722,63 @@
                 
                 chart.data.labels.push(timeLabel);
                 
-                // 각 코인의 24시간 변화율 추가
+                // 각 코인의 데이터 처리
                 for (let i = 0; i < Math.min(11, data.length); i++) {
-                    const changePercent = parseFloat(data[i].priceChangePercent);
-                    chart.data.datasets[i].data.push(changePercent);
+                    const currentPrice = parseFloat(data[i].lastPrice);
+                    const symbol = data[i].symbol;
                     
-                    console.log(`${data[i].symbol}: ${changePercent.toFixed(3)}%`);
-                    
-                    // 코인 데이터 저장
-                    coinData.set(data[i].symbol, {
-                        price: parseFloat(data[i].lastPrice),
-                        change: changePercent,
-                        volume: parseFloat(data[i].volume)
-                    });
+                    // 최초 수집인 경우 기준가격 설정 (변화율 0으로 시작)
+                    if (isFirstCollection) {
+                        basePrices.set(symbol, currentPrice);
+                        coinData.set(symbol, {
+                            prices: [currentPrice],
+                            changes: [0] // 최초는 0%로 시작
+                        });
+                        
+                        // 차트에 0 추가 (최초 시점)
+                        const valueToAdd = displayMode === 'change' ? 0 : currentPrice;
+                        chart.data.datasets[i].data.push(valueToAdd);
+                        
+                        console.log(`${symbol}: 기준가격 설정 $${currentPrice.toFixed(4)}`);
+                    } else {
+                        // 이후 수집에서는 기준가격 대비 변화율 계산
+                        const basePrice = basePrices.get(symbol);
+                        const changePercent = ((currentPrice - basePrice) / basePrice) * 100;
+                        
+                        // 데이터 저장
+                        const coinInfo = coinData.get(symbol);
+                        coinInfo.prices.push(currentPrice);
+                        coinInfo.changes.push(changePercent);
+                        
+                        // 차트에 현재 모드에 따른 값 추가
+                        const valueToAdd = displayMode === 'change' ? changePercent : currentPrice;
+                        chart.data.datasets[i].data.push(valueToAdd);
+                        
+                        console.log(`${symbol}: $${currentPrice.toFixed(4)} (${changePercent.toFixed(3)}%)`);
+                    }
+                }
+                
+                // 최초 수집 완료 표시
+                if (isFirstCollection) {
+                    isFirstCollection = false;
+                    console.log('✅ 최초 수집 완료 - 기준가격 설정됨');
                 }
                 
                 // 50개 데이터 포인트 유지
                 if (chart.data.labels.length > 50) {
                     chart.data.labels.shift();
                     chart.data.datasets.forEach(dataset => dataset.data.shift());
+                    
+                    // 데이터도 50개로 제한
+                    coinData.forEach(coinInfo => {
+                        if (coinInfo.prices.length > 50) {
+                            coinInfo.prices.shift();
+                            coinInfo.changes.shift();
+                        }
+                    });
                 }
                 
                 chart.update('none');
-                updateStats();
                 
                 console.log(`📊 ${timeLabel} 차트 업데이트 완료`);
                 
@@ -752,56 +787,9 @@
             }
         }
         
-        // 통계 정보 업데이트
-        function updateStats() {
-            const statsContainer = document.getElementById('statsContainer');
-            
-            const coins = Array.from(coinData.entries())
-                .map(([symbol, data]) => ({
-                    symbol: symbol.replace('USDT', ''),
-                    name: symbol.replace('USDT', ''),
-                    change: data.change,
-                    price: data.price
-                }));
-            
-            if (coins.length === 0) return;
-            
-            // 상위 5개, 하위 5개 추출
-            const sortedByChange = [...coins].sort((a, b) => b.change - a.change);
-            const topGainers = sortedByChange.slice(0, 5);
-            const topLosers = sortedByChange.slice(-5).reverse();
-            
-            let statsHTML = '';
-            
-            // 상승 상위 5개
-            statsHTML += '<h3 style="grid-column: 1 / -1; margin: 10px 0; color: #28a745;">📈 상승률 Top 5</h3>';
-            topGainers.forEach(coin => {
-                statsHTML += `
-                    <div class="stat-item positive">
-                        <div class="stat-label">${coin.name}</div>
-                        <div class="stat-value">$${coin.price.toFixed(4)}</div>
-                        <div class="stat-change">+${coin.change.toFixed(2)}%</div>
-                    </div>
-                `;
-            });
-            
-            // 하락 상위 5개
-            statsHTML += '<h3 style="grid-column: 1 / -1; margin: 10px 0; color: #dc3545;">📉 하락률 Top 5</h3>';
-            topLosers.forEach(coin => {
-                statsHTML += `
-                    <div class="stat-item negative">
-                        <div class="stat-label">${coin.name}</div>
-                        <div class="stat-value">$${coin.price.toFixed(4)}</div>
-                        <div class="stat-change">${coin.change.toFixed(2)}%</div>
-                    </div>
-                `;
-            });
-            
-            statsContainer.innerHTML = statsHTML;
-        }
-        
         // 모드 전환 (변화율/가격)
         function switchMode(mode) {
+            console.log(`🔄 모드 전환: ${displayMode} → ${mode}`);
             displayMode = mode;
             
             // 버튼 활성화 상태 변경
@@ -810,8 +798,11 @@
             });
             document.getElementById(mode + 'Btn').classList.add('active');
             
-            // Y축 라벨 변경
-            if (cryptoChart) {
+            if (cryptoChart && coinData.size > 0) {
+                // 차트 데이터를 현재 모드에 맞게 업데이트
+                updateChartForMode();
+                
+                // Y축 설정 변경
                 cryptoChart.options.scales.y.title.text = 
                     displayMode === 'change' ? '변화율 (%)' : '가격 ($)';
                     
@@ -819,23 +810,47 @@
                     cryptoChart.options.scales.y.min = undefined;
                     cryptoChart.options.scales.y.max = undefined;
                 } else {
-                    cryptoChart.options.scales.y.min = -2;
-                    cryptoChart.options.scales.y.max = 2;
+                    cryptoChart.options.scales.y.min = -5;
+                    cryptoChart.options.scales.y.max = 5;
                 }
                 
                 cryptoChart.update();
+                console.log(`✅ 모드 전환 완료: ${mode}`);
             }
+        }
+        
+        // 현재 모드에 맞게 차트 데이터 업데이트
+        function updateChartForMode() {
+            const symbols = ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'ADAUSDT', 'SOLUSDT', 'DOGEUSDT', 'AVAXUSDT', 'MATICUSDT', 'DOTUSDT', 'LINKUSDT', 'UNIUSDT'];
+            
+            symbols.forEach((symbol, index) => {
+                const coinInfo = coinData.get(symbol);
+                if (coinInfo && cryptoChart.data.datasets[index]) {
+                    // 현재 모드에 따라 데이터 교체
+                    const dataToShow = displayMode === 'change' ? coinInfo.changes : coinInfo.prices;
+                    cryptoChart.data.datasets[index].data = [...dataToShow];
+                }
+            });
         }
         
         // 차트 리셋
         function resetChart() {
+            console.log('🔄 차트 리셋 시작');
+            
             if (cryptoChart) {
+                // 차트 데이터 초기화
                 cryptoChart.data.labels = [];
                 cryptoChart.data.datasets.forEach(dataset => {
                     dataset.data = [];
                 });
                 cryptoChart.update();
-                console.log('📊 차트 리셋 완료');
+                
+                // 변수 초기화
+                coinData.clear();
+                basePrices.clear();
+                isFirstCollection = true;
+                
+                console.log('📊 차트 리셋 완료 - 다음 수집부터 새로운 기준가격 적용');
             }
         }
         
