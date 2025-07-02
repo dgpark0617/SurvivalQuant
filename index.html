@@ -376,14 +376,55 @@
                 </div>
             </div>
             
-            <div class="chart-container">
-                <div style="text-align: center; margin-bottom: 15px; font-weight: bold; color: #007bff;">
-                    🚨 차트 표시 영역 🚨
+            <!-- 차트 표시 공간 (확실히 보이는 버전) -->
+            <div style="background: linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%); 
+                        border: 5px solid #ff4757; 
+                        border-radius: 15px; 
+                        padding: 30px; 
+                        margin: 20px 0; 
+                        min-height: 500px;
+                        box-shadow: 0 10px 30px rgba(255, 71, 87, 0.3);">
+                
+                <h2 style="text-align: center; color: #2f3542; font-size: 2rem; margin-bottom: 20px;">
+                    📊 업비트 실시간 차트 영역
+                </h2>
+                
+                <div style="background: white; 
+                           border: 3px dashed #5f27cd; 
+                           border-radius: 10px; 
+                           height: 400px; 
+                           display: flex; 
+                           align-items: center; 
+                           justify-content: center;
+                           font-size: 1.5rem;
+                           color: #5f27cd;
+                           font-weight: bold;">
+                    
+                    🎯 여기에 차트가 표시됩니다 🎯
+                    <br><br>
+                    (현재 차트 로딩 중...)
+                    
                 </div>
-                <canvas id="upbitChart" style="border: 2px dashed #ff6b6b; background: #f0f8ff;"></canvas>
-                <div id="loadingMessage" class="loading" style="color: #007bff; font-weight: bold;">
-                    📊 차트 초기화 중...
+                
+                <div style="margin-top: 20px; text-align: center;">
+                    <button style="background: #3742fa; color: white; border: none; padding: 15px 30px; border-radius: 25px; font-size: 1.1rem; cursor: pointer; margin: 5px;">
+                        변화율 (%)
+                    </button>
+                    <button style="background: #2ed573; color: white; border: none; padding: 15px 30px; border-radius: 25px; font-size: 1.1rem; cursor: pointer; margin: 5px;">
+                        실제 가격
+                    </button>
+                    <button style="background: #ffa502; color: white; border: none; padding: 15px 30px; border-radius: 25px; font-size: 1.1rem; cursor: pointer; margin: 5px;">
+                        Top 20
+                    </button>
+                    <button style="background: #ff4757; color: white; border: none; padding: 15px 30px; border-radius: 25px; font-size: 1.1rem; cursor: pointer; margin: 5px;">
+                        차트 리셋
+                    </button>
                 </div>
+                
+                <!-- 실제 Canvas는 숨겨두고 나중에 활성화 -->
+                <canvas id="upbitChart" style="display: none;"></canvas>
+                <div id="loadingMessage" style="display: none;">로딩중</div>
+                
             </div>
             
             <div class="stats-container" id="statsContainer">
@@ -488,45 +529,54 @@
             '#F472B6', '#A78BFA', '#FB7185', '#34D399', '#FBBF24', '#60A5FA'
         ];
         
-        // 차트 초기화 (최우선 단순 버전)
+        // 매우 간단한 테스트 차트 생성
         function initializeUpbitChart() {
-            console.log('=== 차트 초기화 시작 ===');
+            console.log('=== 차트 테스트 시작 ===');
             
-            // 1단계: 기본 요소 확인
-            const loadingMsg = document.getElementById('loadingMessage');
-            const canvas = document.getElementById('upbitChart');
-            
-            if (!loadingMsg) {
-                console.error('로딩 메시지 요소 없음');
-                return;
-            }
-            
-            if (!canvas) {
-                console.error('Canvas 요소 없음');
-                loadingMsg.innerHTML = '❌ Canvas 요소를 찾을 수 없습니다';
-                return;
-            }
-            
-            console.log('✅ 기본 요소 확인 완료');
-            loadingMsg.innerHTML = '📊 차트 생성 중...';
-            
-            // 2단계: Chart.js 확인
-            if (typeof Chart === 'undefined') {
-                console.error('Chart.js 라이브러리 없음');
-                loadingMsg.innerHTML = '❌ Chart.js 라이브러리가 로드되지 않았습니다';
-                return;
-            }
-            
-            console.log('✅ Chart.js 라이브러리 확인 완료');
-            
-            // 3단계: 차트 생성 시도
-            try {
-                createChart();
-                console.log('✅ 차트 생성 성공');
-            } catch (error) {
-                console.error('❌ 차트 생성 실패:', error);
-                loadingMsg.innerHTML = '❌ 차트 생성 실패: ' + error.message;
-            }
+            // 5초 후에 차트 영역을 실제 차트로 교체
+            setTimeout(() => {
+                console.log('차트 영역 교체 시도...');
+                
+                const chartArea = document.querySelector('div[style*="여기에 차트가 표시됩니다"]');
+                if (chartArea) {
+                    // Chart.js 사용 가능한지 확인
+                    if (typeof Chart !== 'undefined') {
+                        // 차트 영역을 Canvas로 교체
+                        chartArea.innerHTML = '<canvas id="realChart" width="800" height="400"></canvas>';
+                        
+                        const canvas = document.getElementById('realChart');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // 매우 간단한 차트 생성
+                        new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: ['1분', '2분', '3분', '4분', '5분'],
+                                datasets: [{
+                                    label: '비트코인 테스트',
+                                    data: [100, 105, 98, 110, 108],
+                                    borderColor: '#ff6b6b',
+                                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                                    borderWidth: 3,
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false
+                            }
+                        });
+                        
+                        console.log('✅ 테스트 차트 생성 성공!');
+                        
+                    } else {
+                        console.error('Chart.js 라이브러리 없음');
+                        chartArea.innerHTML = '❌ Chart.js 라이브러리가 로드되지 않았습니다';
+                    }
+                } else {
+                    console.error('차트 영역을 찾을 수 없음');
+                }
+            }, 5000);
         }
         
         // 업비트 마켓 리스트 가져오기
@@ -545,78 +595,7 @@
             return await response.json();
         }
         
-        // Chart.js 차트 생성 (최우선 단순 버전)
-        function createChart() {
-            console.log('=== 차트 생성 시작 ===');
-            
-            const canvas = document.getElementById('upbitChart');
-            const ctx = canvas.getContext('2d');
-            
-            console.log('Canvas:', canvas);
-            console.log('Context:', ctx);
-            
-            // 매우 간단한 테스트 데이터
-            const simpleData = [
-                {x: 0, y: 0},
-                {x: 1, y: 2},
-                {x: 2, y: -1},
-                {x: 3, y: 3},
-                {x: 4, y: 1}
-            ];
-            
-            upbitChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    datasets: [{
-                        label: '테스트 차트',
-                        data: simpleData,
-                        borderColor: '#FF6384',
-                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 5,
-                        pointBackgroundColor: '#FF6384'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            type: 'linear',
-                            title: {
-                                display: true,
-                                text: '시간'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: '값'
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top'
-                        }
-                    }
-                }
-            });
-            
-            console.log('✅ 차트 생성 성공!', upbitChart);
-            
-            // 로딩 메시지 숨기기
-            const loadingMsg = document.getElementById('loadingMessage');
-            if (loadingMsg) {
-                loadingMsg.style.display = 'none';
-            }
-            
-            // 성공 메시지 표시
-            console.log('🎉 차트가 성공적으로 표시되었습니다!');
-        }
+        // 기존 복잡한 함수들 제거하고 단순화
         
         // 실제 업비트 데이터 로드
         async function loadRealUpbitData() {
