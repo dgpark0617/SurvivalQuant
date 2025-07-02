@@ -389,7 +389,7 @@
                     📊 업비트 실시간 차트 영역
                 </h2>
                 
-                <div style="background: white; 
+                <div id="chartPlaceholder" style="background: white; 
                            border: 3px dashed #5f27cd; 
                            border-radius: 10px; 
                            height: 400px; 
@@ -537,7 +537,9 @@
             setTimeout(() => {
                 console.log('차트 영역 교체 시도...');
                 
-                                 const chartArea = document.querySelector('div[style*="여기에 차트가 표시됩니다"]');
+                                 // ID로 차트 영역 찾기
+                const chartArea = document.getElementById('chartPlaceholder');
+                console.log('찾은 차트 영역:', chartArea);
                  if (chartArea) {
                      // Chart.js 사용 가능한지 확인
                      if (typeof Chart !== 'undefined') {
