@@ -771,20 +771,58 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
             console.log('🔄 실제 업비트 API 연결 시도...');
             
             try {
-                // 1. 원하는 11개 코인 지정
-                const targetCoins = ['KRW-BTC', 'KRW-ETH', 'KRW-XRP', 'KRW-ADA', 'KRW-SOL', 'KRW-DOGE', 'KRW-AVAX', 'KRW-MATIC', 'KRW-DOT', 'KRW-LINK', 'KRW-UNI'];
+                // 1. 먼저 간단한 테스트 API 호출
+                console.log('🧪 업비트 API 접근 테스트...');
+                const testResponse = await fetch('https://api.upbit.com/v1/market/all');
                 
-                console.log('📊 타겟 코인 11개 설정 완료');
+                if (!testResponse.ok) {
+                    throw new Error(`API 응답 오류: ${testResponse.status} ${testResponse.statusText}`);
+                }
                 
-                // 2. 현재 가격 및 24시간 변화율 정보 가져오기 (전체 한 번에)
+                const testData = await testResponse.json();
+                console.log('✅ 업비트 API 접근 성공!', testData.length, '개 마켓 확인');
+                
+                // 2. 원하는 11개 코인 지정 (실제 존재하는 코인들로)
+                const availableCoins = testData
+                    .filter(market => market.market.startsWith('KRW-'))
+                    .map(market => market.market);
+                
+                console.log('📋 사용 가능한 원화 마켓:', availableCoins.slice(0, 20));
+                
+                // 주요 코인들 우선 선택
+                const targetCoins = [];
+                const preferredCoins = ['KRW-BTC', 'KRW-ETH', 'KRW-XRP', 'KRW-ADA', 'KRW-SOL', 'KRW-DOGE', 'KRW-AVAX', 'KRW-MATIC', 'KRW-DOT', 'KRW-LINK', 'KRW-UNI'];
+                
+                preferredCoins.forEach(coin => {
+                    if (availableCoins.includes(coin)) {
+                        targetCoins.push(coin);
+                    }
+                });
+                
+                // 부족하면 다른 코인들로 채우기
+                if (targetCoins.length < 11) {
+                    const additionalCoins = availableCoins.filter(coin => !targetCoins.includes(coin));
+                    targetCoins.push(...additionalCoins.slice(0, 11 - targetCoins.length));
+                }
+                
+                console.log('🎯 선택된 타겟 코인:', targetCoins);
+                
+                // 3. 현재 가격 및 24시간 변화율 정보 가져오기
                 const marketCodes = targetCoins.join(',');
+                console.log('📡 API 호출:', `https://api.upbit.com/v1/ticker?markets=${marketCodes}`);
+                
                 const priceResponse = await fetch(`https://api.upbit.com/v1/ticker?markets=${marketCodes}`);
+                
+                if (!priceResponse.ok) {
+                    throw new Error(`가격 정보 API 오류: ${priceResponse.status} ${priceResponse.statusText}`);
+                }
+                
                 const priceData = await priceResponse.json();
                 
-                console.log('💰 전체 코인 가격 정보 한 번에 로드 완료:', priceData.length, '개');
-                console.log('📋 로드된 코인들:', priceData.map(coin => coin.market));
+                console.log('💰 전체 코인 가격 정보 로드 완료:', priceData.length, '개');
+                console.log('� 가격 데이터 샘플:', priceData.slice(0, 3));
                 
-                // 3. 차트 데이터 초기화 (24시간 변화율 사용)
+                // 4. 차트 데이터 초기화
                 const coinNames = priceData.map(coin => coin.market.replace('KRW-', ''));
                 
                 // 차트 레이블과 데이터셋 업데이트
@@ -794,16 +832,69 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
                 
                 console.log('🎯 실제 코인 데이터로 전환:', coinNames);
                 
-                // 4. 첫 번째 데이터 포인트 추가
+                // 5. 첫 번째 데이터 포인트 추가
                 addInitialDataPoint(chart, priceData);
                 
-                // 5. 정기적으로 전체 가격 업데이트 (5초마다)
+                // 6. 정기적으로 전체 가격 업데이트 (5초마다)
                 startPeriodicPriceUpdate(chart, targetCoins);
                 
             } catch (error) {
                 console.error('❌ 실제 API 연결 실패:', error);
-                alert('업비트 API 연결에 실패했습니다. 네트워크를 확인해주세요.');
+                console.error('❌ 에러 상세:', error.message);
+                
+                // 데모 모드로 전환
+                console.log('🔄 데모 모드로 전환합니다...');
+                startDemoMode(chart);
             }
+        }
+        
+        // 데모 모드 (API 실패 시)
+        function startDemoMode(chart) {
+            console.log('📺 데모 모드 시작 - 가상 데이터로 차트 표시');
+            
+            // 가상 코인 이름들
+            const demoCoins = ['BTC', 'ETH', 'XRP', 'ADA', 'SOL', 'DOGE', 'AVAX', 'MATIC', 'DOT', 'LINK', 'UNI'];
+            
+            // 차트 레이블 업데이트
+            for (let i = 0; i < 11; i++) {
+                chart.data.datasets[i].label = `${demoCoins[i]} (데모)`;
+            }
+            
+            // 첫 번째 데이터 포인트
+            const now = new Date();
+            const timeLabel = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            
+            chart.data.labels.push(timeLabel);
+            
+            for (let i = 0; i < 11; i++) {
+                const randomChange = (Math.random() - 0.5) * 4; // -2% ~ +2%
+                chart.data.datasets[i].data.push(randomChange);
+            }
+            
+            chart.update();
+            
+            // 5초마다 데모 데이터 업데이트
+            setInterval(() => {
+                const now = new Date();
+                const timeLabel = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                
+                chart.data.labels.push(timeLabel);
+                
+                for (let i = 0; i < 11; i++) {
+                    const randomChange = (Math.random() - 0.5) * 4; // -2% ~ +2%
+                    chart.data.datasets[i].data.push(randomChange);
+                }
+                
+                // 50개 데이터 포인트 유지
+                if (chart.data.labels.length > 50) {
+                    chart.data.labels.shift();
+                    chart.data.datasets.forEach(dataset => dataset.data.shift());
+                }
+                
+                chart.update('none');
+                console.log(`📺 ${timeLabel} 데모 데이터 업데이트`);
+                
+            }, 5000);
         }
         
         // 첫 번째 데이터 포인트 추가
