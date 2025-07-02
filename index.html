@@ -1,12 +1,10 @@
-THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SurvivalQuant</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -476,48 +474,18 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
             '#F472B6', '#A78BFA', '#FB7185', '#34D399', '#FBBF24', '#60A5FA'
         ];
         
-        // 차트 초기화
-        async function initializeUpbitChart() {
+        // 차트 초기화 (간단한 버전)
+        function initializeUpbitChart() {
+            console.log('업비트 차트 초기화 시작...');
+            
             try {
-                console.log('업비트 차트 초기화 시작...');
-                
-                // 1. 모든 원화 마켓 가져오기
-                const markets = await getUpbitMarkets();
-                console.log(`총 ${markets.length}개 코인 발견`);
-                
-                // 2. 초기 가격 데이터 가져오기
-                const initialPrices = await getCurrentPrices(markets);
-                chartStartTime = new Date();
-                
-                // 3. 기준가격 설정
-                initialPrices.forEach(coin => {
-                    baselinePrices.set(coin.market, coin.trade_price);
-                    coinData.set(coin.market, {
-                        prices: [coin.trade_price],
-                        changes: [0], // 초기에는 변화율 0
-                        timestamps: [chartStartTime],
-                        name: coin.market.replace('KRW-', ''),
-                        basePrice: coin.trade_price
-                    });
-                });
-                
-                // 4. 차트 생성
+                // 먼저 테스트 차트 생성
                 createChart();
-                
-                // 5. WebSocket 연결
-                connectWebSocket(markets);
-                
-                // 6. 로딩 메시지 숨기기
-                document.getElementById('loadingMessage').style.display = 'none';
-                
-                // 7. 통계 정보 업데이트
-                updateStats();
-                
-                console.log('업비트 차트 초기화 완료!');
+                console.log('초기 테스트 차트 생성 완료');
                 
             } catch (error) {
                 console.error('차트 초기화 실패:', error);
-                document.getElementById('loadingMessage').innerHTML = '❌ 데이터 로딩 실패';
+                document.getElementById('loadingMessage').innerHTML = '❌ 차트 생성 실패: ' + error.message;
             }
         }
         
@@ -540,31 +508,62 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
         // Chart.js 차트 생성
         function createChart() {
             const ctx = document.getElementById('upbitChart').getContext('2d');
+            console.log('차트 생성 시작, Canvas 요소:', ctx);
+            
+            // 테스트 데이터 생성
+            const testData = [];
+            for (let i = 0; i < 50; i++) {
+                testData.push({
+                    x: i,
+                    y: Math.sin(i * 0.1) * 2 + Math.random() * 0.5
+                });
+            }
             
             upbitChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    datasets: []
+                    datasets: [{
+                        label: 'BTC 테스트',
+                        data: testData,
+                        borderColor: '#FF6384',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.1,
+                        pointRadius: 1
+                    }, {
+                        label: 'ETH 테스트',
+                        data: testData.map(point => ({
+                            x: point.x,
+                            y: point.y + Math.random() - 0.5
+                        })),
+                        borderColor: '#36A2EB',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.1,
+                        pointRadius: 1
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: {
+                        duration: 0 // 애니메이션 비활성화
+                    },
                     interaction: {
                         mode: 'index',
                         intersect: false,
                     },
                     scales: {
                         x: {
-                            type: 'time',
-                            time: {
-                                unit: 'minute',
-                                displayFormats: {
-                                    minute: 'HH:mm'
-                                }
-                            },
+                            type: 'linear',
                             title: {
                                 display: true,
-                                text: '시간'
+                                text: '시간 경과 (5초 단위)'
+                            },
+                            grid: {
+                                display: true
                             }
                         },
                         y: {
@@ -572,12 +571,20 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
                             title: {
                                 display: true,
                                 text: displayMode === 'change' ? '변화율 (%)' : '가격 (원)'
+                            },
+                            grid: {
+                                display: true
                             }
                         }
                     },
                     plugins: {
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'line'
+                            }
                         },
                         tooltip: {
                             mode: 'index',
@@ -597,15 +604,89 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
                     },
                     elements: {
                         point: {
-                            radius: 0
+                            radius: 1
                         },
                         line: {
-                            borderWidth: 1.5,
+                            borderWidth: 2,
                             tension: 0.1
                         }
                     }
                 }
             });
+            
+            console.log('차트 생성 완료:', upbitChart);
+            
+            // 5초 후 실제 업비트 데이터 로드 시작
+            setTimeout(() => {
+                console.log('실제 업비트 데이터 로딩 시작...');
+                loadRealUpbitData();
+            }, 5000);
+        }
+        
+        // 실제 업비트 데이터 로드
+        async function loadRealUpbitData() {
+            try {
+                const markets = await getUpbitMarkets();
+                const initialPrices = await getCurrentPrices(markets.slice(0, 20)); // 처음엔 20개만
+                
+                console.log(`${initialPrices.length}개 코인 데이터 로드 완료`);
+                
+                // 실제 데이터로 차트 업데이트
+                updateChartWithRealData(initialPrices);
+                
+                // WebSocket 연결
+                connectWebSocket(markets.slice(0, 20));
+                
+            } catch (error) {
+                console.error('실제 데이터 로드 실패:', error);
+            }
+        }
+        
+        // 실제 데이터로 차트 업데이트
+        function updateChartWithRealData(priceData) {
+            if (!upbitChart) return;
+            
+            chartStartTime = new Date();
+            const timeIndex = 0;
+            
+            // 기존 테스트 데이터 제거
+            upbitChart.data.datasets = [];
+            
+            // 실제 코인 데이터 추가
+            priceData.forEach((coin, index) => {
+                const symbol = coin.market;
+                const price = coin.trade_price;
+                
+                // 기준가격 설정
+                baselinePrices.set(symbol, price);
+                coinData.set(symbol, {
+                    prices: [price],
+                    changes: [0],
+                    timestamps: [chartStartTime],
+                    name: symbol.replace('KRW-', ''),
+                    basePrice: price
+                });
+                
+                // 차트 데이터셋 추가
+                const color = colorPalette[index % colorPalette.length];
+                upbitChart.data.datasets.push({
+                    label: symbol.replace('KRW-', ''),
+                    data: [{x: timeIndex, y: 0}], // 초기 변화율 0%
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    borderWidth: 1.5,
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 1
+                });
+            });
+            
+            upbitChart.update();
+            
+            // 로딩 메시지 숨기기
+            document.getElementById('loadingMessage').style.display = 'none';
+            
+            console.log('실제 업비트 데이터로 차트 업데이트 완료');
         }
         
         // WebSocket 연결
@@ -680,7 +761,7 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
             }
         }
         
-        // 차트 업데이트 쓰로틀링
+        // 차트 업데이트 쓰로틀링 (5초 간격)
         let lastChartUpdate = 0;
         let updateQueue = new Set();
         
@@ -688,46 +769,64 @@ THIS SHOULD BE A LINTER ERROR<!DOCTYPE html>
             updateQueue.add(symbol);
             
             const now = Date.now();
-            if (now - lastChartUpdate > 1000) { // 1초마다 업데이트
+            if (now - lastChartUpdate > 5000) { // 5초마다 업데이트
                 batchUpdateChart();
                 lastChartUpdate = now;
+                console.log('차트 업데이트됨 (5초 간격)');
             }
         }
         
         function batchUpdateChart() {
-            if (!upbitChart) return;
+            if (!upbitChart) {
+                console.log('차트가 아직 초기화되지 않음');
+                return;
+            }
+            
+            console.log('차트 배치 업데이트 시작...');
             
             // 표시할 코인 필터링
             const coinsToShow = getDisplayCoins();
+            console.log(`표시할 코인 수: ${coinsToShow.length}`);
             
-            // 기존 datasets 정리
-            upbitChart.data.datasets = [];
+            // 기존 datasets 정리 (첫 2개 테스트 데이터 제외하고)
+            const realDatasets = [];
             
             // 선택된 코인들만 차트에 추가
             coinsToShow.forEach((symbol, index) => {
                 const data = coinData.get(symbol);
-                if (data && data.timestamps.length > 1) {
+                if (data && data.timestamps.length > 0) {
                     const color = colorPalette[index % colorPalette.length];
                     const values = displayMode === 'change' ? data.changes : data.prices;
                     
-                    upbitChart.data.datasets.push({
+                    // 시간 기반 x축 데이터 생성 (5초 간격)
+                    const chartData = data.timestamps.map((time, idx) => ({
+                        x: idx * 5, // 5초 간격으로 표시
+                        y: values[idx]
+                    }));
+                    
+                    realDatasets.push({
                         label: data.name,
-                        data: data.timestamps.map((time, idx) => ({
-                            x: time,
-                            y: values[idx]
-                        })),
+                        data: chartData,
                         borderColor: color,
                         backgroundColor: color + '20',
                         borderWidth: 1.5,
                         fill: false,
-                        tension: 0.1
+                        tension: 0.1,
+                        pointRadius: 1
                     });
                 }
             });
             
+            // 실제 데이터가 있으면 테스트 데이터 대체
+            if (realDatasets.length > 0) {
+                upbitChart.data.datasets = realDatasets;
+            }
+            
             upbitChart.update('none');
             updateStats();
             updateQueue.clear();
+            
+            console.log('차트 업데이트 완료');
         }
         
         // 표시할 코인 선택
