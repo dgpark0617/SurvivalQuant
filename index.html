@@ -13,23 +13,22 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #ffffff;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            color: #333;
         }
         
         .container {
             text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: #ffffff;
+            border: 2px solid #e0e0e0;
             border-radius: 20px;
             padding: 40px;
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-            max-width: 500px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            max-width: 600px;
             width: 90%;
         }
         
@@ -40,15 +39,15 @@
         }
         
         .url-display {
-            background: rgba(255, 255, 255, 0.9);
+            background: #f8f9fa;
             color: #333;
             padding: 15px 20px;
             border-radius: 10px;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 500;
-            margin: 20px 0;
+            margin: 15px 0;
             word-break: break-all;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid #e9ecef;
             transition: all 0.3s ease;
         }
         
@@ -88,11 +87,35 @@
             font-weight: 500;
             margin-top: 10px;
         }
+        
+        .link-display {
+            background: #f8f9fa;
+            color: #333;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .link-display a {
+            color: #0066cc;
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .link-display a:hover {
+            color: #004499;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🚀 SurvivalQuant</h1>
+        
         <div class="url-display" id="urlDisplay">
             https://dgpark0617.github.io/SurvivalQuant/
         </div>
@@ -102,6 +125,13 @@
         <div class="success-message" id="successMessage">
             ✅ URL이 클립보드에 복사되었습니다!
         </div>
+        
+        <div class="link-display">
+            <a href="https://www.bybit.com/copyMt5/trade-center/detail?providerMark=xkc2wsLqVomphpP%2FtV6RRQ%3D%3D" target="_blank">
+                🌟 EconomicEden
+            </a>
+        </div>
+        
         <div class="description">
             <p>GitHub Pages로 호스팅되는 간단한 웹사이트입니다.</p>
             <p>위의 URL을 통해 외부에서 접근할 수 있습니다.</p>
