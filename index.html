@@ -507,19 +507,46 @@
         
         // Chart.js 차트 생성
         function createChart() {
-            const ctx = document.getElementById('upbitChart').getContext('2d');
-            console.log('차트 생성 시작, Canvas 요소:', ctx);
+            console.log('차트 생성 함수 호출됨');
             
-            // 테스트 데이터 생성
-            const testData = [];
-            for (let i = 0; i < 50; i++) {
-                testData.push({
-                    x: i,
-                    y: Math.sin(i * 0.1) * 2 + Math.random() * 0.5
-                });
+            // Chart.js 로드 확인
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js가 로드되지 않았습니다!');
+                document.getElementById('loadingMessage').innerHTML = '❌ Chart.js 라이브러리 로드 실패';
+                return;
             }
             
-            upbitChart = new Chart(ctx, {
+            // Canvas 요소 확인
+            const canvas = document.getElementById('upbitChart');
+            if (!canvas) {
+                console.error('Canvas 요소를 찾을 수 없습니다!');
+                document.getElementById('loadingMessage').innerHTML = '❌ Canvas 요소 없음';
+                return;
+            }
+            
+            console.log('Canvas 요소 확인됨:', canvas);
+            
+            // Canvas 크기 명시적 설정
+            canvas.width = 800;
+            canvas.height = 350;
+            canvas.style.width = '100%';
+            canvas.style.height = '350px';
+            
+            const ctx = canvas.getContext('2d');
+            console.log('Context 생성됨:', ctx);
+            
+            // 간단한 테스트 데이터
+            const testData = [
+                {x: 0, y: 0},
+                {x: 10, y: 1.5},
+                {x: 20, y: -0.8},
+                {x: 30, y: 2.1},
+                {x: 40, y: -1.2},
+                {x: 50, y: 0.9}
+            ];
+            
+            try {
+                upbitChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     datasets: [{
