@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎀 인형 옷 갈아입히기 - SurvivalQuant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Comic Sans MS', cursive, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 50%, #ffccdd 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            padding: 25px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: linear-gradient(45deg, #ff69b4, #ff1493, #da70d6);
+            color: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(255, 105, 180, 0.3);
+        }
+        
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 15px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-3px);
+        }
+        
+        .game-area {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 25px;
+            min-height: 700px;
+        }
+        
+        .clothing-panel {
+            background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
+            border-radius: 20px;
+            padding: 20px;
+            border: 3px solid #ff69b4;
+            box-shadow: 0 8px 20px rgba(255, 105, 180, 0.2);
+        }
+        
+        .category-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #d63384;
+            margin-bottom: 15px;
+            text-align: center;
+            padding: 12px;
+            background: linear-gradient(45deg, rgba(255, 105, 180, 0.15), rgba(218, 112, 214, 0.15));
+            border-radius: 15px;
+            border: 2px solid rgba(255, 105, 180, 0.3);
+        }
+        
+        .clothing-items {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .clothing-item {
+            aspect-ratio: 1;
+            border: 3px solid #ffb3d9;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .clothing-item:hover {
+            transform: scale(1.08) rotate(2deg);
+            border-color: #ff1493;
+            box-shadow: 0 8px 25px rgba(255, 20, 147, 0.4);
+            z-index: 10;
+        }
+        
+        .clothing-item.selected {
+            border-color: #ff1493;
+            background: linear-gradient(45deg, #ffe4e1, #ffd0dc);
+            transform: scale(0.95);
+            box-shadow: inset 0 4px 8px rgba(255, 20, 147, 0.2);
+        }
+        
+        .doll-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 20px;
+            border: 3px solid #ff69b4;
+            position: relative;
+            min-height: 700px;
+            box-shadow: inset 0 0 30px rgba(255, 105, 180, 0.1);
+        }
+        
+        .doll {
+            position: relative;
+            width: 280px;
+            height: 500px;
+            margin: 20px;
+        }
+        
+        .controls {
+            text-align: center;
+            margin-top: 25px;
+        }
+        
+        .reset-btn, .save-btn {
+            padding: 15px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 0 15px;
+            border: none;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .reset-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+        
+        .reset-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(238, 90, 36, 0.4);
+        }
+        
+        .save-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        .save-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="index.html" class="back-btn">← 게임 목록으로</a>
+            <h1>🎀 프리미엄 인형 옷 갈아입히기</h1>
+            <p>아름다운 인형을 꾸며보세요! ✨💕</p>
+        </div>
+        
+        <div class="game-area">
+            <!-- 왼쪽 옷장 -->
+            <div class="clothing-panel">
+                <div class="category-title">💇‍♀️ 헤어스타일</div>
+                <div class="clothing-items" id="hair-items">
+                    <!-- 헤어 아이템들이 동적으로 추가됩니다 -->
+                </div>
+                
+                <div class="category-title">👕 상의</div>
+                <div class="clothing-items" id="top-items">
+                    <!-- 상의 아이템들이 동적으로 추가됩니다 -->
+                </div>
+            </div>
+            
+            <!-- 중앙 인형 -->
+            <div class="doll-container">
+                <div class="doll" id="doll">
+                    <!-- SVG 인형이 여기에 추가됩니다 -->
+                </div>
+            </div>
+            
+            <!-- 오른쪽 옷장 -->
+            <div class="clothing-panel">
+                <div class="category-title">👗 하의</div>
+                <div class="clothing-items" id="bottom-items">
+                    <!-- 하의 아이템들이 동적으로 추가됩니다 -->
+                </div>
+                
+                <div class="category-title">👠 신발</div>
+                <div class="clothing-items" id="shoes-items">
+                    <!-- 신발 아이템들이 동적으로 추가됩니다 -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="reset-btn" onclick="resetDoll()">🔄 모두 벗기기</button>
+            <button class="save-btn" onclick="saveDoll()">📸 사진 찍기</button>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let currentHair = 0;
+        let currentTop = 0;
+        let currentBottom = 0;
+        let currentShoes = 0;
+        
+        // 고품질 SVG 인형 생성
+        function createDoll() {
+            const dollContainer = document.getElementById('doll');
+            dollContainer.innerHTML = `
+                <svg width="280" height="500" viewBox="0 0 280 500" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 인형 기본 몸체 -->
+                    <defs>
+                        <radialGradient id="skinGradient" cx="0.3" cy="0.3">
+                            <stop offset="0%" stop-color="#fdd5c7"/>
+                            <stop offset="100%" stop-color="#f4a688"/>
+                        </radialGradient>
+                        <linearGradient id="cheekGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#ff9eb5" stop-opacity="0.8"/>
+                            <stop offset="100%" stop-color="#ff6b9d" stop-opacity="0.6"/>
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- 머리 -->
+                    <circle cx="140" cy="80" r="45" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2"/>
+                    
+                    <!-- 얼굴 -->
+                    <g id="face">
+                        <!-- 눈 -->
+                        <ellipse cx="125" cy="70" rx="8" ry="12" fill="#333"/>
+                        <ellipse cx="155" cy="70" rx="8" ry="12" fill="#333"/>
+                        <ellipse cx="127" cy="67" rx="3" ry="4" fill="white"/>
+                        <ellipse cx="157" cy="67" rx="3" ry="4" fill="white"/>
+                        
+                        <!-- 눈썹 -->
+                        <path d="M115 60 Q125 55 135 60" stroke="#8B4513" stroke-width="2" fill="none"/>
+                        <path d="M145 60 Q155 55 165 60" stroke="#8B4513" stroke-width="2" fill="none"/>
+                        
+                        <!-- 코 -->
+                        <ellipse cx="140" cy="80" rx="2" ry="3" fill="#e6967a"/>
+                        
+                        <!-- 입 -->
+                        <path d="M130 90 Q140 100 150 90" stroke="#ff6b9d" stroke-width="3" fill="none"/>
+                        
+                        <!-- 볼 -->
+                        <circle cx="110" cy="85" r="8" fill="url(#cheekGradient)"/>
+                        <circle cx="170" cy="85" r="8" fill="url(#cheekGradient)"/>
+                    </g>
+                    
+                    <!-- 목 -->
+                    <rect x="125" y="120" width="30" height="25" fill="url(#skinGradient)" rx="15"/>
+                    
+                    <!-- 몸통 -->
+                    <ellipse cx="140" cy="200" rx="50" ry="80" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2"/>
+                    
+                    <!-- 팔 -->
+                    <ellipse cx="85" cy="180" rx="15" ry="45" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2" transform="rotate(-20 85 180)"/>
+                    <ellipse cx="195" cy="180" rx="15" ry="45" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2" transform="rotate(20 195 180)"/>
+                    
+                    <!-- 손 -->
+                    <circle cx="75" cy="210" r="12" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2"/>
+                    <circle cx="205" cy="210" r="12" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2"/>
+                    
+                    <!-- 다리 -->
+                    <ellipse cx="115" cy="340" rx="18" ry="60" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2"/>
+                    <ellipse cx="165" cy="340" rx="18" ry="60" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2"/>
+                    
+                    <!-- 발 -->
+                    <ellipse cx="115" cy="420" rx="15" ry="25" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2"/>
+                    <ellipse cx="165" cy="420" rx="15" ry="25" fill="url(#skinGradient)" stroke="#d4a574" stroke-width="2"/>
+                    
+                    <!-- 옷 레이어들 -->
+                    <g id="hair-layer"></g>
+                    <g id="top-layer"></g>
+                    <g id="bottom-layer"></g>
+                    <g id="shoes-layer"></g>
+                </svg>
+            `;
+        }
+        
+        // 헤어스타일 데이터
+        const hairStyles = [
+            {
+                name: '갈색 웨이브',
+                svg: `<path d="M95 40 Q140 25 185 40 Q190 50 185 65 Q180 75 170 80 Q140 85 110 80 Q100 75 95 65 Q90 50 95 40" fill="#8B4513" stroke="#654321" stroke-width="2"/>
+                      <path d="M100 45 Q120 35 140 40 Q160 35 180 45" stroke="#A0522D" stroke-width="3" fill="none" opacity="0.7"/>`,
+                emoji: '🤎'
+            },
+            {
+                name: '금발 포니테일',
+                svg: `<circle cx="140" cy="50" r="40" fill="#FFD700" stroke="#DAA520" stroke-width="2"/>
+                      <ellipse cx="180" cy="45" rx="15" ry="35" fill="#FFD700" stroke="#DAA520" stroke-width="2" transform="rotate(30 180 45)"/>
+                      <path d="M175 35 Q185 25 190 40 Q185 50 175 55" fill="#FFA500" stroke="#DAA520" stroke-width="1"/>`,
+                emoji: '💛'
+            },
+            {
+                name: '검은 단발',
+                svg: `<path d="M95 35 Q140 20 185 35 Q185 55 180 70 Q140 80 100 70 Q95 55 95 35" fill="#000" stroke="#333" stroke-width="2"/>
+                      <path d="M100 40 Q140 30 180 40" stroke="#333" stroke-width="2" fill="none"/>`,
+                emoji: '🖤'
+            },
+            {
+                name: '빨간 컬리',
+                svg: `<circle cx="140" cy="50" r="42" fill="#DC143C" stroke="#B22222" stroke-width="2"/>
+                      <circle cx="120" cy="40" r="12" fill="#FF6347" opacity="0.8"/>
+                      <circle cx="160" cy="40" r="12" fill="#FF6347" opacity="0.8"/>
+                      <circle cx="130" cy="60" r="8" fill="#FF6347" opacity="0.6"/>
+                      <circle cx="150" cy="60" r="8" fill="#FF6347" opacity="0.6"/>`,
+                emoji: '🧡'
+            }
+        ];
+        
+        // 상의 데이터
+        const topStyles = [
+            {
+                name: '핑크 드레스',
+                svg: `<path d="M90 145 Q140 140 190 145 Q195 160 190 180 Q185 200 180 220 Q140 225 100 220 Q95 200 90 180 Q85 160 90 145" fill="#FF69B4" stroke="#FF1493" stroke-width="2"/>
+                      <rect x="120" y="150" width="40" height="15" fill="#FFB6C1" rx="7"/>
+                      <circle cx="130" cy="165" r="3" fill="#FF1493"/>
+                      <circle cx="150" cy="165" r="3" fill="#FF1493"/>`,
+                emoji: '💗'
+            },
+            {
+                name: '하늘색 블라우스',
+                svg: `<rect x="90" y="145" width="100" height="75" fill="#87CEEB" stroke="#4682B4" stroke-width="2" rx="15"/>
+                      <rect x="110" y="155" width="60" height="55" fill="#B0E0E6" rx="10"/>
+                      <line x1="125" y1="160" x2="125" y2="200" stroke="#4682B4" stroke-width="2"/>
+                      <line x1="155" y1="160" x2="155" y2="200" stroke="#4682B4" stroke-width="2"/>`,
+                emoji: '💙'
+            },
+            {
+                name: '초록 티셔츠',
+                svg: `<rect x="90" y="145" width="100" height="70" fill="#98FB98" stroke="#32CD32" stroke-width="2" rx="12"/>
+                      <ellipse cx="140" cy="175" rx="25" ry="15" fill="#90EE90"/>
+                      <text x="140" y="180" text-anchor="middle" font-family="Arial" font-size="12" fill="#228B22">♡</text>`,
+                emoji: '💚'
+            },
+            {
+                name: '보라 스웨터',
+                svg: `<rect x="90" y="145" width="100" height="75" fill="#DDA0DD" stroke="#9370DB" stroke-width="2" rx="18"/>
+                      <rect x="100" y="155" width="80" height="20" fill="#E6E6FA" rx="10"/>
+                      <circle cx="115" cy="175" r="4" fill="#9370DB"/>
+                      <circle cx="140" cy="175" r="4" fill="#9370DB"/>
+                      <circle cx="165" cy="175" r="4" fill="#9370DB"/>`,
+                emoji: '💜'
+            }
+        ];
+        
+        // 하의 데이터
+        const bottomStyles = [
+            {
+                name: '핑크 스커트',
+                svg: `<path d="M100 220 Q140 215 180 220 Q190 240 185 270 Q180 290 170 300 Q140 305 110 300 Q100 290 95 270 Q90 240 100 220" fill="#FF1493" stroke="#DC143C" stroke-width="2"/>
+                      <path d="M105 230 Q140 225 175 230" stroke="#FFB6C1" stroke-width="3" fill="none"/>`,
+                emoji: '💗'
+            },
+            {
+                name: '파란 청바지',
+                svg: `<rect x="97" y="220" width="36" height="80" fill="#4169E1" stroke="#191970" stroke-width="2" rx="18"/>
+                      <rect x="147" y="220" width="36" height="80" fill="#4169E1" stroke="#191970" stroke-width="2" rx="18"/>
+                      <line x1="115" y1="240" x2="115" y2="280" stroke="#6495ED" stroke-width="2"/>
+                      <line x1="165" y1="240" x2="165" y2="280" stroke="#6495ED" stroke-width="2"/>`,
+                emoji: '💙'
+            },
+            {
+                name: '초록 반바지',
+                svg: `<rect x="100" y="220" width="80" height="50" fill="#32CD32" stroke="#228B22" stroke-width="2" rx="15"/>
+                      <rect x="110" y="230" width="60" height="30" fill="#90EE90" rx="10"/>
+                      <circle cx="125" cy="240" r="3" fill="#228B22"/>
+                      <circle cx="155" cy="240" r="3" fill="#228B22"/>`,
+                emoji: '💚'
+            },
+            {
+                name: '노란 치마',
+                svg: `<path d="M95 220 Q140 215 185 220 Q190 235 185 255 Q180 275 175 285 Q140 290 105 285 Q100 275 95 255 Q90 235 95 220" fill="#FFD700" stroke="#FFA500" stroke-width="2"/>
+                      <rect x="110" y="225" width="60" height="8" fill="#FFFF00" rx="4"/>`,
+                emoji: '💛'
+            }
+        ];
+        
+        // 신발 데이터
+        const shoeStyles = [
+            {
+                name: '빨간 구두',
+                svg: `<ellipse cx="115" cy="430" rx="20" ry="15" fill="#DC143C" stroke="#8B0000" stroke-width="2"/>
+                      <ellipse cx="165" cy="430" rx="20" ry="15" fill="#DC143C" stroke="#8B0000" stroke-width="2"/>
+                      <ellipse cx="115" cy="425" rx="15" ry="8" fill="#FF6347"/>
+                      <ellipse cx="165" cy="425" rx="15" ry="8" fill="#FF6347"/>`,
+                emoji: '❤️'
+            },
+            {
+                name: '검은 부츠',
+                svg: `<rect x="95" y="415" width="40" height="30" fill="#000" stroke="#333" stroke-width="2" rx="10"/>
+                      <rect x="145" y="415" width="40" height="30" fill="#000" stroke="#333" stroke-width="2" rx="10"/>
+                      <rect x="100" y="420" width="30" height="20" fill="#333" rx="5"/>
+                      <rect x="150" y="420" width="30" height="20" fill="#333" rx="5"/>`,
+                emoji: '🖤'
+            },
+            {
+                name: '핑크 운동화',
+                svg: `<ellipse cx="115" cy="430" rx="22" ry="18" fill="#FF69B4" stroke="#FF1493" stroke-width="2"/>
+                      <ellipse cx="165" cy="430" rx="22" ry="18" fill="#FF69B4" stroke="#FF1493" stroke-width="2"/>
+                      <ellipse cx="115" cy="425" rx="18" ry="12" fill="#FFB6C1"/>
+                      <ellipse cx="165" cy="425" rx="18" ry="12" fill="#FFB6C1"/>
+                      <line x1="105" y1="430" x2="125" y2="430" stroke="white" stroke-width="2"/>
+                      <line x1="155" y1="430" x2="175" y2="430" stroke="white" stroke-width="2"/>`,
+                emoji: '💗'
+            },
+            {
+                name: '파란 샌들',
+                svg: `<ellipse cx="115" cy="435" rx="18" ry="12" fill="#4169E1" stroke="#191970" stroke-width="2"/>
+                      <ellipse cx="165" cy="435" rx="18" ry="12" fill="#4169E1" stroke="#191970" stroke-width="2"/>
+                      <path d="M105 430 Q115 425 125 430" stroke="#6495ED" stroke-width="3" fill="none"/>
+                      <path d="M155 430 Q165 425 175 430" stroke="#6495ED" stroke-width="3" fill="none"/>`,
+                emoji: '💙'
+            }
+        ];
+        
+        // 옷 아이템 생성 함수
+        function createClothingItems() {
+            // 헤어스타일 아이템 생성
+            const hairContainer = document.getElementById('hair-items');
+            hairStyles.forEach((hair, index) => {
+                const item = document.createElement('div');
+                item.className = 'clothing-item';
+                item.innerHTML = `
+                    <div style="font-size: 2.5rem;">${hair.emoji}</div>
+                    <div style="position: absolute; bottom: 5px; font-size: 0.8rem; color: #666;">${hair.name}</div>
+                `;
+                item.onclick = () => changeHair(index + 1);
+                hairContainer.appendChild(item);
+            });
+            
+            // 상의 아이템 생성
+            const topContainer = document.getElementById('top-items');
+            topStyles.forEach((top, index) => {
+                const item = document.createElement('div');
+                item.className = 'clothing-item';
+                item.innerHTML = `
+                    <div style="font-size: 2.5rem;">${top.emoji}</div>
+                    <div style="position: absolute; bottom: 5px; font-size: 0.8rem; color: #666;">${top.name}</div>
+                `;
+                item.onclick = () => changeTop(index + 1);
+                topContainer.appendChild(item);
+            });
+            
+            // 하의 아이템 생성
+            const bottomContainer = document.getElementById('bottom-items');
+            bottomStyles.forEach((bottom, index) => {
+                const item = document.createElement('div');
+                item.className = 'clothing-item';
+                item.innerHTML = `
+                    <div style="font-size: 2.5rem;">${bottom.emoji}</div>
+                    <div style="position: absolute; bottom: 5px; font-size: 0.8rem; color: #666;">${bottom.name}</div>
+                `;
+                item.onclick = () => changeBottom(index + 1);
+                bottomContainer.appendChild(item);
+            });
+            
+            // 신발 아이템 생성
+            const shoesContainer = document.getElementById('shoes-items');
+            shoeStyles.forEach((shoes, index) => {
+                const item = document.createElement('div');
+                item.className = 'clothing-item';
+                item.innerHTML = `
+                    <div style="font-size: 2.5rem;">${shoes.emoji}</div>
+                    <div style="position: absolute; bottom: 5px; font-size: 0.8rem; color: #666;">${shoes.name}</div>
+                `;
+                item.onclick = () => changeShoes(index + 1);
+                shoesContainer.appendChild(item);
+            });
+        }
+        
+        // 옷 갈아입히기 함수들
+        function changeHair(hairId) {
+            currentHair = hairId;
+            const hairLayer = document.getElementById('hair-layer');
+            if (hairId > 0) {
+                hairLayer.innerHTML = hairStyles[hairId - 1].svg;
+            } else {
+                hairLayer.innerHTML = '';
+            }
+            updateButtonSelection('hair-items', hairId - 1);
+            playEffect();
+        }
+        
+        function changeTop(topId) {
+            currentTop = topId;
+            const topLayer = document.getElementById('top-layer');
+            if (topId > 0) {
+                topLayer.innerHTML = topStyles[topId - 1].svg;
+            } else {
+                topLayer.innerHTML = '';
+            }
+            updateButtonSelection('top-items', topId - 1);
+            playEffect();
+        }
+        
+        function changeBottom(bottomId) {
+            currentBottom = bottomId;
+            const bottomLayer = document.getElementById('bottom-layer');
+            if (bottomId > 0) {
+                bottomLayer.innerHTML = bottomStyles[bottomId - 1].svg;
+            } else {
+                bottomLayer.innerHTML = '';
+            }
+            updateButtonSelection('bottom-items', bottomId - 1);
+            playEffect();
+        }
+        
+        function changeShoes(shoesId) {
+            currentShoes = shoesId;
+            const shoesLayer = document.getElementById('shoes-layer');
+            if (shoesId > 0) {
+                shoesLayer.innerHTML = shoeStyles[shoesId - 1].svg;
+            } else {
+                shoesLayer.innerHTML = '';
+            }
+            updateButtonSelection('shoes-items', shoesId - 1);
+            playEffect();
+        }
+        
+        function updateButtonSelection(containerId, activeIndex) {
+            const container = document.getElementById(containerId);
+            const buttons = container.querySelectorAll('.clothing-item');
+            buttons.forEach((button, index) => {
+                if (index === activeIndex) {
+                    button.classList.add('selected');
+                    setTimeout(() => button.classList.remove('selected'), 300);
+                }
+            });
+        }
+        
+        function resetDoll() {
+            changeHair(0);
+            changeTop(0);
+            changeBottom(0);
+            changeShoes(0);
+            playEffect();
+        }
+        
+        function saveDoll() {
+            const dollContainer = document.querySelector('.doll-container');
+            dollContainer.style.animation = 'flash 0.5s ease-in-out';
+            
+            setTimeout(() => {
+                dollContainer.style.animation = '';
+                alert('📸 아름다운 인형 사진을 찍었어요! 정말 예쁘게 꾸몄네요! 💕✨');
+            }, 500);
+        }
+        
+        function playEffect() {
+            // 시각적 효과
+            const doll = document.querySelector('.doll');
+            doll.style.transform = 'scale(1.02)';
+            setTimeout(() => {
+                doll.style.transform = 'scale(1)';
+            }, 200);
+        }
+        
+        // 페이지 로드 시 초기화
+        window.onload = function() {
+            createDoll();
+            createClothingItems();
+            
+            // CSS 애니메이션 추가
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes flash {
+                    0% { background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); }
+                    50% { background: linear-gradient(135deg, #fff9c4 0%, #ffeb3b 100%); }
+                    100% { background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); }
+                }
+                
+                .doll {
+                    transition: transform 0.2s ease;
+                }
+                
+                @media (max-width: 768px) {
+                    .game-area {
+                        grid-template-columns: 1fr;
+                        grid-template-rows: auto auto auto;
+                    }
+                    
+                    .clothing-panel {
+                        order: 2;
+                    }
+                    
+                    .doll-container {
+                        order: 1;
+                        min-height: 500px;
+                    }
+                    
+                    .doll {
+                        transform: scale(0.8);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            setTimeout(() => {
+                alert('🎀 프리미엄 인형 옷 갈아입히기 게임에 오신 걸 환영해요!\n\n이제 훨씬 더 예쁜 SVG 인형과 고품질 옷들로 꾸며보세요! ✨💕');
+            }, 800);
+        };
+    </script>
+</body>
+</html>
