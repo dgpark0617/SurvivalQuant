@@ -158,6 +158,10 @@
             color: #1976D2;
         }
         
+        .legend-item.minute1 {
+            color: #9C27B0;
+        }
+        
         .chart-info {
             margin-top: 20px;
             padding: 15px;
@@ -176,22 +180,26 @@
             margin-bottom: 0;
         }
         
-        .chart-container {
+        .fractal-chart-container {
             position: relative;
-            height: 450px;
+            height: 500px;
             width: 100%;
-            background: #ffffff;
-            border: 3px solid #007bff;
-            border-radius: 10px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border: 3px solid #ff69b4;
+            border-radius: 15px;
             padding: 20px;
             margin: 20px 0;
-            box-shadow: 0 4px 20px rgba(0, 123, 255, 0.2);
+            box-shadow: 0 8px 25px rgba(255, 105, 180, 0.3);
+            overflow: hidden;
         }
         
-        #overlayChart {
-            width: 100% !important;
-            height: 400px !important;
-            background: #ffffff;
+        .candle-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: calc(100% - 40px) !important;
+            height: calc(100% - 40px) !important;
+            pointer-events: none;
         }
         
         .stats-container {
@@ -438,10 +446,10 @@
             <p>EconomicEden - 실시간 코인 차트 및 투자 도구</p>
         </div>
         
-        <!-- 다중 시간대 오버레이 차트 섹션 -->
+        <!-- 프랙탈 캔들스틱 차트 섹션 -->
         <div class="chart-section">
             <div class="chart-header">
-                <h2 class="chart-title">📊 다중 시간대 오버레이 차트</h2>
+                <h2 class="chart-title">�️ 프랙탈 캔들스틱 차트</h2>
                 <div class="chart-controls">
                     <select id="coinSelector" class="coin-selector">
                         <option value="BTCUSDT">🟡 Bitcoin (BTC)</option>
@@ -457,21 +465,29 @@
                     <span class="legend-item hourly4">■ 4시간봉 (4H)</span>
                     <span class="legend-item minute30">■ 30분봉 (30M)</span>
                     <span class="legend-item minute5">■ 5분봉 (5M)</span>
+                    <span class="legend-item minute1">■ 1분봉 (1M)</span>
                 </div>
             </div>
             
-            <!-- 차트 표시 공간 -->
-            <div class="chart-container">
-                <canvas id="overlayChart"></canvas>
-                <div id="loadingMessage" class="loading">다중 시간대 데이터 로딩중...</div>
+            <!-- 프랙탈 캔들 차트 표시 공간 -->
+            <div class="fractal-chart-container">
+                <canvas id="dailyCanvas" class="candle-layer" style="z-index: 1;"></canvas>
+                <canvas id="hourly4Canvas" class="candle-layer" style="z-index: 2;"></canvas>
+                <canvas id="minute30Canvas" class="candle-layer" style="z-index: 3;"></canvas>
+                <canvas id="minute5Canvas" class="candle-layer" style="z-index: 4;"></canvas>
+                <canvas id="minute1Canvas" class="candle-layer" style="z-index: 5;"></canvas>
+                <div id="loadingMessage" class="loading">프랙탈 캔들 데이터 로딩중...</div>
             </div>
             
             <div class="chart-info">
                 <div class="info-item">
-                    <strong>컨셉:</strong> 하나의 차트에서 모든 시간대의 가격 움직임을 동시에 관찰
+                    <strong>혁신적 컨셉:</strong> 세계 최초 프랙탈 구조 캔들스틱 차트
                 </div>
                 <div class="info-item">
-                    <strong>투명도:</strong> 일봉(불투명) → 4시간봉(70%) → 30분봉(60%) → 5분봉(90%)
+                    <strong>구조:</strong> 일봉 → 4시간봉(6개) → 30분봉(8개) → 5분봉(6개) → 1분봉(5개)
+                </div>
+                <div class="info-item">
+                    <strong>투명도:</strong> 일봉(불투명) → 4시간봉(80%) → 30분봉(60%) → 5분봉(40%) → 1분봉(20%)
                 </div>
             </div>
         </div>
@@ -555,155 +571,62 @@
             });
         }
         
-        // 다중 시간대 오버레이 차트 변수들
-        let overlayChart = null;
+        // 프랙탈 캔들스틱 차트 변수들
         let currentSymbol = 'BTCUSDT';
-        let timeframeData = {
+        let candleData = {
             '1d': [],
             '4h': [],
             '30m': [],
-            '5m': []
+            '5m': [],
+            '1m': []
+        };
+        let canvasContexts = {};
+        let chartDimensions = {
+            width: 0,
+            height: 0,
+            candleWidth: 120,
+            candleSpacing: 10
         };
         
-        // 다중 시간대 오버레이 차트 초기화
-        function initializeOverlayChart() {
-            console.log('=== 다중 시간대 오버레이 차트 시작 ===');
+        // 프랙탈 캔들스틱 차트 초기화
+        function initializeFractalChart() {
+            console.log('=== 🕯️ 프랙탈 캔들스틱 차트 시작 ===');
             
-            const canvas = document.getElementById('overlayChart');
-            const ctx = canvas.getContext('2d');
+            // 모든 캔버스 초기화
+            const canvasIds = ['dailyCanvas', 'hourly4Canvas', 'minute30Canvas', 'minute5Canvas', 'minute1Canvas'];
             
-            // Chart.js를 사용한 다중 시간대 오버레이 차트 생성
-            overlayChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [
-                        {
-                            label: '일봉 (1D)',
-                            data: [],
-                            borderColor: 'rgba(34, 34, 34, 1.0)',
-                            backgroundColor: 'rgba(34, 34, 34, 0.05)',
-                            borderWidth: 4,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 4,
-                            pointBackgroundColor: 'rgba(34, 34, 34, 1.0)'
-                        },
-                        {
-                            label: '4시간봉 (4H)',
-                            data: [],
-                            borderColor: 'rgba(255, 87, 51, 0.7)',
-                            backgroundColor: 'rgba(255, 87, 51, 0.05)',
-                            borderWidth: 3,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 3,
-                            pointBackgroundColor: 'rgba(255, 87, 51, 0.7)'
-                        },
-                        {
-                            label: '30분봉 (30M)',
-                            data: [],
-                            borderColor: 'rgba(46, 125, 50, 0.6)',
-                            backgroundColor: 'rgba(46, 125, 50, 0.03)',
-                            borderWidth: 2,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 2,
-                            pointBackgroundColor: 'rgba(46, 125, 50, 0.6)'
-                        },
-                        {
-                            label: '5분봉 (5M)',
-                            data: [],
-                            borderColor: 'rgba(25, 118, 210, 0.9)',
-                            backgroundColor: 'rgba(25, 118, 210, 0.02)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 1,
-                            pointBackgroundColor: 'rgba(25, 118, 210, 0.9)'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        duration: 1500,
-                        easing: 'easeInOutQuart'
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,
-                                font: { size: 11, weight: 'bold' },
-                                padding: 15
-                            }
-                        },
-                        title: {
-                            display: true,
-                            text: `${currentSymbol.replace('USDT', '')} - 다중 시간대 오버레이`,
-                            font: { size: 14, weight: 'bold' },
-                            padding: 20
-                        }
-                    },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: '시간 흐름 →',
-                                font: { size: 12, weight: 'bold' }
-                            },
-                            grid: { 
-                                display: true, 
-                                color: 'rgba(0,0,0,0.1)'
-                            },
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 45,
-                                maxTicksLimit: 10
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: '가격 ($)',
-                                font: { size: 12, weight: 'bold' }
-                            },
-                            grid: { 
-                                display: true, 
-                                color: 'rgba(0,0,0,0.1)'
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return '$' + value.toLocaleString();
-                                }
-                            }
-                        }
-                    },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    }
-                }
+            canvasIds.forEach(canvasId => {
+                const canvas = document.getElementById(canvasId);
+                const ctx = canvas.getContext('2d');
+                canvasContexts[canvasId] = ctx;
+                
+                // 캔버스 크기 설정
+                const container = canvas.parentElement;
+                canvas.width = container.clientWidth - 40;
+                canvas.height = container.clientHeight - 40;
+                
+                console.log(`✅ ${canvasId} 초기화 완료: ${canvas.width}x${canvas.height}`);
             });
             
-            console.log('✅ 다중 시간대 오버레이 차트 생성 성공!');
+            // 차트 크기 설정
+            chartDimensions.width = canvasContexts['dailyCanvas'].canvas.width;
+            chartDimensions.height = canvasContexts['dailyCanvas'].canvas.height;
+            
+            console.log('📐 차트 크기:', chartDimensions);
             
             // 코인 선택기 이벤트 리스너
             document.getElementById('coinSelector').addEventListener('change', function(e) {
                 currentSymbol = e.target.value;
-                loadMultiTimeframeData();
+                loadFractalCandleData();
             });
             
             // 초기 데이터 로드
-            loadMultiTimeframeData();
+            loadFractalCandleData();
         }
         
-        // 다중 시간대 데이터 로드
-        async function loadMultiTimeframeData() {
-            console.log(`🔄 ${currentSymbol} 다중 시간대 데이터 로딩 시작...`);
+        // 프랙탈 캔들 데이터 로드
+        async function loadFractalCandleData() {
+            console.log(`🔄 ${currentSymbol} 프랙탈 캔들 데이터 로딩 시작...`);
             
             try {
                 // 로딩 메시지 표시
@@ -711,34 +634,44 @@
                 
                 // 각 시간대별 데이터 병렬 로드
                 const promises = [
-                    fetchKlineData(currentSymbol, '1d', 30),   // 일봉 30개
-                    fetchKlineData(currentSymbol, '4h', 72),   // 4시간봉 72개 (12일)
-                    fetchKlineData(currentSymbol, '30m', 96),  // 30분봉 96개 (2일)
-                    fetchKlineData(currentSymbol, '5m', 144)   // 5분봉 144개 (12시간)
+                    fetchKlineData(currentSymbol, '1d', 5),    // 일봉 5개
+                    fetchKlineData(currentSymbol, '4h', 30),   // 4시간봉 30개 (5일)
+                    fetchKlineData(currentSymbol, '30m', 240), // 30분봉 240개 (5일)
+                    fetchKlineData(currentSymbol, '5m', 1440), // 5분봉 1440개 (5일)
+                    fetchKlineData(currentSymbol, '1m', 7200)  // 1분봉 7200개 (5일)
                 ];
                 
-                const [dailyData, hourly4Data, minute30Data, minute5Data] = await Promise.all(promises);
+                const [dailyData, hourly4Data, minute30Data, minute5Data, minute1Data] = await Promise.all(promises);
                 
                 // 데이터 저장
-                timeframeData['1d'] = dailyData;
-                timeframeData['4h'] = hourly4Data;
-                timeframeData['30m'] = minute30Data;
-                timeframeData['5m'] = minute5Data;
+                candleData['1d'] = dailyData;
+                candleData['4h'] = hourly4Data;
+                candleData['30m'] = minute30Data;
+                candleData['5m'] = minute5Data;
+                candleData['1m'] = minute1Data;
                 
-                // 차트 업데이트
-                updateOverlayChart();
+                console.log('📊 캔들 데이터 로딩 완료:', {
+                    '일봉': dailyData.length,
+                    '4시간봉': hourly4Data.length,
+                    '30분봉': minute30Data.length,
+                    '5분봉': minute5Data.length,
+                    '1분봉': minute1Data.length
+                });
+                
+                // 프랙탈 캔들 차트 그리기
+                drawFractalCandles();
                 
                 // 로딩 메시지 숨기기
                 document.getElementById('loadingMessage').style.display = 'none';
                 
-                console.log('✅ 다중 시간대 데이터 로딩 완료');
+                console.log('✅ 프랙탈 캔들 차트 완성!');
                 
             } catch (error) {
-                console.error('❌ 다중 시간대 데이터 로딩 실패:', error);
+                console.error('❌ 프랙탈 캔들 데이터 로딩 실패:', error);
                 
                 document.getElementById('loadingMessage').innerHTML = `
                     <div style="text-align: center; color: #ff4757;">
-                        ❌ 데이터 로딩에 실패했습니다<br>
+                        ❌ 프랙탈 캔들 데이터 로딩에 실패했습니다<br>
                         <small style="color: #666; font-size: 0.9rem;">에러: ${error.message}</small>
                     </div>
                 `;
@@ -775,82 +708,146 @@
             }
         }
         
-        // 오버레이 차트 업데이트
-        function updateOverlayChart() {
-            if (!overlayChart) return;
+        // 프랙탈 캔들 차트 그리기
+        function drawFractalCandles() {
+            console.log('🎨 프랙탈 캔들 그리기 시작...');
             
-            console.log('🔄 오버레이 차트 업데이트 시작...');
-            
-            // 가장 긴 시간대(일봉)를 기준으로 X축 라벨 생성
-            const dailyData = timeframeData['1d'];
-            if (dailyData.length === 0) return;
-            
-            // X축 라벨 생성 (일봉 기준)
-            const labels = dailyData.map(item => {
-                const date = new Date(item.timestamp);
-                return `${date.getMonth() + 1}/${date.getDate()}`;
+            // 모든 캔버스 클리어
+            Object.values(canvasContexts).forEach(ctx => {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             });
             
-            overlayChart.data.labels = labels;
+            // 가격 범위 계산 (모든 시간대 데이터 포함)
+            const priceRange = calculatePriceRange();
+            console.log('� 가격 범위:', priceRange);
             
-            // 각 시간대 데이터를 일봉 시간축에 맞춰 정규화
-            const datasets = [
-                normalizeDataToTimeframe(timeframeData['1d'], dailyData, '일봉'),
-                normalizeDataToTimeframe(timeframeData['4h'], dailyData, '4시간봉'),
-                normalizeDataToTimeframe(timeframeData['30m'], dailyData, '30분봉'),
-                normalizeDataToTimeframe(timeframeData['5m'], dailyData, '5분봉')
-            ];
+            // 각 시간대별 캔들 그리기
+            drawTimeframeCandles('1d', 'dailyCanvas', priceRange, 1.0, '#222222');
+            drawTimeframeCandles('4h', 'hourly4Canvas', priceRange, 0.8, '#FF5733');  
+            drawTimeframeCandles('30m', 'minute30Canvas', priceRange, 0.6, '#2E7D32');
+            drawTimeframeCandles('5m', 'minute5Canvas', priceRange, 0.4, '#1976D2');
+            drawTimeframeCandles('1m', 'minute1Canvas', priceRange, 0.2, '#9C27B0');
             
-            // 차트 데이터셋 업데이트
-            datasets.forEach((data, index) => {
-                if (overlayChart.data.datasets[index]) {
-                    overlayChart.data.datasets[index].data = data;
-                }
-            });
-            
-            // 차트 제목 업데이트
-            overlayChart.options.plugins.title.text = `${currentSymbol.replace('USDT', '')} - 다중 시간대 오버레이`;
-            
-            overlayChart.update();
-            
-            console.log('✅ 오버레이 차트 업데이트 완료');
+            console.log('✨ 프랙탈 캔들 그리기 완료!');
         }
         
-        // 데이터를 기준 시간대에 맞춰 정규화
-        function normalizeDataToTimeframe(sourceData, referenceData, label) {
-            if (sourceData.length === 0) return [];
+        // 가격 범위 계산
+        function calculatePriceRange() {
+            let allPrices = [];
             
-            const result = [];
-            
-            // 각 기준 시점에 대해 가장 가까운 소스 데이터 찾기
-            referenceData.forEach(refPoint => {
-                let closestData = sourceData[0];
-                let minTimeDiff = Math.abs(refPoint.timestamp - sourceData[0].timestamp);
-                
-                // 가장 가까운 시간의 데이터 찾기
-                sourceData.forEach(srcPoint => {
-                    const timeDiff = Math.abs(refPoint.timestamp - srcPoint.timestamp);
-                    if (timeDiff < minTimeDiff) {
-                        minTimeDiff = timeDiff;
-                        closestData = srcPoint;
-                    }
+            Object.values(candleData).forEach(timeframeData => {
+                timeframeData.forEach(candle => {
+                    allPrices.push(candle.high, candle.low);
                 });
-                
-                result.push(closestData.close);
             });
             
-            return result;
+            if (allPrices.length === 0) return { min: 0, max: 100 };
+            
+            const min = Math.min(...allPrices);
+            const max = Math.max(...allPrices);
+            const padding = (max - min) * 0.1; // 10% 여유 공간
+            
+            return {
+                min: min - padding,
+                max: max + padding
+            };
+        }
+        
+        // 특정 시간대 캔들 그리기
+        function drawTimeframeCandles(timeframe, canvasId, priceRange, opacity, color) {
+            const ctx = canvasContexts[canvasId];
+            const data = candleData[timeframe];
+            
+            if (!data || data.length === 0) return;
+            
+            console.log(`🕯️ ${timeframe} 캔들 그리기: ${data.length}개`);
+            
+            // 캔들 크기 계산
+            const candleWidth = getCandleWidth(timeframe);
+            const spacing = candleWidth * 0.1;
+            
+            // 최근 데이터만 표시 (화면에 맞게)
+            const maxCandles = Math.floor(chartDimensions.width / (candleWidth + spacing));
+            const recentData = data.slice(-maxCandles);
+            
+            recentData.forEach((candle, index) => {
+                const x = index * (candleWidth + spacing);
+                drawSingleCandle(ctx, x, candle, candleWidth, priceRange, opacity, color);
+            });
+        }
+        
+        // 시간대별 캔들 폭 계산
+        function getCandleWidth(timeframe) {
+            const baseWidth = chartDimensions.width / 10; // 기본 폭
+            
+            switch(timeframe) {
+                case '1d': return baseWidth;           // 가장 큰 캔들
+                case '4h': return baseWidth / 6;       // 일봉의 1/6
+                case '30m': return baseWidth / 48;     // 일봉의 1/48
+                case '5m': return baseWidth / 288;     // 일봉의 1/288
+                case '1m': return baseWidth / 1440;    // 일봉의 1/1440
+                default: return baseWidth;
+            }
+        }
+        
+        // 단일 캔들 그리기
+        function drawSingleCandle(ctx, x, candle, width, priceRange, opacity, color) {
+            // 가격을 Y좌표로 변환
+            const getY = (price) => {
+                const ratio = (price - priceRange.min) / (priceRange.max - priceRange.min);
+                return chartDimensions.height - (ratio * chartDimensions.height);
+            };
+            
+            const openY = getY(candle.open);
+            const closeY = getY(candle.close);
+            const highY = getY(candle.high);
+            const lowY = getY(candle.low);
+            
+            // 상승/하락 색상 결정
+            const isUp = candle.close >= candle.open;
+            const candleColor = isUp ? '#4CAF50' : '#F44336'; // 초록/빨강
+            
+            // 투명도 적용
+            ctx.globalAlpha = opacity;
+            
+            // 캔들 몸통 그리기
+            ctx.fillStyle = candleColor;
+            const bodyTop = Math.min(openY, closeY);
+            const bodyHeight = Math.abs(closeY - openY);
+            
+            if (bodyHeight > 0) {
+                ctx.fillRect(x, bodyTop, width, bodyHeight);
+            } else {
+                // 도지 캔들 (시가 = 종가)
+                ctx.strokeStyle = candleColor;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x, openY);
+                ctx.lineTo(x + width, openY);
+                ctx.stroke();
+            }
+            
+            // 캔들 꼬리 그리기 (High-Low)
+            ctx.strokeStyle = candleColor;
+            ctx.lineWidth = Math.max(1, width / 10);
+            ctx.beginPath();
+            ctx.moveTo(x + width/2, highY);
+            ctx.lineTo(x + width/2, lowY);
+            ctx.stroke();
+            
+            // 투명도 리셋
+            ctx.globalAlpha = 1.0;
         }
         
         // 차트 새로고침
         function refreshChart() {
-            console.log('🔄 차트 새로고침 시작...');
-            loadMultiTimeframeData();
+            console.log('🔄 프랙탈 캔들 차트 새로고침 시작...');
+            loadFractalCandleData();
         }
         
         // 페이지 로드 시 차트 초기화
         document.addEventListener('DOMContentLoaded', function() {
-            initializeOverlayChart();
+            initializeFractalChart();
         });
     </script>
 </body>
