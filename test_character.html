@@ -1,1 +1,358 @@
-THIS SHOULD BE A LINTER ERROR
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인형 캐릭터 테스트</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #ffb3d9 0%, #ff99cc 100%);
+            font-family: 'Comic Sans MS', cursive;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .character-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .doll {
+            position: relative;
+            width: 200px;
+            height: 350px;
+            margin: 0 auto;
+        }
+        
+        /* 머리 */
+        .head {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 80px;
+            background: #fdbcb4;
+            border-radius: 50%;
+            border: 3px solid #333;
+        }
+        
+        /* 얼굴 */
+        .eyes {
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 20px;
+        }
+        
+        .eye {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #333;
+            border-radius: 50%;
+        }
+        
+        .eye.left { left: 8px; }
+        .eye.right { right: 8px; }
+        
+        .eye::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+        }
+        
+        .mouth {
+            position: absolute;
+            top: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 10px;
+            border: 2px solid #ff6b9d;
+            border-top: none;
+            border-radius: 0 0 20px 20px;
+        }
+        
+        .cheeks {
+            position: absolute;
+            top: 35px;
+            width: 100%;
+        }
+        
+        .cheek {
+            position: absolute;
+            width: 15px;
+            height: 12px;
+            background: #ff9eb5;
+            border-radius: 50%;
+            opacity: 0.7;
+        }
+        
+        .cheek.left { left: 5px; }
+        .cheek.right { right: 5px; }
+        
+        /* 헤어스타일 */
+        .hair {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90px;
+            height: 60px;
+            background: #8B4513;
+            border-radius: 50px 50px 40px 40px;
+            z-index: -1;
+        }
+        
+        .hair::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: -15px;
+            width: 30px;
+            height: 40px;
+            background: #8B4513;
+            border-radius: 50%;
+        }
+        
+        .hair::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: -15px;
+            width: 30px;
+            height: 40px;
+            background: #8B4513;
+            border-radius: 50%;
+        }
+        
+        /* 몸통 */
+        .body {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 100px;
+            background: #fdbcb4;
+            border-radius: 30px;
+            border: 3px solid #333;
+        }
+        
+        /* 기본 드레스 */
+        .dress {
+            position: absolute;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 80px;
+            background: #ff69b4;
+            border-radius: 40px 40px 0 0;
+            border: 3px solid #333;
+        }
+        
+        .dress::before {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 30px;
+            background: #ff69b4;
+            border-radius: 0 0 50px 50px;
+            border: 3px solid #333;
+            border-top: none;
+        }
+        
+        /* 팔 */
+        .arms {
+            position: absolute;
+            top: 90px;
+            width: 100%;
+        }
+        
+        .arm {
+            position: absolute;
+            width: 20px;
+            height: 60px;
+            background: #fdbcb4;
+            border-radius: 10px;
+            border: 2px solid #333;
+        }
+        
+        .arm.left {
+            left: 20px;
+            transform: rotate(-20deg);
+        }
+        
+        .arm.right {
+            right: 20px;
+            transform: rotate(20deg);
+        }
+        
+        /* 다리 */
+        .legs {
+            position: absolute;
+            top: 220px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+        }
+        
+        .leg {
+            position: absolute;
+            width: 18px;
+            height: 80px;
+            background: #fdbcb4;
+            border-radius: 9px;
+            border: 2px solid #333;
+        }
+        
+        .leg.left { left: 10px; }
+        .leg.right { right: 10px; }
+        
+        /* 신발 */
+        .shoes {
+            position: absolute;
+            top: 290px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+        }
+        
+        .shoe {
+            position: absolute;
+            width: 25px;
+            height: 15px;
+            background: #333;
+            border-radius: 15px 15px 5px 5px;
+        }
+        
+        .shoe.left { left: 8px; }
+        .shoe.right { right: 8px; }
+        
+        /* 액세서리 - 리본 */
+        .hair-bow {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            width: 20px;
+            height: 15px;
+            background: #ff1493;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+        
+        .hair-bow::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: #ff1493;
+            border-radius: 50%;
+            border: 1px solid #333;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .test-info {
+            margin-top: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* 호버 효과 */
+        .doll:hover {
+            transform: scale(1.05);
+            transition: transform 0.3s ease;
+        }
+        
+        .doll:hover .eyes {
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 90%, 100% { transform: translateX(-50%) scaleY(1); }
+            95% { transform: translateX(-50%) scaleY(0.1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="character-container">
+        <h1>🎀 인형 캐릭터 테스트 🎀</h1>
+        
+        <div class="doll">
+            <!-- 헤어스타일 -->
+            <div class="hair">
+                <div class="hair-bow"></div>
+            </div>
+            
+            <!-- 머리 -->
+            <div class="head">
+                <div class="eyes">
+                    <div class="eye left"></div>
+                    <div class="eye right"></div>
+                </div>
+                <div class="mouth"></div>
+                <div class="cheeks">
+                    <div class="cheek left"></div>
+                    <div class="cheek right"></div>
+                </div>
+            </div>
+            
+            <!-- 몸통 -->
+            <div class="body"></div>
+            
+            <!-- 팔 -->
+            <div class="arms">
+                <div class="arm left"></div>
+                <div class="arm right"></div>
+            </div>
+            
+            <!-- 드레스 -->
+            <div class="dress"></div>
+            
+            <!-- 다리 -->
+            <div class="legs">
+                <div class="leg left"></div>
+                <div class="leg right"></div>
+            </div>
+            
+            <!-- 신발 -->
+            <div class="shoes">
+                <div class="shoe left"></div>
+                <div class="shoe right"></div>
+            </div>
+        </div>
+        
+        <div class="test-info">
+            <p>💕 CSS로 만든 귀여운 인형 캐릭터</p>
+            <p>마우스를 올려보세요! 눈을 깜빡여요 ✨</p>
+        </div>
+    </div>
+</body>
+</html>
