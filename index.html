@@ -489,10 +489,10 @@
                             data: [],
                             borderColor: '#000000',
                             backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                            borderWidth: 1,
+                            borderWidth: 2,
                             fill: false,
                             tension: 0.1,
-                            pointRadius: 2,
+                            pointRadius: 3,
                             pointBackgroundColor: '#000000'
                         },
                         {
@@ -500,110 +500,44 @@
                             data: [],
                             borderColor: '#627EEA',
                             backgroundColor: 'rgba(98, 126, 234, 0.05)',
-                            borderWidth: 1,
+                            borderWidth: 2,
                             fill: false,
                             tension: 0.1,
-                            pointRadius: 2,
+                            pointRadius: 3,
                             pointBackgroundColor: '#627EEA'
-                        },
-                        {
-                            label: 'XRP (리플)',
-                            data: [],
-                            borderColor: '#23292F',
-                            backgroundColor: 'rgba(35, 41, 47, 0.05)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 2,
-                            pointBackgroundColor: '#23292F'
-                        },
-                        {
-                            label: 'ADA (에이다)',
-                            data: [],
-                            borderColor: '#0033AD',
-                            backgroundColor: 'rgba(0, 51, 173, 0.05)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 2,
-                            pointBackgroundColor: '#0033AD'
                         },
                         {
                             label: 'SOL (솔라나)',
                             data: [],
                             borderColor: '#9945FF',
                             backgroundColor: 'rgba(153, 69, 255, 0.05)',
-                            borderWidth: 1,
+                            borderWidth: 2,
                             fill: false,
                             tension: 0.1,
-                            pointRadius: 2,
+                            pointRadius: 3,
                             pointBackgroundColor: '#9945FF'
+                        },
+                        {
+                            label: 'ADA (에이다)',
+                            data: [],
+                            borderColor: '#0033AD',
+                            backgroundColor: 'rgba(0, 51, 173, 0.05)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#0033AD'
                         },
                         {
                             label: 'DOGE (도지코인)',
                             data: [],
                             borderColor: '#C2A633',
                             backgroundColor: 'rgba(194, 166, 51, 0.05)',
-                            borderWidth: 1,
+                            borderWidth: 2,
                             fill: false,
                             tension: 0.1,
-                            pointRadius: 2,
+                            pointRadius: 3,
                             pointBackgroundColor: '#C2A633'
-                        },
-                        {
-                            label: 'AVAX (아발란체)',
-                            data: [],
-                            borderColor: '#E84142',
-                            backgroundColor: 'rgba(232, 65, 66, 0.05)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 2,
-                            pointBackgroundColor: '#E84142'
-                        },
-                        {
-                            label: 'MATIC (폴리곤)',
-                            data: [],
-                            borderColor: '#8247E5',
-                            backgroundColor: 'rgba(130, 71, 229, 0.05)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 2,
-                            pointBackgroundColor: '#8247E5'
-                        },
-                        {
-                            label: 'DOT (폴카닷)',
-                            data: [],
-                            borderColor: '#E6007A',
-                            backgroundColor: 'rgba(230, 0, 122, 0.05)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 2,
-                            pointBackgroundColor: '#E6007A'
-                        },
-                        {
-                            label: 'LINK (체인링크)',
-                            data: [],
-                            borderColor: '#375BD2',
-                            backgroundColor: 'rgba(55, 91, 210, 0.05)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 2,
-                            pointBackgroundColor: '#375BD2'
-                        },
-                        {
-                            label: 'UNI (유니스왑)',
-                            data: [],
-                            borderColor: '#FF007A',
-                            backgroundColor: 'rgba(255, 0, 122, 0.05)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 2,
-                            pointBackgroundColor: '#FF007A'
                         }
                     ]
                 },
@@ -652,8 +586,8 @@
                                 color: 'rgba(0,0,0,0.1)',
                                 backgroundColor: '#ffffff'
                             },
-                            min: -5,
-                            max: 5,
+                            min: -2,
+                            max: 2,
                             ticks: {
                                 stepSize: 1
                             }
@@ -673,8 +607,8 @@
             console.log('🔄 바이낸스 API 연결 시도...');
             
             try {
-                // 주요 USDT 코인들
-                const targetSymbols = ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'ADAUSDT', 'SOLUSDT', 'DOGEUSDT', 'AVAXUSDT', 'MATICUSDT', 'DOTUSDT', 'LINKUSDT', 'UNIUSDT'];
+                // 주요 USDT 코인들 (5개로 축소, 비트코인 포함)
+                const targetSymbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'ADAUSDT', 'DOGEUSDT'];
                 
                 console.log('🎯 타겟 코인:', targetSymbols);
                 
@@ -723,7 +657,7 @@
                 chart.data.labels.push(timeLabel);
                 
                 // 각 코인의 데이터 처리
-                for (let i = 0; i < Math.min(11, data.length); i++) {
+                for (let i = 0; i < Math.min(5, data.length); i++) {
                     const currentPrice = parseFloat(data[i].lastPrice);
                     const symbol = data[i].symbol;
                     
@@ -778,6 +712,11 @@
                     });
                 }
                 
+                // Y축 범위 동적 조정 (변화율 모드일 때만)
+                if (displayMode === 'change') {
+                    updateYAxisRange();
+                }
+                
                 chart.update('none');
                 
                 console.log(`📊 ${timeLabel} 차트 업데이트 완료`);
@@ -810,8 +749,10 @@
                     cryptoChart.options.scales.y.min = undefined;
                     cryptoChart.options.scales.y.max = undefined;
                 } else {
-                    cryptoChart.options.scales.y.min = -5;
-                    cryptoChart.options.scales.y.max = 5;
+                    cryptoChart.options.scales.y.min = -2;
+                    cryptoChart.options.scales.y.max = 2;
+                    // 동적 범위 조정
+                    updateYAxisRange();
                 }
                 
                 cryptoChart.update();
@@ -819,9 +760,42 @@
             }
         }
         
+        // Y축 범위 동적 조정 함수
+        function updateYAxisRange() {
+            if (!cryptoChart || displayMode !== 'change') return;
+            
+            let allValues = [];
+            
+            // 모든 데이터셋의 값들을 수집
+            cryptoChart.data.datasets.forEach(dataset => {
+                allValues = allValues.concat(dataset.data.filter(val => val !== null && val !== undefined));
+            });
+            
+            if (allValues.length === 0) return;
+            
+            const maxValue = Math.max(...allValues);
+            const minValue = Math.min(...allValues);
+            
+            // 현재 범위 확인
+            const currentMax = cryptoChart.options.scales.y.max;
+            const currentMin = cryptoChart.options.scales.y.min;
+            
+            // 기본 범위 -2% ~ +2%에서 시작
+            let newMax = Math.max(2, maxValue + 0.5); // 최소 2%, 여유분 0.5% 추가
+            let newMin = Math.min(-2, minValue - 0.5); // 최소 -2%, 여유분 0.5% 추가
+            
+            // 범위가 변경되었을 때만 업데이트
+            if (Math.abs(newMax - currentMax) > 0.1 || Math.abs(newMin - currentMin) > 0.1) {
+                cryptoChart.options.scales.y.max = newMax;
+                cryptoChart.options.scales.y.min = newMin;
+                
+                console.log(`📏 Y축 범위 조정: ${newMin.toFixed(1)}% ~ ${newMax.toFixed(1)}%`);
+            }
+        }
+        
         // 현재 모드에 맞게 차트 데이터 업데이트
         function updateChartForMode() {
-            const symbols = ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'ADAUSDT', 'SOLUSDT', 'DOGEUSDT', 'AVAXUSDT', 'MATICUSDT', 'DOTUSDT', 'LINKUSDT', 'UNIUSDT'];
+            const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'ADAUSDT', 'DOGEUSDT'];
             
             symbols.forEach((symbol, index) => {
                 const coinInfo = coinData.get(symbol);
