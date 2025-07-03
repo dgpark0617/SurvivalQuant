@@ -684,10 +684,10 @@
                 // 로딩 메시지 숨기기
                 document.getElementById('loadingMessage').style.display = 'none';
                 
-                // 5초마다 업데이트
+                // 1초마다 업데이트
                 setInterval(async () => {
                     await addBinanceDataPoint(chart, targetSymbols);
-                }, 5000);
+                }, 1000);
                 
             } catch (error) {
                 console.error('❌ 바이낸스 API 연결 실패:', error);
