@@ -213,25 +213,19 @@
                 <button class="control-btn active" id="refreshBtn" onclick="refreshChart()">🔄 새로고침</button>
             </div>
             <div class="timeframe-legend">
-                <span class="legend-item daily">■ 일봉 (1D)</span>
-                <span class="legend-item hourly4">■ 4시간봉 (4H)</span>
-                <span class="legend-item minute30">■ 30분봉 (30M)</span>
+                <span class="legend-item daily">■ 1시간봉 (1H)</span>
                 <span class="legend-item minute5">■ 5분봉 (5M)</span>
-                <span class="legend-item minute1">■ 1분봉 (1M)</span>
             </div>
         </div>
         <div class="fractal-chart-container" id="fractalContainer">
-            <canvas id="dailyCanvas" class="candle-layer" style="z-index: 1;"></canvas>
-            <canvas id="hourly4Canvas" class="candle-layer" style="z-index: 2;"></canvas>
-            <canvas id="minute30Canvas" class="candle-layer" style="z-index: 3;"></canvas>
-            <canvas id="minute5Canvas" class="candle-layer" style="z-index: 4;"></canvas>
-            <canvas id="minute1Canvas" class="candle-layer" style="z-index: 5;"></canvas>
+            <canvas id="hourlyCanvas" class="candle-layer" style="z-index: 1;"></canvas>
+            <canvas id="minute5Canvas" class="candle-layer" style="z-index: 2;"></canvas>
             <div id="loadingMessage" class="loading">프랙탈 캔들 데이터 로딩중...</div>
         </div>
         <div class="chart-info">
-            <div class="info-item"><strong>혁신적 컨셉:</strong> 세계 최초 프랙탈 구조 캔들스틱 차트</div>
-            <div class="info-item"><strong>구조:</strong> 일봉 → 4시간봉(6개) → 30분봉(8개) → 5분봉(6개) → 1분봉(5개)</div>
-            <div class="info-item"><strong>투명도:</strong> 일봉(20%) → 4시간봉(40%) → 30분봉(60%) → 5분봉(80%) → 1분봉(불투명)</div>
+            <div class="info-item"><strong>혁신적 컨셉:</strong> 프랙탈 구조 캔들스틱 차트 (1시간봉 + 5분봉)</div>
+            <div class="info-item"><strong>구조:</strong> 1시간봉 → 5분봉(12개)</div>
+            <div class="info-item"><strong>투명도:</strong> 1시간봉(30%) → 5분봉(불투명)</div>
         </div>
     </div>
 
@@ -306,13 +300,13 @@
 
     // 차트 관련 변수
     let currentSymbol = 'BTCUSDT';
-    let candleData = { '1d': [], '4h': [], '30m': [], '5m': [], '1m': [] };
+    let candleData = { '1h': [], '5m': [] };
     let canvasContexts = {};
     let chartDimensions = { width: 0, height: 0 };
 
     // 캔버스 크기 동기화 (리사이즈 대응)
     function resizeCanvases() {
-        const canvasIds = ['dailyCanvas', 'hourly4Canvas', 'minute30Canvas', 'minute5Canvas', 'minute1Canvas'];
+        const canvasIds = ['hourlyCanvas', 'minute5Canvas'];
         const container = document.getElementById('fractalContainer');
         const width = Math.max(300, container.clientWidth - 40);
         const height = Math.max(200, container.clientHeight - 40);
@@ -365,18 +359,12 @@
         document.getElementById('loadingMessage').style.display = 'flex';
         try {
             const requests = [
-                fetchKlineData(currentSymbol, '1d', 10),
-                fetchKlineData(currentSymbol, '4h', 60),
-                fetchKlineData(currentSymbol, '30m', 240),
-                fetchKlineData(currentSymbol, '5m', 720),
-                fetchKlineData(currentSymbol, '1m', 720)
+                fetchKlineData(currentSymbol, '1h', 24),   // 1시간봉 24개 (1일)
+                fetchKlineData(currentSymbol, '5m', 288)   // 5분봉 288개 (1일)
             ];
-            const [dailyData, hourly4Data, minute30Data, minute5Data, minute1Data] = await Promise.all(requests);
-            candleData['1d'] = dailyData;
-            candleData['4h'] = hourly4Data;
-            candleData['30m'] = minute30Data;
+            const [hourlyData, minute5Data] = await Promise.all(requests);
+            candleData['1h'] = hourlyData;
             candleData['5m'] = minute5Data;
-            candleData['1m'] = minute1Data;
             drawFractalCandles();
             document.getElementById('loadingMessage').style.display = 'none';
         } catch (error) {
@@ -419,11 +407,8 @@
     function drawFractalCandles() {
         Object.values(canvasContexts).forEach(ctx => ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height));
         const priceRange = calculatePriceRange();
-        drawTimeframeCandles('1d', 'dailyCanvas', priceRange, 0.20, '#222222');
-        drawTimeframeCandles('4h', 'hourly4Canvas', priceRange, 0.40, '#FF5733');
-        drawTimeframeCandles('30m', 'minute30Canvas', priceRange, 0.60, '#2E7D32');
-        drawTimeframeCandles('5m', 'minute5Canvas', priceRange, 0.80, '#1976D2');
-        drawTimeframeCandles('1m', 'minute1Canvas', priceRange, 1.00, '#9C27B0');
+        drawTimeframeCandles('1h', 'hourlyCanvas', priceRange, 0.30, '#222222');
+        drawTimeframeCandles('5m', 'minute5Canvas', priceRange, 1.00, '#1976D2');
     }
 
     // 특정 시간대 캔들 그리기
