@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SurvivalQuant</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <style>
-        /* ----------- 기존 스타일 유지, 일부만 개선 ----------- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -38,170 +35,106 @@
             border: none;
             padding: 15px 30px;
         }
-        .chart-section {
-            background: #181a20;
-            border: 2px solid #23262f;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.18);
-            margin-bottom: 20px;
-        }
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        .chart-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #e0e0e0;
-            margin: 0;
-        }
-        .chart-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .control-btn {
+        h1 { font-size: 1.8rem; margin-bottom: 10px; font-weight: 400; }
+        h2 { font-size: 1.8rem; margin-bottom: 20px; font-weight: 400; color: #e0e0e0; }
+        h3 { font-size: 1.3rem; margin-bottom: 10px; font-weight: 500; color: #e0e0e0; }
+        .url-display {
             background: #f8f9fa;
+            color: #333;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin: 15px 0;
+            word-break: break-all;
             border: 2px solid #e9ecef;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
             transition: all 0.3s ease;
         }
-        .control-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .url-display:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .copy-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
             color: white;
-            border-color: #667eea;
-        }
-        .control-btn:hover {
-            background: #e9ecef;
-        }
-        .control-btn.active:hover {
-            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-        }
-        .coin-selector {
-            padding: 10px 15px;
-            border: 2px solid #ddd;
+            border: none;
+            padding: 12px 25px;
             border-radius: 25px;
-            background: white;
+            cursor: pointer;
             font-size: 1rem;
             font-weight: 500;
-            color: #333;
-            cursor: pointer;
             transition: all 0.3s ease;
-            margin-right: 15px;
-            min-width: 200px;
+            margin-top: 15px;
         }
-        .coin-selector:hover { border-color: #667eea; transform: translateY(-2px);}
-        .coin-selector:focus { outline: none; border-color: #667eea; box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);}
-        .timeframe-legend {
-            display: flex; justify-content: center; gap: 20px; margin-top: 15px; flex-wrap: wrap;
+        .copy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(238,90,36,0.4);
         }
-        .legend-item { font-size: 0.9rem; font-weight: 600; padding: 5px 10px; border-radius: 15px; background: rgba(255,255,255,0.8);}
-        .legend-item.daily { color: #222;}
-        .legend-item.hourly4 { color: #FF5733;}
-        .legend-item.minute30 { color: #2E7D32;}
-        .legend-item.minute5 { color: #1976D2;}
-        .legend-item.minute1 { color: #9C27B0;}
-        .chart-info { margin-top: 20px; padding: 15px; background: linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%); border-radius: 10px; border: 1px solid #dee2e6;}
-        .info-item { margin-bottom: 8px; font-size: 0.9rem; color: #495057;}
-        .info-item:last-child { margin-bottom: 0;}
-        .fractal-chart-container {
+        .success-message {
+            display: none;
+            color: #2ecc71;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        .link-display {
+            background: #f8f9fa;
+            color: #333;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        .link-display a {
+            color: #0066cc;
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        .link-display a:hover {
+            color: #004499;
+            text-decoration: underline;
+        }
+        .section-link {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
             position: relative;
-            height: 500px;
+            height: 100%;
             width: 100%;
-            background: linear-gradient(135deg, #23262f 0%, #181a20 100%);
-            border: 3px solid #23262f;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-            box-shadow: 0 8px 25px rgba(24, 26, 32, 0.5);
-            overflow: hidden;
         }
-        .candle-layer {
+        .section-link:hover {
+            transform: translateY(-2px);
+            color: #333;
+        }
+        .link-arrow {
             position: absolute;
-            top: 20px; left: 20px;
-            width: calc(100% - 40px) !important;
-            height: calc(100% - 40px) !important;
-            pointer-events: none;
+            bottom: 15px;
+            right: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            opacity: 0.7;
+            transition: all 0.3s ease;
         }
-        .loading {
-            display: flex; justify-content: center; align-items: center;
-            height: 200px; font-size: 1.1rem; color: #666;
-        }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .loading::after { content: '...'; animation: pulse 1.5s infinite; }
-        .links-section { grid-column: 1; }
-        .ads-section {
-            background: #f8f9fa; min-height: 200px; border-style: dashed; display: flex; align-items: center; justify-content: center; color: #6c757d;
-        }
-        .future-section {
-            background: #f1f3f4; min-height: 150px; border-style: dashed; display: flex; align-items: center; justify-content: center; color: #6c757d;
+        .section-link:hover .link-arrow {
+            opacity: 1;
+            transform: translateX(5px);
         }
         @media (min-width: 768px) {
             .main-container {
                 grid-template-columns: 2fr 1fr;
                 grid-template-areas:
                     "header header"
-                    "chart chart"
                     "links ads"
                     "games utilities";
             }
             .header-section { grid-area: header; }
-            .chart-section { grid-area: chart; }
             .links-section { grid-area: links; }
             .ads-section { grid-area: ads; }
             .games-section { grid-area: games; }
             .utilities-section { grid-area: utilities; }
-        }
-        h1 { font-size: 1.8rem; margin-bottom: 10px; font-weight: 400; }
-        h2 { font-size: 1.8rem; margin-bottom: 20px; font-weight: 400; color: #e0e0e0; }
-        h3 { font-size: 1.3rem; margin-bottom: 10px; font-weight: 500; color: #e0e0e0; }
-        .url-display {
-            background: #f8f9fa; color: #333; padding: 15px 20px; border-radius: 10px;
-            font-size: 1.1rem; font-weight: 500; margin: 15px 0; word-break: break-all;
-            border: 2px solid #e9ecef; transition: all 0.3s ease;
-        }
-        .url-display:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.2);}
-        .copy-btn {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24); color: white; border: none;
-            padding: 12px 25px; border-radius: 25px; cursor: pointer;
-            font-size: 1rem; font-weight: 500; transition: all 0.3s ease; margin-top: 15px;
-        }
-        .copy-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(238,90,36,0.4);}
-        .success-message { display: none; color: #2ecc71; font-weight: 500; margin-top: 10px;}
-        .link-display {
-            background: #f8f9fa; color: #333; padding: 15px 20px; border-radius: 10px; margin: 15px 0;
-            border: 2px solid #e9ecef; transition: all 0.3s ease;
-        }
-        .link-display a {
-            color: #0066cc; text-decoration: none; font-size: 1.2rem; font-weight: 500; transition: color 0.3s ease;
-        }
-        .link-display a:hover { color: #004499; text-decoration: underline; }
-        .section-link { display: block; text-decoration: none; color: inherit; transition: all 0.3s ease; position: relative; height: 100%; width: 100%;}
-        .section-link:hover { transform: translateY(-2px); color: #333; }
-        .link-arrow { position: absolute; bottom: 15px; right: 15px; font-size: 1.5rem; font-weight: bold; opacity: 0.7; transition: all 0.3s ease;}
-        .section-link:hover .link-arrow { opacity: 1; transform: translateX(5px);}
-        /* 그리드 라인 및 축 라벨 */
-        .fractal-chart-container::before {
-            content: '';
-            position: absolute;
-            left: 0; top: 0; right: 0; bottom: 0;
-            pointer-events: none;
-            background: repeating-linear-gradient(
-                to right, #23262f 0px, #23262f 1px, transparent 1px, transparent 60px
-            ), repeating-linear-gradient(
-                to bottom, #23262f 0px, #23262f 1px, transparent 1px, transparent 60px
-            );
-            opacity: 0.5;
-            z-index: 0;
         }
     </style>
 </head>
@@ -211,44 +144,6 @@
     <div class="section header-section">
         <h1>🚀 SurvivalQuant</h1>
         <p>EconomicEden - 실시간 코인 차트 및 투자 도구</p>
-    </div>
-
-    <!-- 프랙탈 캔들스틱 차트 섹션 -->
-    <div class="chart-section">
-        <div class="chart-header">
-            <h2 class="chart-title">🕯️ 프랙탈 캔들스틱 차트</h2>
-            <div class="chart-controls">
-                <label for="mainTfSelector">상위봉:</label>
-                <select id="mainTfSelector" class="coin-selector">
-                    <option value="1h">1시간봉 (1H)</option>
-                    <option value="4h">4시간봉 (4H)</option>
-                    <option value="1d">일봉 (1D)</option>
-                </select>
-                <label for="subTfSelector">하위봉:</label>
-                <select id="subTfSelector" class="coin-selector">
-                    <option value="5m">5분봉 (5M)</option>
-                    <option value="1m">1분봉 (1M)</option>
-                    <option value="15m">15분봉 (15M)</option>
-                </select>
-                <button class="control-btn active" id="refreshBtn" onclick="refreshChart()">🔄 새로고침</button>
-            </div>
-            <div class="timeframe-legend">
-                <span class="legend-item daily">■ 1시간봉 (1H)</span>
-                <span class="legend-item minute5">■ 5분봉 (5M)</span>
-            </div>
-        </div>
-        <div class="fractal-chart-container" id="fractalContainer">
-            <div id="tvChart" style="width:100%;height:100%;position:relative;"></div>
-            <!-- 기존 Canvas 차트는 유지 또는 주석처리 -->
-            <!-- <canvas id="hourlyCanvas" class="candle-layer" style="z-index: 1;"></canvas> -->
-            <!-- <canvas id="minute5Canvas" class="candle-layer" style="z-index: 2;"></canvas> -->
-            <div id="loadingMessage" class="loading">프랙탈 캔들 데이터 로딩중...</div>
-        </div>
-        <div class="chart-info">
-            <div class="info-item"><strong>혁신적 컨셉:</strong> 프랙탈 구조 캔들스틱 차트 (1시간봉 + 5분봉)</div>
-            <div class="info-item"><strong>구조:</strong> 1시간봉 → 5분봉(12개)</div>
-            <div class="info-item"><strong>투명도:</strong> 1시간봉(30%) → 5분봉(불투명)</div>
-        </div>
     </div>
 
     <!-- 링크 섹션 -->
@@ -292,6 +187,7 @@
             <p>YouTube 애드센스 및 광고가 표시될 예정입니다</p>
         </div>
     </div>
+
     <!-- 게임 섹션 -->
     <div class="section future-section games-section">
         <a href="games/" class="section-link">
@@ -300,6 +196,7 @@
             <div class="link-arrow">→</div>
         </a>
     </div>
+
     <!-- 유틸리티 섹션 -->
     <div class="section future-section utilities-section">
         <a href="utilities/" class="section-link">
@@ -310,166 +207,15 @@
     </div>
 </div>
 <script>
-    // URL 복사
-    function copyToClipboard() {
-        const urlText = document.getElementById('urlDisplay').textContent;
-        navigator.clipboard.writeText(urlText).then(function() {
-            const successMessage = document.getElementById('successMessage');
-            successMessage.style.display = 'block';
-            setTimeout(() => { successMessage.style.display = 'none'; }, 3000);
-        });
-    }
-
-    // 차트 관련 변수
-    let currentSymbol = 'BTCUSDT';
-    let candleData = { 'main': [], 'sub': [] };
-    let canvasContexts = {};
-    let chartDimensions = { width: 0, height: 0 };
-
-    // 하이킨아시 변환 함수
-    function heikinAshiTransform(candles) {
-        if (!candles || candles.length === 0) return [];
-        const haCandles = [];
-        for (let i = 0; i < candles.length; i++) {
-            const prev = haCandles[i - 1] || candles[i];
-            const open = i === 0 ? (candles[i].open + candles[i].close) / 2 : (prev.open + prev.close) / 2;
-            const close = (candles[i].open + candles[i].high + candles[i].low + candles[i].close) / 4;
-            const high = Math.max(candles[i].high, open, close);
-            const low = Math.min(candles[i].low, open, close);
-            haCandles.push({
-                timestamp: candles[i].timestamp,
-                open, high, low, close, volume: candles[i].volume
-            });
-        }
-        return haCandles;
-    }
-
-    // 바이낸스 Kline 데이터 가져오기
-    async function fetchKlineData(symbol, interval, limit) {
-        try {
-            const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
-            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            const data = await response.json();
-            return data.map(kline => ({
-                timestamp: parseInt(kline[0]),
-                open: parseFloat(kline[1]),
-                high: parseFloat(kline[2]),
-                low: parseFloat(kline[3]),
-                close: parseFloat(kline[4]),
-                volume: parseFloat(kline[5])
-            }));
-        } catch (error) {
-            console.error(`❌ ${symbol} ${interval} 데이터 가져오기 실패:`, error);
-            return [];
-        }
-    }
-
-    // 타임프레임 분 단위 변환 함수
-    function tfToMinutes(tf) {
-        if (tf.endsWith('m')) return parseInt(tf);
-        if (tf.endsWith('h')) return parseInt(tf) * 60;
-        if (tf.endsWith('d')) return parseInt(tf) * 60 * 24;
-        return 1;
-    }
-
-    // 상위/하위 타임프레임 선택값
-    let mainTf = '1h';
-    let subTf = '5m';
-    document.getElementById('mainTfSelector').addEventListener('change', function(e) {
-        mainTf = e.target.value;
-        loadFractalCandleData();
+// URL 복사
+function copyToClipboard() {
+    const urlText = document.getElementById('urlDisplay').textContent;
+    navigator.clipboard.writeText(urlText).then(function() {
+        const successMessage = document.getElementById('successMessage');
+        successMessage.style.display = 'block';
+        setTimeout(() => { successMessage.style.display = 'none'; }, 3000);
     });
-    document.getElementById('subTfSelector').addEventListener('change', function(e) {
-        subTf = e.target.value;
-        loadFractalCandleData();
-    });
-
-    // Lightweight Charts 차트 객체 전역 변수
-    let tvChart = null;
-    let mainSeries = null;
-    let subSeries = null;
-
-    // Lightweight Charts 차트 초기화 및 데이터 렌더링
-    function renderLightweightChart() {
-        if (tvChart) {
-            tvChart.remove();
-        }
-        tvChart = LightweightCharts.createChart(document.getElementById('tvChart'), {
-            width: document.getElementById('tvChart').clientWidth,
-            height: document.getElementById('tvChart').clientHeight,
-            layout: {
-                background: { type: 'solid', color: '#181a20' },
-                textColor: '#e0e0e0',
-            },
-            grid: {
-                vertLines: { color: '#23262f', style: 1, visible: true },
-                horzLines: { color: '#23262f', style: 1, visible: true },
-            },
-            timeScale: { borderColor: '#23262f', timeVisible: true, secondsVisible: false },
-            rightPriceScale: { borderColor: '#23262f' },
-            crosshair: { mode: 1 },
-        });
-        // 상위봉(메인) 시리즈
-        mainSeries = tvChart.addCandlestickSeries({
-            upColor: '#26a69a', downColor: '#ef5350', borderVisible: false, wickUpColor: '#26a69a', wickDownColor: '#ef5350',
-            overlay: false, priceLineVisible: false, opacity: 0.3
-        });
-        // 하위봉(서브) 시리즈
-        subSeries = tvChart.addCandlestickSeries({
-            upColor: '#1976D2', downColor: '#ef5350', borderVisible: false, wickUpColor: '#1976D2', wickDownColor: '#ef5350',
-            overlay: true, priceLineVisible: false, opacity: 1.0
-        });
-        // 데이터 세팅
-        if (candleData['main_ha'] && candleData['main_ha'].length > 0) {
-            mainSeries.setData(candleData['main_ha'].map(c => ({
-                time: Math.floor(c.timestamp / 1000),
-                open: c.open, high: c.high, low: c.low, close: c.close
-            })));
-        }
-        if (candleData['sub_ha'] && candleData['sub_ha'].length > 0) {
-            subSeries.setData(candleData['sub_ha'].map(c => ({
-                time: Math.floor(c.timestamp / 1000),
-                open: c.open, high: c.high, low: c.low, close: c.close
-            })));
-        }
-    }
-
-    // 프랙탈 캔들 데이터 로드 후 차트 렌더링
-    async function loadFractalCandleData() {
-        document.getElementById('loadingMessage').style.display = 'flex';
-        try {
-            const mainLimit = 24;
-            const subLimit = mainLimit * (tfToMinutes(mainTf) / tfToMinutes(subTf));
-            const requests = [
-                fetchKlineData(currentSymbol, mainTf, mainLimit),
-                fetchKlineData(currentSymbol, subTf, subLimit)
-            ];
-            const [mainData, subData] = await Promise.all(requests);
-            candleData['main'] = mainData;
-            candleData['sub'] = subData;
-            candleData['main_ha'] = heikinAshiTransform(mainData);
-            candleData['sub_ha'] = heikinAshiTransform(subData);
-            renderLightweightChart();
-            document.getElementById('loadingMessage').style.display = 'none';
-        } catch (error) {
-            document.getElementById('loadingMessage').innerHTML = `
-                <div style="text-align: center; color: #ff4757;">
-                    ❌ 프랙탈 캔들 데이터 로딩에 실패했습니다<br>
-                    <small style="color: #666; font-size: 0.9rem;">에러: ${error.message}</small>
-                </div>
-            `;
-        }
-    }
-
-    // 차트 새로고침
-    function refreshChart() {
-        loadFractalCandleData();
-    }
-
-    // 첫 렌더링
-    document.addEventListener('DOMContentLoaded', function() {
-        loadFractalCandleData();
-    });
+}
 </script>
 </body>
 </html>

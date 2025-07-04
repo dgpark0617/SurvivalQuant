@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurvivalQuant Tests</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #181a20;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-suite {
+            background: #23262f;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .test-case {
+            background: #2a2d35;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .test-result {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pass { color: #4caf50; }
+        .fail { color: #f44336; }
+        .pending { color: #ff9800; }
+        .error-details {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .test-summary {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2a2d35;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+<div class="test-container">
+    <h1>🧪 SurvivalQuant Tests</h1>
+    <div id="testResults"></div>
+    <div id="testSummary" class="test-summary"></div>
+</div>
+
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+// 테스트 유틸리티 함수
+const TestUtils = {
+    assertEquals(actual, expected, message = '') {
+        if (actual !== expected) {
+            throw new Error(`${message}\nExpected: ${expected}\nActual: ${actual}`);
+        }
+    },
+    assertNotEquals(actual, expected, message = '') {
+        if (actual === expected) {
+            throw new Error(`${message}\nExpected not to be: ${expected}`);
+        }
+    },
+    assertTrue(condition, message = '') {
+        if (!condition) {
+            throw new Error(`${message}\nExpected to be true`);
+        }
+    },
+    assertFalse(condition, message = '') {
+        if (condition) {
+            throw new Error(`${message}\nExpected to be false`);
+        }
+    },
+    assertDefined(value, message = '') {
+        if (value === undefined) {
+            throw new Error(`${message}\nExpected to be defined`);
+        }
+    },
+    assertUndefined(value, message = '') {
+        if (value !== undefined) {
+            throw new Error(`${message}\nExpected to be undefined`);
+        }
+    },
+    assertNull(value, message = '') {
+        if (value !== null) {
+            throw new Error(`${message}\nExpected to be null`);
+        }
+    },
+    assertNotNull(value, message = '') {
+        if (value === null) {
+            throw new Error(`${message}\nExpected not to be null`);
+        }
+    },
+    assertArrayEquals(actual, expected, message = '') {
+        if (actual.length !== expected.length) {
+            throw new Error(`${message}\nArray lengths differ. Expected: ${expected.length}, Actual: ${actual.length}`);
+        }
+        for (let i = 0; i < actual.length; i++) {
+            if (actual[i] !== expected[i]) {
+                throw new Error(`${message}\nArrays differ at index ${i}. Expected: ${expected[i]}, Actual: ${actual[i]}`);
+            }
+        }
+    }
+};
+
+// 테스트 실행기
+class TestRunner {
+    constructor() {
+        this.tests = [];
+        this.results = {
+            passed: 0,
+            failed: 0,
+            total: 0
+        };
+    }
+
+    addTest(name, testFn) {
+        this.tests.push({ name, testFn });
+    }
+
+    async runTests() {
+        const resultsDiv = document.getElementById('testResults');
+        const summaryDiv = document.getElementById('testSummary');
+        
+        for (const test of this.tests) {
+            const testCase = document.createElement('div');
+            testCase.className = 'test-case';
+            
+            try {
+                await test.testFn();
+                testCase.innerHTML = `
+                    <div class="test-result">
+                        <span class="pass">✓</span>
+                        <span>${test.name}</span>
+                    </div>
+                `;
+                this.results.passed++;
+            } catch (error) {
+                testCase.innerHTML = `
+                    <div class="test-result">
+                        <span class="fail">✗</span>
+                        <span>${test.name}</span>
+                    </div>
+                    <div class="error-details">${error.message}</div>
+                `;
+                this.results.failed++;
+            }
+            
+            resultsDiv.appendChild(testCase);
+        }
+        
+        this.results.total = this.tests.length;
+        summaryDiv.innerHTML = `
+            <h3>테스트 결과 요약</h3>
+            <p>총 테스트: ${this.results.total}</p>
+            <p class="pass">통과: ${this.results.passed}</p>
+            <p class="fail">실패: ${this.results.failed}</p>
+        `;
+    }
+}
+
+// 테스트 케이스들
+const runner = new TestRunner();
+
+// 하이킨아시 변환 테스트
+runner.addTest('하이킨아시 변환 - 빈 배열 입력', () => {
+    const result = heikinAshiTransform([]);
+    TestUtils.assertTrue(Array.isArray(result), '결과는 배열이어야 함');
+    TestUtils.assertEquals(result.length, 0, '빈 배열이 반환되어야 함');
+});
+
+runner.addTest('하이킨아시 변환 - 단일 캔들 입력', () => {
+    const input = [{
+        timestamp: 1000,
+        open: 100,
+        high: 110,
+        low: 90,
+        close: 105,
+        volume: 1000
+    }];
+    
+    const result = heikinAshiTransform(input);
+    TestUtils.assertEquals(result.length, 1, '결과 배열 길이는 1이어야 함');
+    TestUtils.assertEquals(result[0].open, (100 + 105) / 2, '첫 캔들의 시가 계산');
+    TestUtils.assertEquals(result[0].close, (100 + 110 + 90 + 105) / 4, '첫 캔들의 종가 계산');
+});
+
+// 웹소켓 연결 테스트
+runner.addTest('웹소켓 연결 초기화', () => {
+    const ws = new WebSocket('wss://api.upbit.com/websocket/v1');
+    TestUtils.assertNotNull(ws, '웹소켓 객체가 생성되어야 함');
+    TestUtils.assertEquals(ws.url, 'wss://api.upbit.com/websocket/v1', '올바른 URL로 연결');
+    ws.close();
+});
+
+// 차트 렌더링 테스트
+runner.addTest('차트 컨테이너 초기화', () => {
+    const container = document.createElement('div');
+    container.id = 'tvChart';
+    document.body.appendChild(container);
+    
+    const chart = LightweightCharts.createChart(container, {
+        width: 400,
+        height: 300
+    });
+    
+    TestUtils.assertNotNull(chart, '차트 객체가 생성되어야 함');
+    TestUtils.assertTrue(typeof chart.resize === 'function', '차트 객체는 resize 메서드를 가져야 함');
+    
+    chart.remove();
+    container.remove();
+});
+
+// 테스트 실행
+document.addEventListener('DOMContentLoaded', () => {
+    runner.runTests().catch(console.error);
+});
+</script>
+</body>
+</html> 
