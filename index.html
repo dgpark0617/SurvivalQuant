@@ -12,130 +12,103 @@
             min-height: 100vh;
             color: #333;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
         }
         .main-container {
             max-width: 1200px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 30px;
+            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         }
         .section {
             background: #ffffff;
-            border: 2px solid #e9ecef;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            text-align: center;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         .header-section {
             background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);
             color: white;
-            border: none;
-            padding: 15px 30px;
+            grid-column: 1 / -1;
+            padding: 10px;
+            text-align: center;
         }
-        h1 { font-size: 1.8rem; margin-bottom: 10px; font-weight: 400; }
-        h2 { font-size: 1.8rem; margin-bottom: 20px; font-weight: 400; color: #333; }
-        h3 { font-size: 1.3rem; margin-bottom: 10px; font-weight: 500; color: #333; }
-        .url-display {
-            background: #ffffff;
-            color: #333;
-            padding: 15px 20px;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            font-weight: 500;
-            margin: 15px 0;
-            word-break: break-all;
-            border: 2px solid #e9ecef;
-            transition: all 0.3s ease;
+        .links-section {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            padding: 15px;
         }
-        .url-display:hover {
+        h1 { font-size: 1.5rem; margin-bottom: 5px; }
+        h2 { font-size: 1.3rem; margin-bottom: 10px; }
+        h3 { font-size: 1.1rem; margin-bottom: 5px; }
+        
+        .quick-links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .quick-link {
+            background: #fff;
+            padding: 8px 15px;
+            border-radius: 20px;
+            text-decoration: none;
+            color: #4e54c8;
+            font-size: 0.9rem;
+            border: 1px solid #e9ecef;
+        }
+        .quick-link:hover {
+            background: #f8f9fa;
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        .copy-btn {
-            background: linear-gradient(45deg, #4e54c8, #8f94fb);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 25px;
+        
+        .ad-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            grid-column: 1 / -1;
+        }
+        .ad-placeholder {
+            border: 1px dashed #ccc;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
             cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
             transition: all 0.3s ease;
-            margin-top: 15px;
         }
-        .copy-btn:hover {
+        .ad-placeholder:hover {
+            background: #e9ecef;
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(78,84,200,0.4);
         }
-        .success-message {
-            display: none;
-            color: #2ecc71;
-            font-weight: 500;
-            margin-top: 10px;
+        .ad-placeholder p {
+            color: #666;
+            margin: 2px 0;
+            font-size: 0.9rem;
         }
-        .link-display {
-            background: #ffffff;
-            color: #333;
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin: 15px 0;
-            border: 2px solid #e9ecef;
-            transition: all 0.3s ease;
+        .ad-size {
+            font-size: 0.8rem;
+            color: #888;
         }
-        .link-display a {
-            color: #4e54c8;
-            text-decoration: none;
-            font-size: 1.2rem;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-        .link-display a:hover {
-            color: #8f94fb;
-            text-decoration: underline;
-        }
-        .section-link {
-            display: block;
-            text-decoration: none;
-            color: inherit;
-            transition: all 0.3s ease;
-            position: relative;
-            height: 100%;
-            width: 100%;
-        }
-        .section-link:hover {
-            transform: translateY(-2px);
-            color: #4e54c8;
-        }
-        .link-arrow {
-            position: absolute;
-            bottom: 15px;
-            right: 15px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            opacity: 0.7;
-            transition: all 0.3s ease;
-        }
-        .section-link:hover .link-arrow {
-            opacity: 1;
-            transform: translateX(5px);
-            color: #4e54c8;
-        }
-        @media (min-width: 768px) {
+        
+        @media (max-width: 768px) {
             .main-container {
-                grid-template-columns: 2fr 1fr;
-                grid-template-areas:
-                    "header header"
-                    "links ads"
-                    "games utilities";
+                grid-template-columns: 1fr;
             }
-            .header-section { grid-area: header; }
-            .links-section { grid-area: links; }
-            .ads-section { grid-area: ads; }
-            .games-section { grid-area: games; }
-            .utilities-section { grid-area: utilities; }
+            .links-section {
+                grid-template-columns: 1fr;
+            }
+            .ad-container {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -149,74 +122,116 @@
 
     <!-- 링크 섹션 -->
     <div class="section links-section">
-        <h2>🔗 주요 링크</h2>
-        <div class="url-display" id="urlDisplay">
-            https://dgpark0617.github.io/SurvivalQuant/
-        </div>
-        <button class="copy-btn" onclick="copyToClipboard()">
-            📋 URL 복사하기
-        </button>
-        <div class="success-message" id="successMessage">
-            ✅ URL이 클립보드에 복사되었습니다!
-        </div>
-        <div class="link-display">
-            <a href="https://www.bybit.com/copyMt5/trade-center/detail?providerMark=xkc2wsLqVomphpP%2FtV6RRQ%3D%3D" target="_blank">
+        <div class="quick-links">
+            <a href="https://www.bybit.com/copyMt5/trade-center/detail?providerMark=xkc2wsLqVomphpP%2FtV6RRQ%3D%3D" class="quick-link" target="_blank">
                 🌟 EconomicEden
             </a>
-        </div>
-        <div class="link-display">
-            <a href="https://m.blog.naver.com/economic_eden?tab=1" target="_blank">
+            <a href="https://m.blog.naver.com/economic_eden?tab=1" class="quick-link" target="_blank">
                 📖 개발블로그
             </a>
-        </div>
-        <div class="link-display">
-            <a href="https://youtube.com/@economiceden?si=OLHH8h2MZep0oAYA" target="_blank">
+            <a href="https://youtube.com/@economiceden?si=OLHH8h2MZep0oAYA" class="quick-link" target="_blank">
                 📺 유튜브
             </a>
-        </div>
-        <div class="link-display">
-            <a href="https://cryptoinvest.cafe24.com:8080/m/dashboard" target="_blank">
-                💰 크립토 대시보드
+            <a href="https://cryptoinvest.cafe24.com:8080/m/dashboard" class="quick-link" target="_blank">
+                💰 대시보드
+            </a>
+            <a href="games/" class="quick-link">
+                🎮 게임
+            </a>
+            <a href="utilities/" class="quick-link">
+                🛠️ 유틸리티
             </a>
         </div>
     </div>
 
-    <!-- 광고 섹션 -->
-    <div class="section ads-section">
-        <div>
-            <h3>📺 광고 공간</h3>
-            <p>YouTube 애드센스 및 광고가 표시될 예정입니다</p>
+    <!-- 광고 컨테이너 -->
+    <div class="ad-container">
+        <!-- 프리미엄 광고 영역 -->
+        <div class="ad-placeholder">
+            <p>프리미엄 광고 #1</p>
+            <p class="ad-size">300x600px - 스카이스크래퍼</p>
+            <p>최상단 노출 광고</p>
+        </div>
+        <div class="ad-placeholder">
+            <p>프리미엄 광고 #2</p>
+            <p class="ad-size">300x600px - 스카이스크래퍼</p>
+            <p>상단 우측 광고</p>
+        </div>
+
+        <!-- 일반 광고 영역 -->
+        <div class="ad-placeholder">
+            <p>거래소 광고 #1</p>
+            <p class="ad-size">336x280px - 라지 렉탱글</p>
+            <p>바이낸스 거래소</p>
+        </div>
+        <div class="ad-placeholder">
+            <p>거래소 광고 #2</p>
+            <p class="ad-size">336x280px - 라지 렉탱글</p>
+            <p>바이비트 거래소</p>
+        </div>
+        <div class="ad-placeholder">
+            <p>거래소 광고 #3</p>
+            <p class="ad-size">336x280px - 라지 렉탱글</p>
+            <p>업비트 거래소</p>
+        </div>
+        <div class="ad-placeholder">
+            <p>거래소 광고 #4</p>
+            <p class="ad-size">336x280px - 라지 렉탱글</p>
+            <p>빗썸 거래소</p>
+        </div>
+
+        <!-- 코인 프로젝트 광고 -->
+        <div class="ad-placeholder">
+            <p>코인 프로젝트 #1</p>
+            <p class="ad-size">300x250px - 미디움 렉탱글</p>
+            <p>신규 코인 런칭</p>
+        </div>
+        <div class="ad-placeholder">
+            <p>코인 프로젝트 #2</p>
+            <p class="ad-size">300x250px - 미디움 렉탱글</p>
+            <p>ICO 진행중</p>
+        </div>
+
+        <!-- 트레이딩 도구 광고 -->
+        <div class="ad-placeholder">
+            <p>트레이딩 도구 #1</p>
+            <p class="ad-size">300x250px - 미디움 렉탱글</p>
+            <p>차트 분석 툴</p>
+        </div>
+        <div class="ad-placeholder">
+            <p>트레이딩 도구 #2</p>
+            <p class="ad-size">300x250px - 미디움 렉탱글</p>
+            <p>시그널 서비스</p>
+        </div>
+
+        <!-- 교육 서비스 광고 -->
+        <div class="ad-placeholder">
+            <p>교육 서비스 #1</p>
+            <p class="ad-size">300x250px - 미디움 렉탱글</p>
+            <p>트레이딩 강좌</p>
+        </div>
+        <div class="ad-placeholder">
+            <p>교육 서비스 #2</p>
+            <p class="ad-size">300x250px - 미디움 렉탱글</p>
+            <p>멘토링 프로그램</p>
+        </div>
+
+        <!-- 추가 광고 공간 -->
+        <div class="ad-placeholder">
+            <p>추가 광고 #1</p>
+            <p class="ad-size">300x250px - 미디움 렉탱글</p>
+            <p>광고 준비중</p>
+        </div>
+        <div class="ad-placeholder">
+            <p>추가 광고 #2</p>
+            <p class="ad-size">300x250px - 미디움 렉탱글</p>
+            <p>광고 준비중</p>
         </div>
     </div>
-
-    <!-- 게임 섹션 -->
-    <div class="section future-section games-section">
-        <a href="games/" class="section-link">
-            <h3>🎮 미니 게임</h3>
-            <p>재미있는 게임들을 즐겨보세요!</p>
-            <div class="link-arrow">→</div>
-        </a>
-    </div>
-
-    <!-- 유틸리티 섹션 -->
-    <div class="section future-section utilities-section">
-        <a href="utilities/" class="section-link">
-            <h3>🛠️ 유틸리티</h3>
-            <p>유용한 도구들을 사용해보세요!</p>
-            <div class="link-arrow">→</div>
-        </a>
-    </div>
 </div>
+
 <script>
-// URL 복사
-function copyToClipboard() {
-    const urlText = document.getElementById('urlDisplay').textContent;
-    navigator.clipboard.writeText(urlText).then(function() {
-        const successMessage = document.getElementById('successMessage');
-        successMessage.style.display = 'block';
-        setTimeout(() => { successMessage.style.display = 'none'; }, 3000);
-    });
-}
+// URL 복사 기능은 제거 (불필요)
 </script>
 </body>
 </html>
