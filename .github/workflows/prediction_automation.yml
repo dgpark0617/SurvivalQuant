@@ -83,7 +83,7 @@ jobs:
             const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
             const data = await response.json();
             return data.price;
-            
+          
       - name: Update Statistics
         uses: actions/github-script@v6
         with:
@@ -101,18 +101,16 @@ jobs:
             const startPrice = startPriceMatch ? parseFloat(startPriceMatch[1]) : 0;
             const finalPrice = parseFloat(steps.final_price.outputs.result);
             
+            // 투표 수 계산
+            const upVotes = reactions.data.filter(r => r.content === '+1').length;
+            const downVotes = reactions.data.filter(r => r.content === '-1').length;
+            const totalVotes = reactions.data.length;
+            
             // 투표 결과 분석
-            const stats = {
-              upVotes: reactions.data.filter(r => r.content === '+1').length,
-              downVotes: reactions.data.filter(r => r.content === '-1').length,
-              totalVotes: reactions.data.length,
-              startPrice,
-              finalPrice,
-              actualDirection: finalPrice > startPrice ? '상승' : '하락',
-              majorityPrediction: (stats.upVotes > stats.downVotes) ? '상승' : '하락',
-              isCorrect: (finalPrice > startPrice && stats.upVotes > stats.downVotes) || 
-                        (finalPrice < startPrice && stats.downVotes > stats.upVotes)
-            };
+            const actualDirection = finalPrice > startPrice ? '상승' : '하락';
+            const majorityPrediction = upVotes > downVotes ? '상승' : '하락';
+            const isCorrect = (finalPrice > startPrice && upVotes > downVotes) || 
+                            (finalPrice < startPrice && downVotes > upVotes);
             
             // Wiki 페이지 읽기
             const wikiPath = 'Prediction-Statistics.md';
@@ -129,7 +127,7 @@ jobs:
             let correctPredictions = (wikiContent.match(/정확한 예측 횟수: (\d+)/) || [0, 0])[1];
             
             totalPredictions = parseInt(totalPredictions) + 1;
-            if (stats.isCorrect) {
+            if (isCorrect) {
               correctPredictions = parseInt(correctPredictions) + 1;
             }
             
@@ -137,7 +135,7 @@ jobs:
             
             // 최근 예측 기록 업데이트
             const now = new Date();
-            const newRecord = `| ${now.toISOString().split('T')[0]} | $${stats.startPrice.toFixed(2)} | $${stats.finalPrice.toFixed(2)} | ${stats.upVotes} | ${stats.downVotes} | ${stats.actualDirection} | ${stats.majorityPrediction} | ${stats.isCorrect ? '✅' : '❌'} |`;
+            const newRecord = `| ${now.toISOString().split('T')[0]} | $${startPrice.toFixed(2)} | $${finalPrice.toFixed(2)} | ${upVotes} | ${downVotes} | ${actualDirection} | ${majorityPrediction} | ${isCorrect ? '✅' : '❌'} |`;
             
             // 기존 기록 가져오기 (최대 9개)
             const recordsMatch = wikiContent.match(/\|.*\|/g) || [];
@@ -156,7 +154,7 @@ jobs:
 - 총 예측 횟수: ${totalPredictions}
 - 정확한 예측 횟수: ${correctPredictions}
 - 전체 정확도: ${accuracy}%
-- 총 참여자 수: ${stats.totalVotes}
+- 총 참여자 수: ${totalVotes}
 
 ## 최근 예측 기록 (최근 10개)
 ${records.join('\n')}
@@ -174,12 +172,12 @@ ${records.join('\n')}
               issue_number: issue.number,
               body: `## 📊 예측 결과
 
-- 시작 가격: $${stats.startPrice.toFixed(2)}
-- 종료 가격: $${stats.finalPrice.toFixed(2)}
-- 실제 방향: ${stats.actualDirection}
-- 투표 결과: ${stats.upVotes}명 상승 vs ${stats.downVotes}명 하락
-- 다수결 예측: ${stats.majorityPrediction}
-- 정확도: ${stats.isCorrect ? '✅ 정확' : '❌ 오답'}
+- 시작 가격: $${startPrice.toFixed(2)}
+- 종료 가격: $${finalPrice.toFixed(2)}
+- 실제 방향: ${actualDirection}
+- 투표 결과: ${upVotes}명 상승 vs ${downVotes}명 하락
+- 다수결 예측: ${majorityPrediction}
+- 정확도: ${isCorrect ? '✅ 정확' : '❌ 오답'}
 
 통계가 Wiki 페이지에 업데이트되었습니다.`
             }); 
