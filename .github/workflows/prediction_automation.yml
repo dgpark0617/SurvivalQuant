@@ -9,7 +9,7 @@ on:
 
 jobs:
   create-prediction:
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -109,9 +109,9 @@ jobs:
               startPrice,
               finalPrice,
               actualDirection: finalPrice > startPrice ? '상승' : '하락',
-              majorityPrediction: upVotes > downVotes ? '상승' : '하락',
-              isCorrect: (finalPrice > startPrice && upVotes > downVotes) || 
-                        (finalPrice < startPrice && downVotes > upVotes)
+              majorityPrediction: (stats.upVotes > stats.downVotes) ? '상승' : '하락',
+              isCorrect: (finalPrice > startPrice && stats.upVotes > stats.downVotes) || 
+                        (finalPrice < startPrice && stats.downVotes > stats.upVotes)
             };
             
             // Wiki 페이지 읽기
