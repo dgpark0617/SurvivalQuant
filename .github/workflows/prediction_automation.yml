@@ -1,0 +1,60 @@
+name: Prediction Automation
+
+on:
+  schedule:
+    - cron: '30 */4 * * *'  # 매 4시간 30분 전에 실행
+  issues:
+    types: [closed]  # 이슈가 닫힐 때
+
+jobs:
+  create-prediction:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Create Prediction Issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const now = new Date();
+            const nextFourHour = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+            
+            const title = `[4H Poll] BTCUSDT 방향성 예측 (${nextFourHour.toISOString().split('T')[0]} ${nextFourHour.getUTCHours()}:00)`;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: `## 📊 4시간 방향성 투표\n\n투표 진행 중...\n\n마감 시간: ${nextFourHour.toISOString()}`,
+              labels: ['prediction', 'active']
+            });
+
+  update-stats:
+    if: github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'prediction')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: ${{github.repository}}.wiki
+          
+      - name: Update Statistics
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const reactions = await github.rest.reactions.listForIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number
+            });
+            
+            // 통계 업데이트 로직
+            const stats = {
+              upVotes: reactions.data.filter(r => r.content === '+1').length,
+              downVotes: reactions.data.filter(r => r.content === '-1').length,
+              totalVotes: reactions.data.length
+            };
+            
+            // Wiki 페이지 업데이트
+            // TODO: 실제 통계 업데이트 로직 구현 
