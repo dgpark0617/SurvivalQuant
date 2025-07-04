@@ -1,183 +1,39 @@
-name: Prediction Automation
+name: BTC Price Prediction
 
 on:
   schedule:
-    - cron: '30 */4 * * *'  # 매 4시간 30분 전에 실행
-  workflow_dispatch:  # 수동 트리거 추가
-  issues:
-    types: [closed]  # 이슈가 닫힐 때
+    - cron: '0 */4 * * *'  # 4시간마다 실행
+  workflow_dispatch:  # 수동 실행 가능
 
 jobs:
-  create-prediction:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+  prediction:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      
-      - name: Get Current Price
+      - name: Get BTC Price
         id: price
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
-            const data = await response.json();
-            return data.price;
-      
-      - name: Create Prediction Issue
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const now = new Date();
-            const nextFourHour = new Date(now.getTime() + 4 * 60 * 60 * 1000);
-            const price = steps.price.outputs.result;
-            
-            const title = `[4H Poll] BTCUSDT 방향성 예측 (${nextFourHour.toISOString().split('T')[0]} ${nextFourHour.getUTCHours()}:00)`;
-            
-            const body = `## 📊 4시간 방향성 투표
+        run: |
+          price=$(curl -s https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT | jq -r .price)
+          echo "PRICE=$price" >> $GITHUB_ENV
 
-### ⏰ 투표 기간
-- 시작: ${now.toISOString()}
-- 마감: ${nextFourHour.toISOString()}
+      - name: Create or Close Issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 새 예측 이슈 생성
+          gh issue create \
+            --title "BTC 가격 예측 $(date +%Y-%m-%d_%H)" \
+            --body "현재 가격: \$${{ env.PRICE }}
 
-### 📈 현재 가격: $${parseFloat(price).toFixed(2)}
+          👍 = 상승 예상
+          👎 = 하락 예상
 
-### 투표 방법
-- 👍 (상승 예상)
-- 👎 (하락 예상)
+          4시간 후 자동으로 마감됩니다." \
+            --label "prediction"
 
-### 분석 공유
-- 코멘트로 자유롭게 분석을 공유해주세요
-- 기술적/펀더멘탈 분석 모두 환영합니다
-
-### 결과 집계
-- 4시간 후 종가 기준으로 판정
-- 시작 가격 대비 +/- 로 승패 결정
-- 정확도는 Wiki 페이지에서 확인 가능
-
-### 주의사항
-- 마감 전까지 예측을 변경할 수 있습니다
-- 여러 번 투표 시 마지막 투표만 인정
-- 결과는 자동으로 집계됩니다`;
-            
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: title,
-              body: body,
-              labels: ['prediction', 'active']
-            });
-
-  update-stats:
-    if: github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'prediction')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          repository: ${{github.repository}}.wiki
-          
-      - name: Get Final Price
-        id: final_price
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
-            const data = await response.json();
-            return data.price;
-          
-      - name: Update Statistics
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const issue = context.payload.issue;
-            const reactions = await github.rest.reactions.listForIssue({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number
-            });
-            
-            // 이슈 본문에서 시작 가격 추출
-            const startPriceMatch = issue.body.match(/현재 가격: \$([0-9.]+)/);
-            const startPrice = startPriceMatch ? parseFloat(startPriceMatch[1]) : 0;
-            const finalPrice = parseFloat(steps.final_price.outputs.result);
-            
-            // 투표 수 계산
-            const upVotes = reactions.data.filter(r => r.content === '+1').length;
-            const downVotes = reactions.data.filter(r => r.content === '-1').length;
-            const totalVotes = reactions.data.length;
-            
-            // 투표 결과 분석
-            const actualDirection = finalPrice > startPrice ? '상승' : '하락';
-            const majorityPrediction = upVotes > downVotes ? '상승' : '하락';
-            const isCorrect = (finalPrice > startPrice && upVotes > downVotes) || 
-                            (finalPrice < startPrice && downVotes > upVotes);
-            
-            // Wiki 페이지 읽기
-            const wikiPath = 'Prediction-Statistics.md';
-            let wikiContent = '';
-            try {
-              wikiContent = fs.readFileSync(wikiPath, 'utf8');
-            } catch (error) {
-              console.log('Wiki file not found, creating new one');
-              wikiContent = `# 4시간 BTC 예측 통계\n\n## 전체 통계\n`;
-            }
-            
-            // 전체 통계 업데이트
-            let totalPredictions = (wikiContent.match(/총 예측 횟수: (\d+)/) || [0, 0])[1];
-            let correctPredictions = (wikiContent.match(/정확한 예측 횟수: (\d+)/) || [0, 0])[1];
-            
-            totalPredictions = parseInt(totalPredictions) + 1;
-            if (isCorrect) {
-              correctPredictions = parseInt(correctPredictions) + 1;
-            }
-            
-            const accuracy = ((correctPredictions / totalPredictions) * 100).toFixed(1);
-            
-            // 최근 예측 기록 업데이트
-            const now = new Date();
-            const newRecord = `| ${now.toISOString().split('T')[0]} | $${startPrice.toFixed(2)} | $${finalPrice.toFixed(2)} | ${upVotes} | ${downVotes} | ${actualDirection} | ${majorityPrediction} | ${isCorrect ? '✅' : '❌'} |`;
-            
-            // 기존 기록 가져오기 (최대 9개)
-            const recordsMatch = wikiContent.match(/\|.*\|/g) || [];
-            const headerRow = '| 날짜 | 시작가 | 종가 | 상승표 | 하락표 | 실제방향 | 다수결예측 | 정확여부 |';
-            const formatRow = '|------|--------|------|---------|---------|-----------|------------|----------|';
-            let records = [headerRow, formatRow, newRecord];
-            
-            if (recordsMatch.length > 2) {
-              records = records.concat(recordsMatch.slice(2, 11));
-            }
-            
-            // 새로운 Wiki 내용 생성
-            const newWikiContent = `# 4시간 BTC 예측 통계
-
-## 전체 통계
-- 총 예측 횟수: ${totalPredictions}
-- 정확한 예측 횟수: ${correctPredictions}
-- 전체 정확도: ${accuracy}%
-- 총 참여자 수: ${totalVotes}
-
-## 최근 예측 기록 (최근 10개)
-${records.join('\n')}
-
-## 업데이트 내역
-마지막 업데이트: ${now.toISOString()}`;
-            
-            // Wiki 페이지 저장
-            fs.writeFileSync(wikiPath, newWikiContent);
-            
-            // 이슈에 결과 코멘트 작성
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              body: `## 📊 예측 결과
-
-- 시작 가격: $${startPrice.toFixed(2)}
-- 종료 가격: $${finalPrice.toFixed(2)}
-- 실제 방향: ${actualDirection}
-- 투표 결과: ${upVotes}명 상승 vs ${downVotes}명 하락
-- 다수결 예측: ${majorityPrediction}
-- 정확도: ${isCorrect ? '✅ 정확' : '❌ 오답'}
-
-통계가 Wiki 페이지에 업데이트되었습니다.`
-            }); 
+          # 4시간 이상 된 이슈 마감
+          gh issue list \
+            --label "prediction" \
+            --state open \
+            --json number,createdAt \
+            | jq -r '.[] | select(((now - (.[].createdAt | fromdateiso8601)) / 3600) >= 4) | .number' \
+            | xargs -I {} gh issue close {}
