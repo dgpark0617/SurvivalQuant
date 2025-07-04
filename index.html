@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SurvivalQuant</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         /* ----------- 기존 스타일 유지, 일부만 개선 ----------- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -237,8 +238,10 @@
             </div>
         </div>
         <div class="fractal-chart-container" id="fractalContainer">
-            <canvas id="hourlyCanvas" class="candle-layer" style="z-index: 1;"></canvas>
-            <canvas id="minute5Canvas" class="candle-layer" style="z-index: 2;"></canvas>
+            <div id="tvChart" style="width:100%;height:100%;position:relative;"></div>
+            <!-- 기존 Canvas 차트는 유지 또는 주석처리 -->
+            <!-- <canvas id="hourlyCanvas" class="candle-layer" style="z-index: 1;"></canvas> -->
+            <!-- <canvas id="minute5Canvas" class="candle-layer" style="z-index: 2;"></canvas> -->
             <div id="loadingMessage" class="loading">프랙탈 캔들 데이터 로딩중...</div>
         </div>
         <div class="chart-info">
@@ -341,36 +344,6 @@
         return haCandles;
     }
 
-    // 캔버스 크기 동기화 (리사이즈 대응)
-    function resizeCanvases() {
-        const canvasIds = ['hourlyCanvas', 'minute5Canvas'];
-        const container = document.getElementById('fractalContainer');
-        const width = Math.max(300, container.clientWidth - 40);
-        const height = Math.max(200, container.clientHeight - 40);
-        canvasIds.forEach(canvasId => {
-            const canvas = document.getElementById(canvasId);
-            canvas.width = width;
-            canvas.height = height;
-            canvasContexts[canvasId] = canvas.getContext('2d');
-        });
-        chartDimensions.width = width;
-        chartDimensions.height = height;
-    }
-
-    // 프랙탈 차트 초기화
-    function initializeFractalChart() {
-        resizeCanvases();
-        document.getElementById('coinSelector').addEventListener('change', function(e) {
-            currentSymbol = e.target.value;
-            loadFractalCandleData();
-        });
-        window.addEventListener('resize', () => {
-            resizeCanvases();
-            drawFractalCandles();
-        });
-        loadFractalCandleData();
-    }
-
     // 바이낸스 Kline 데이터 가져오기
     async function fetchKlineData(symbol, interval, limit) {
         try {
@@ -411,7 +384,57 @@
         loadFractalCandleData();
     });
 
-    // 프랙탈 캔들 데이터 로드 (상위/하위 타임프레임 반영)
+    // Lightweight Charts 차트 객체 전역 변수
+    let tvChart = null;
+    let mainSeries = null;
+    let subSeries = null;
+
+    // Lightweight Charts 차트 초기화 및 데이터 렌더링
+    function renderLightweightChart() {
+        if (tvChart) {
+            tvChart.remove();
+        }
+        tvChart = LightweightCharts.createChart(document.getElementById('tvChart'), {
+            width: document.getElementById('tvChart').clientWidth,
+            height: document.getElementById('tvChart').clientHeight,
+            layout: {
+                background: { type: 'solid', color: '#181a20' },
+                textColor: '#e0e0e0',
+            },
+            grid: {
+                vertLines: { color: '#23262f', style: 1, visible: true },
+                horzLines: { color: '#23262f', style: 1, visible: true },
+            },
+            timeScale: { borderColor: '#23262f', timeVisible: true, secondsVisible: false },
+            rightPriceScale: { borderColor: '#23262f' },
+            crosshair: { mode: 1 },
+        });
+        // 상위봉(메인) 시리즈
+        mainSeries = tvChart.addCandlestickSeries({
+            upColor: '#26a69a', downColor: '#ef5350', borderVisible: false, wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+            overlay: false, priceLineVisible: false, opacity: 0.3
+        });
+        // 하위봉(서브) 시리즈
+        subSeries = tvChart.addCandlestickSeries({
+            upColor: '#1976D2', downColor: '#ef5350', borderVisible: false, wickUpColor: '#1976D2', wickDownColor: '#ef5350',
+            overlay: true, priceLineVisible: false, opacity: 1.0
+        });
+        // 데이터 세팅
+        if (candleData['main_ha'] && candleData['main_ha'].length > 0) {
+            mainSeries.setData(candleData['main_ha'].map(c => ({
+                time: Math.floor(c.timestamp / 1000),
+                open: c.open, high: c.high, low: c.low, close: c.close
+            })));
+        }
+        if (candleData['sub_ha'] && candleData['sub_ha'].length > 0) {
+            subSeries.setData(candleData['sub_ha'].map(c => ({
+                time: Math.floor(c.timestamp / 1000),
+                open: c.open, high: c.high, low: c.low, close: c.close
+            })));
+        }
+    }
+
+    // 프랙탈 캔들 데이터 로드 후 차트 렌더링
     async function loadFractalCandleData() {
         document.getElementById('loadingMessage').style.display = 'flex';
         try {
@@ -426,7 +449,7 @@
             candleData['sub'] = subData;
             candleData['main_ha'] = heikinAshiTransform(mainData);
             candleData['sub_ha'] = heikinAshiTransform(subData);
-            drawFractalCandles();
+            renderLightweightChart();
             document.getElementById('loadingMessage').style.display = 'none';
         } catch (error) {
             document.getElementById('loadingMessage').innerHTML = `
@@ -438,120 +461,6 @@
         }
     }
 
-    // 하이킨아시 기준 가격 범위 계산
-    function calculatePriceRangeHA() {
-        let allPrices = [];
-        ['main_ha', 'sub_ha'].forEach(key => {
-            (candleData[key] || []).forEach(candle => {
-                allPrices.push(candle.high, candle.low);
-            });
-        });
-        if (allPrices.length === 0) return { min: 0, max: 100 };
-        const min = Math.min(...allPrices);
-        const max = Math.max(...allPrices);
-        const padding = (max - min) * 0.1;
-        return { min: min - padding, max: max + padding };
-    }
-
-    // 각 타임프레임별 캔들 폭/간격 계산
-    function getCandleRenderParams(timeframe) {
-        const data = candleData[timeframe] || [];
-        if (!data.length) return {candleWidth: 4, spacing: 2};
-        const maxArea = chartDimensions.width * 0.90;
-        const candleCount = data.length;
-        let candleWidth = Math.max(3, Math.min(16, maxArea / (candleCount*1.5)));
-        let spacing = Math.max(1, candleWidth * 0.3);
-        return {candleWidth, spacing};
-    }
-
-    // 프랙탈 캔들 차트 그리기 (상위/하위 타임프레임 오버레이)
-    function drawFractalCandles() {
-        Object.values(canvasContexts).forEach(ctx => ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height));
-        const priceRange = calculatePriceRangeHA();
-        drawMainCandlesHA('main_ha', 'hourlyCanvas', priceRange, 0.30, '#222222');
-        drawSubCandlesHA('sub_ha', 'minute5Canvas', priceRange, 1.00, '#1976D2');
-    }
-
-    // 상위봉(메인) 캔들 그리기: 전체 x축 균등 분할
-    function drawMainCandlesHA(timeframe, canvasId, priceRange, opacity, color) {
-        const ctx = canvasContexts[canvasId];
-        const data = candleData[timeframe];
-        if (!data || data.length === 0) return;
-        const count = data.length;
-        const totalWidth = chartDimensions.width;
-        const candleWidth = Math.max(8, totalWidth / (count * 1.5));
-        const spacing = (totalWidth - candleWidth * count) / (count + 1);
-        data.forEach((candle, i) => {
-            const x = spacing + i * (candleWidth + spacing);
-            drawSingleCandle(ctx, x, candle, candleWidth, priceRange, opacity, color);
-        });
-    }
-
-    // 하위봉(서브) 캔들 그리기: 각 상위봉 구간 내 N개 균등 분할
-    function drawSubCandlesHA(timeframe, canvasId, priceRange, opacity, color) {
-        const ctx = canvasContexts[canvasId];
-        const subData = candleData[timeframe];
-        const mainData = candleData['main_ha'];
-        if (!subData || !mainData || subData.length === 0 || mainData.length === 0) return;
-        const mainCount = mainData.length;
-        const subPerMain = Math.round(subData.length / mainCount);
-        const totalWidth = chartDimensions.width;
-        const mainCandleWidth = Math.max(8, totalWidth / (mainCount * 1.5));
-        const mainSpacing = (totalWidth - mainCandleWidth * mainCount) / (mainCount + 1);
-        for (let i = 0; i < mainCount; i++) {
-            const mainX = mainSpacing + i * (mainCandleWidth + mainSpacing);
-            const subStart = i * subPerMain;
-            const subEnd = subStart + subPerMain;
-            const subCandles = subData.slice(subStart, subEnd);
-            const subCandleWidth = Math.max(2, mainCandleWidth / (subPerMain * 1.2));
-            const subSpacing = (mainCandleWidth - subCandleWidth * subPerMain) / (subPerMain + 1);
-            subCandles.forEach((candle, j) => {
-                const x = mainX + subSpacing + j * (subCandleWidth + subSpacing);
-                drawSingleCandle(ctx, x, candle, subCandleWidth, priceRange, opacity, color);
-            });
-        }
-    }
-
-    // 단일 캔들 그리기 (트레이딩뷰 스타일)
-    function drawSingleCandle(ctx, x, candle, width, priceRange, opacity, color) {
-        const getY = (price) => {
-            const ratio = (price - priceRange.min) / (priceRange.max - priceRange.min);
-            return chartDimensions.height - (ratio * chartDimensions.height);
-        };
-        const openY = getY(candle.open), closeY = getY(candle.close), highY = getY(candle.high), lowY = getY(candle.low);
-        const isUp = candle.close >= candle.open;
-        const bodyColor = isUp ? "#26a69a" : "#ef5350";
-        ctx.globalAlpha = opacity;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = isUp ? "#26a69a55" : "#ef535055";
-
-        // 캔들 몸통
-        ctx.fillStyle = bodyColor;
-        const bodyTop = Math.min(openY, closeY);
-        const bodyHeight = Math.max(1, Math.abs(closeY - openY));
-        if (bodyHeight > 1.2) {
-            ctx.fillRect(x, bodyTop, width, bodyHeight);
-        } else {
-            ctx.strokeStyle = bodyColor;
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(x, openY);
-            ctx.lineTo(x + width, openY);
-            ctx.stroke();
-        }
-
-        // 꼬리 (wick)
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = Math.max(1, width / 6);
-        ctx.beginPath();
-        ctx.moveTo(x + width / 2, highY);
-        ctx.lineTo(x + width / 2, lowY);
-        ctx.stroke();
-
-        ctx.globalAlpha = 1.0;
-    }
-
     // 차트 새로고침
     function refreshChart() {
         loadFractalCandleData();
@@ -559,7 +468,7 @@
 
     // 첫 렌더링
     document.addEventListener('DOMContentLoaded', function() {
-        initializeFractalChart();
+        loadFractalCandleData();
     });
 </script>
 </body>
