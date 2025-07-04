@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>생존형 퀀트의 경제적 낙원</title>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -36,29 +40,26 @@
             padding: 10px;
             text-align: center;
         }
-        .chart-section {
-            grid-column: 1 / -1;
+        .chart-container {
             height: 400px;
+            width: 100%;
             position: relative;
         }
-        #chart-container {
-            height: 100%;
-            width: 100%;
-        }
         .vote-container {
-            grid-column: 1 / -1;
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            padding: 10px;
+            text-align: center;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            margin-top: 20px;
         }
         .vote-btn {
             padding: 10px 30px;
+            margin: 0 10px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 16px;
+            transition: all 0.3s;
         }
         .vote-up {
             background: #28a745;
@@ -67,6 +68,33 @@
         .vote-down {
             background: #dc3545;
             color: white;
+        }
+        .vote-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .vote-stats {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .login-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .login-input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .login-btn {
+            padding: 8px 20px;
+            background: #4e54c8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
         }
         .links-section {
             grid-column: 1 / -1;
@@ -153,15 +181,20 @@
         <p>실시간 코인 차트 및 투자 도구</p>
     </div>
 
-    <!-- 차트 섹션 -->
-    <div class="section chart-section">
-        <div id="chart-container"></div>
+    <!-- 로그인 섹션 -->
+    <div class="section login-container" id="loginSection">
+        <input type="text" id="userId" placeholder="닉네임 입력" class="login-input">
+        <button onclick="login()" class="login-btn">시작하기</button>
     </div>
 
+    <!-- 차트 섹션 -->
+    <div class="section chart-container" id="chartContainer"></div>
+
     <!-- 투표 섹션 -->
-    <div class="section vote-container">
+    <div class="section vote-container" id="voteContainer" style="display: none;">
         <button class="vote-btn vote-up" onclick="vote('up')">상승 예상</button>
         <button class="vote-btn vote-down" onclick="vote('down')">하락 예상</button>
+        <div class="vote-stats" id="voteStats"></div>
     </div>
 
     <!-- 링크 섹션 -->
@@ -275,11 +308,27 @@
 </div>
 
 <script>
-const chart = LightweightCharts.createChart(document.getElementById('chart-container'), {
-    width: document.getElementById('chart-container').offsetWidth,
-    height: document.getElementById('chart-container').offsetHeight,
+// Firebase 초기화
+const firebaseConfig = {
+    apiKey: "AIzaSyBqBc2LPOIDcApfyVSUXCSKHoBBkc-EyAU",
+    authDomain: "survivalquant.firebaseapp.com",
+    databaseURL: "https://survivalquant-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "survivalquant",
+    storageBucket: "survivalquant.firebasestorage.app",
+    messagingSenderId: "620666178234",
+    appId: "1:620666178234:web:6975ee8bdf5fd0de949083",
+    measurementId: "G-CXJPRJNBKS"
+};
+
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// 차트 초기화
+const chart = LightweightCharts.createChart(document.getElementById('chartContainer'), {
+    width: document.getElementById('chartContainer').offsetWidth,
+    height: 400,
     layout: {
-        background: { color: '#ffffff' },
+        backgroundColor: '#ffffff',
         textColor: '#333',
     },
     grid: {
@@ -289,66 +338,106 @@ const chart = LightweightCharts.createChart(document.getElementById('chart-conta
     crosshair: {
         mode: LightweightCharts.CrosshairMode.Normal,
     },
-    rightPriceScale: {
-        borderColor: '#f0f0f0',
-    },
     timeScale: {
-        borderColor: '#f0f0f0',
         timeVisible: true,
     },
 });
 
 const candleSeries = chart.addCandlestickSeries();
 
-// 바이낸스 API에서 데이터 가져오기
+// 데이터 가져오기
 async function fetchData() {
-    const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24');
-    const data = await response.json();
-    return data.map(d => ({
-        time: d[0] / 1000,
-        open: parseFloat(d[1]),
-        high: parseFloat(d[2]),
-        low: parseFloat(d[3]),
-        close: parseFloat(d[4])
-    }));
+    try {
+        const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24');
+        const data = await response.json();
+        return data.map(d => ({
+            time: d[0] / 1000,
+            open: parseFloat(d[1]),
+            high: parseFloat(d[2]),
+            low: parseFloat(d[3]),
+            close: parseFloat(d[4])
+        }));
+    } catch (error) {
+        console.error('데이터 로드 실패:', error);
+        return [];
+    }
 }
 
-// 차트 데이터 업데이트
+// 로그인 처리
+function login() {
+    const userId = document.getElementById('userId').value.trim();
+    if (userId) {
+        localStorage.setItem('userId', userId);
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('voteContainer').style.display = 'block';
+        loadVoteStats();
+    }
+}
+
+// 투표 처리
+function vote(direction) {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+
+    const now = new Date();
+    const voteRef = database.ref('votes').push();
+    voteRef.set({
+        userId: userId,
+        vote: direction,
+        timestamp: now.toISOString(),
+        price: currentPrice
+    });
+
+    loadVoteStats();
+}
+
+// 투표 통계 로드
+function loadVoteStats() {
+    const statsRef = database.ref('votes');
+    // 실시간 업데이트를 위해 on 메서드 사용
+    statsRef.on('value', (snapshot) => {
+        const votes = snapshot.val() || {};
+        let upVotes = 0;
+        let downVotes = 0;
+        
+        Object.values(votes).forEach(vote => {
+            if (vote.vote === 'up') upVotes++;
+            else if (vote.vote === 'down') downVotes++;
+        });
+
+        document.getElementById('voteStats').innerHTML = `
+            현재 투표 현황: 상승 ${upVotes}표 vs 하락 ${downVotes}표
+        `;
+    });
+}
+
+// 차트 업데이트
 async function updateChart() {
     const data = await fetchData();
     if (data.length > 0) {
         candleSeries.setData(data);
+        currentPrice = data[data.length - 1].close;
     }
 }
 
-// 초기 로드 및 주기적 업데이트
+// 초기화
+let currentPrice = 0;
 updateChart();
-setInterval(updateChart, 60000);  // 1분마다 업데이트
+// 10초마다 차트 업데이트
+setInterval(updateChart, 10000);
 
-// 창 크기 조절 시 차트 크기 조정
+// 창 크기 조절 대응
 window.addEventListener('resize', () => {
     chart.applyOptions({
-        width: document.getElementById('chart-container').offsetWidth,
-        height: document.getElementById('chart-container').offsetHeight
+        width: document.getElementById('chartContainer').offsetWidth
     });
 });
 
-// 투표 기능
-function vote(direction) {
-    const time = new Date().toISOString();
-    localStorage.setItem('vote', JSON.stringify({
-        direction: direction,
-        time: time
-    }));
-    
-    // 버튼 시각적 피드백
-    const buttons = document.querySelectorAll('.vote-btn');
-    buttons.forEach(btn => btn.style.opacity = '1');
-    
-    const selectedBtn = direction === 'up' ? 
-        document.querySelector('.vote-up') : 
-        document.querySelector('.vote-down');
-    selectedBtn.style.opacity = '0.7';
+// 저장된 사용자 확인
+const savedUserId = localStorage.getItem('userId');
+if (savedUserId) {
+    document.getElementById('userId').value = savedUserId;
+    login();
 }
 </script>
 </body>
