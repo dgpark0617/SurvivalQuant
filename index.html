@@ -10,9 +10,9 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #ffffff;
+            background: #181a20;
             min-height: 100vh;
-            color: #333;
+            color: #e0e0e0;
             margin: 0;
             padding: 20px;
         }
@@ -24,11 +24,11 @@
             gap: 30px;
         }
         .section {
-            background: #ffffff;
-            border: 2px solid #e0e0e0;
+            background: #23262f;
+            border: 2px solid #23262f;
             border-radius: 15px;
             padding: 30px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.18);
             text-align: center;
         }
         .header-section {
@@ -38,11 +38,11 @@
             padding: 15px 30px;
         }
         .chart-section {
-            background: #ffffff;
-            border: 2px solid #e0e0e0;
+            background: #181a20;
+            border: 2px solid #23262f;
             border-radius: 15px;
             padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.18);
             margin-bottom: 20px;
         }
         .chart-header {
@@ -56,7 +56,7 @@
         .chart-title {
             font-size: 1.5rem;
             font-weight: 600;
-            color: #333;
+            color: #e0e0e0;
             margin: 0;
         }
         .chart-controls {
@@ -116,12 +116,12 @@
             position: relative;
             height: 500px;
             width: 100%;
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            border: 3px solid #6c757d;
+            background: linear-gradient(135deg, #23262f 0%, #181a20 100%);
+            border: 3px solid #23262f;
             border-radius: 15px;
             padding: 20px;
             margin: 20px 0;
-            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
+            box-shadow: 0 8px 25px rgba(24, 26, 32, 0.5);
             overflow: hidden;
         }
         .candle-layer {
@@ -161,8 +161,8 @@
             .utilities-section { grid-area: utilities; }
         }
         h1 { font-size: 1.8rem; margin-bottom: 10px; font-weight: 400; }
-        h2 { font-size: 1.8rem; margin-bottom: 20px; font-weight: 400; color: #333; }
-        h3 { font-size: 1.3rem; margin-bottom: 10px; font-weight: 500; color: #555; }
+        h2 { font-size: 1.8rem; margin-bottom: 20px; font-weight: 400; color: #e0e0e0; }
+        h3 { font-size: 1.3rem; margin-bottom: 10px; font-weight: 500; color: #e0e0e0; }
         .url-display {
             background: #f8f9fa; color: #333; padding: 15px 20px; border-radius: 10px;
             font-size: 1.1rem; font-weight: 500; margin: 15px 0; word-break: break-all;
@@ -188,6 +188,20 @@
         .section-link:hover { transform: translateY(-2px); color: #333; }
         .link-arrow { position: absolute; bottom: 15px; right: 15px; font-size: 1.5rem; font-weight: bold; opacity: 0.7; transition: all 0.3s ease;}
         .section-link:hover .link-arrow { opacity: 1; transform: translateX(5px);}
+        /* 그리드 라인 및 축 라벨 */
+        .fractal-chart-container::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                to right, #23262f 0px, #23262f 1px, transparent 1px, transparent 60px
+            ), repeating-linear-gradient(
+                to bottom, #23262f 0px, #23262f 1px, transparent 1px, transparent 60px
+            );
+            opacity: 0.5;
+            z-index: 0;
+        }
     </style>
 </head>
 <body>
@@ -203,12 +217,17 @@
         <div class="chart-header">
             <h2 class="chart-title">🕯️ 프랙탈 캔들스틱 차트</h2>
             <div class="chart-controls">
-                <select id="coinSelector" class="coin-selector">
-                    <option value="BTCUSDT">🟡 Bitcoin (BTC)</option>
-                    <option value="ETHUSDT">🔷 Ethereum (ETH)</option>
-                    <option value="SOLUSDT">🟣 Solana (SOL)</option>
-                    <option value="ADAUSDT">🔵 Cardano (ADA)</option>
-                    <option value="DOGEUSDT">🟠 Dogecoin (DOGE)</option>
+                <label for="mainTfSelector">상위봉:</label>
+                <select id="mainTfSelector" class="coin-selector">
+                    <option value="1h">1시간봉 (1H)</option>
+                    <option value="4h">4시간봉 (4H)</option>
+                    <option value="1d">일봉 (1D)</option>
+                </select>
+                <label for="subTfSelector">하위봉:</label>
+                <select id="subTfSelector" class="coin-selector">
+                    <option value="5m">5분봉 (5M)</option>
+                    <option value="1m">1분봉 (1M)</option>
+                    <option value="15m">15분봉 (15M)</option>
                 </select>
                 <button class="control-btn active" id="refreshBtn" onclick="refreshChart()">🔄 새로고침</button>
             </div>
@@ -300,9 +319,27 @@
 
     // 차트 관련 변수
     let currentSymbol = 'BTCUSDT';
-    let candleData = { '1h': [], '5m': [] };
+    let candleData = { 'main': [], 'sub': [] };
     let canvasContexts = {};
     let chartDimensions = { width: 0, height: 0 };
+
+    // 하이킨아시 변환 함수
+    function heikinAshiTransform(candles) {
+        if (!candles || candles.length === 0) return [];
+        const haCandles = [];
+        for (let i = 0; i < candles.length; i++) {
+            const prev = haCandles[i - 1] || candles[i];
+            const open = i === 0 ? (candles[i].open + candles[i].close) / 2 : (prev.open + prev.close) / 2;
+            const close = (candles[i].open + candles[i].high + candles[i].low + candles[i].close) / 4;
+            const high = Math.max(candles[i].high, open, close);
+            const low = Math.min(candles[i].low, open, close);
+            haCandles.push({
+                timestamp: candles[i].timestamp,
+                open, high, low, close, volume: candles[i].volume
+            });
+        }
+        return haCandles;
+    }
 
     // 캔버스 크기 동기화 (리사이즈 대응)
     function resizeCanvases() {
@@ -354,17 +391,41 @@
         }
     }
 
-    // 프랙탈 캔들 데이터 로드
+    // 타임프레임 분 단위 변환 함수
+    function tfToMinutes(tf) {
+        if (tf.endsWith('m')) return parseInt(tf);
+        if (tf.endsWith('h')) return parseInt(tf) * 60;
+        if (tf.endsWith('d')) return parseInt(tf) * 60 * 24;
+        return 1;
+    }
+
+    // 상위/하위 타임프레임 선택값
+    let mainTf = '1h';
+    let subTf = '5m';
+    document.getElementById('mainTfSelector').addEventListener('change', function(e) {
+        mainTf = e.target.value;
+        loadFractalCandleData();
+    });
+    document.getElementById('subTfSelector').addEventListener('change', function(e) {
+        subTf = e.target.value;
+        loadFractalCandleData();
+    });
+
+    // 프랙탈 캔들 데이터 로드 (상위/하위 타임프레임 반영)
     async function loadFractalCandleData() {
         document.getElementById('loadingMessage').style.display = 'flex';
         try {
+            const mainLimit = 24;
+            const subLimit = mainLimit * (tfToMinutes(mainTf) / tfToMinutes(subTf));
             const requests = [
-                fetchKlineData(currentSymbol, '1h', 24),   // 1시간봉 24개 (1일)
-                fetchKlineData(currentSymbol, '5m', 288)   // 5분봉 288개 (1일)
+                fetchKlineData(currentSymbol, mainTf, mainLimit),
+                fetchKlineData(currentSymbol, subTf, subLimit)
             ];
-            const [hourlyData, minute5Data] = await Promise.all(requests);
-            candleData['1h'] = hourlyData;
-            candleData['5m'] = minute5Data;
+            const [mainData, subData] = await Promise.all(requests);
+            candleData['main'] = mainData;
+            candleData['sub'] = subData;
+            candleData['main_ha'] = heikinAshiTransform(mainData);
+            candleData['sub_ha'] = heikinAshiTransform(subData);
             drawFractalCandles();
             document.getElementById('loadingMessage').style.display = 'none';
         } catch (error) {
@@ -377,14 +438,14 @@
         }
     }
 
-    // 가격 범위 계산
-    function calculatePriceRange() {
+    // 하이킨아시 기준 가격 범위 계산
+    function calculatePriceRangeHA() {
         let allPrices = [];
-        Object.values(candleData).forEach(timeframeData =>
-            timeframeData.forEach(candle => {
+        ['main_ha', 'sub_ha'].forEach(key => {
+            (candleData[key] || []).forEach(candle => {
                 allPrices.push(candle.high, candle.low);
-            })
-        );
+            });
+        });
         if (allPrices.length === 0) return { min: 0, max: 100 };
         const min = Math.min(...allPrices);
         const max = Math.max(...allPrices);
@@ -403,32 +464,55 @@
         return {candleWidth, spacing};
     }
 
-    // 프랙탈 캔들 차트 그리기
+    // 프랙탈 캔들 차트 그리기 (상위/하위 타임프레임 오버레이)
     function drawFractalCandles() {
         Object.values(canvasContexts).forEach(ctx => ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height));
-        const priceRange = calculatePriceRange();
-        drawTimeframeCandles('1h', 'hourlyCanvas', priceRange, 0.30, '#222222');
-        drawTimeframeCandles('5m', 'minute5Canvas', priceRange, 1.00, '#1976D2');
+        const priceRange = calculatePriceRangeHA();
+        drawMainCandlesHA('main_ha', 'hourlyCanvas', priceRange, 0.30, '#222222');
+        drawSubCandlesHA('sub_ha', 'minute5Canvas', priceRange, 1.00, '#1976D2');
     }
 
-    // 특정 시간대 캔들 그리기
-    function drawTimeframeCandles(timeframe, canvasId, priceRange, opacity, color) {
+    // 상위봉(메인) 캔들 그리기: 전체 x축 균등 분할
+    function drawMainCandlesHA(timeframe, canvasId, priceRange, opacity, color) {
         const ctx = canvasContexts[canvasId];
         const data = candleData[timeframe];
         if (!data || data.length === 0) return;
-        const {candleWidth, spacing} = getCandleRenderParams(timeframe);
-        const maxCandles = Math.floor(chartDimensions.width / (candleWidth + spacing));
-        const recentData = data.slice(-maxCandles);
-        const totalWidth = recentData.length * (candleWidth + spacing) - spacing;
-        const startX = Math.max(0, (chartDimensions.width - totalWidth) / 2);
-
-        recentData.forEach((candle, index) => {
-            const x = startX + index * (candleWidth + spacing);
+        const count = data.length;
+        const totalWidth = chartDimensions.width;
+        const candleWidth = Math.max(8, totalWidth / (count * 1.5));
+        const spacing = (totalWidth - candleWidth * count) / (count + 1);
+        data.forEach((candle, i) => {
+            const x = spacing + i * (candleWidth + spacing);
             drawSingleCandle(ctx, x, candle, candleWidth, priceRange, opacity, color);
         });
     }
 
-    // 단일 캔들 그리기
+    // 하위봉(서브) 캔들 그리기: 각 상위봉 구간 내 N개 균등 분할
+    function drawSubCandlesHA(timeframe, canvasId, priceRange, opacity, color) {
+        const ctx = canvasContexts[canvasId];
+        const subData = candleData[timeframe];
+        const mainData = candleData['main_ha'];
+        if (!subData || !mainData || subData.length === 0 || mainData.length === 0) return;
+        const mainCount = mainData.length;
+        const subPerMain = Math.round(subData.length / mainCount);
+        const totalWidth = chartDimensions.width;
+        const mainCandleWidth = Math.max(8, totalWidth / (mainCount * 1.5));
+        const mainSpacing = (totalWidth - mainCandleWidth * mainCount) / (mainCount + 1);
+        for (let i = 0; i < mainCount; i++) {
+            const mainX = mainSpacing + i * (mainCandleWidth + mainSpacing);
+            const subStart = i * subPerMain;
+            const subEnd = subStart + subPerMain;
+            const subCandles = subData.slice(subStart, subEnd);
+            const subCandleWidth = Math.max(2, mainCandleWidth / (subPerMain * 1.2));
+            const subSpacing = (mainCandleWidth - subCandleWidth * subPerMain) / (subPerMain + 1);
+            subCandles.forEach((candle, j) => {
+                const x = mainX + subSpacing + j * (subCandleWidth + subSpacing);
+                drawSingleCandle(ctx, x, candle, subCandleWidth, priceRange, opacity, color);
+            });
+        }
+    }
+
+    // 단일 캔들 그리기 (트레이딩뷰 스타일)
     function drawSingleCandle(ctx, x, candle, width, priceRange, opacity, color) {
         const getY = (price) => {
             const ratio = (price - priceRange.min) / (priceRange.max - priceRange.min);
@@ -436,8 +520,10 @@
         };
         const openY = getY(candle.open), closeY = getY(candle.close), highY = getY(candle.high), lowY = getY(candle.low);
         const isUp = candle.close >= candle.open;
-        const bodyColor = isUp ? "#4CAF50" : "#F44336";
+        const bodyColor = isUp ? "#26a69a" : "#ef5350";
         ctx.globalAlpha = opacity;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = isUp ? "#26a69a55" : "#ef535055";
 
         // 캔들 몸통
         ctx.fillStyle = bodyColor;
@@ -447,7 +533,7 @@
             ctx.fillRect(x, bodyTop, width, bodyHeight);
         } else {
             ctx.strokeStyle = bodyColor;
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.moveTo(x, openY);
             ctx.lineTo(x + width, openY);
@@ -455,6 +541,7 @@
         }
 
         // 꼬리 (wick)
+        ctx.shadowBlur = 0;
         ctx.strokeStyle = color;
         ctx.lineWidth = Math.max(1, width / 6);
         ctx.beginPath();
