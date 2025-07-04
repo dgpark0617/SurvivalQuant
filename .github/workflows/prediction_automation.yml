@@ -8,32 +8,58 @@ on:
 jobs:
   prediction:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
       - name: Get BTC Price
         id: price
         run: |
-          price=$(curl -s https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT | jq -r .price)
-          echo "PRICE=$price" >> $GITHUB_ENV
+          PRICE=$(curl -s https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT | jq -r .price)
+          echo "price=${PRICE}" >> $GITHUB_OUTPUT
 
-      - name: Create or Close Issues
+      - name: Create Issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const price = parseFloat(process.env.PRICE).toFixed(2);
+            const now = new Date();
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `BTC 가격 예측 ${now.toISOString().split('T')[0]}`,
+              body: `현재 가격: $${price}
+
+👍 = 상승 예상
+👎 = 하락 예상
+
+4시간 후에 자동으로 마감됩니다.`,
+              labels: ['prediction']
+            });
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # 새 예측 이슈 생성
-          gh issue create \
-            --title "BTC 가격 예측 $(date +%Y-%m-%d_%H)" \
-            --body "현재 가격: \$${{ env.PRICE }}
+          PRICE: ${{ steps.price.outputs.price }}
 
-          👍 = 상승 예상
-          👎 = 하락 예상
-
-          4시간 후 자동으로 마감됩니다." \
-            --label "prediction"
-
-          # 4시간 이상 된 이슈 마감
-          gh issue list \
-            --label "prediction" \
-            --state open \
-            --json number,createdAt \
-            | jq -r '.[] | select(((now - (.[].createdAt | fromdateiso8601)) / 3600) >= 4) | .number' \
-            | xargs -I {} gh issue close {}
+      - name: Close Old Issues
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['prediction']
+            });
+            
+            const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+            
+            for (const issue of issues.data) {
+              const createdAt = new Date(issue.created_at);
+              if (createdAt < fourHoursAgo) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  state: 'closed'
+                });
+              }
+            }
