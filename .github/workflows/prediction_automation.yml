@@ -3,6 +3,7 @@ name: Prediction Automation
 on:
   schedule:
     - cron: '30 */4 * * *'  # 매 4시간 30분 전에 실행
+  workflow_dispatch:  # 수동 트리거 추가
   issues:
     types: [closed]  # 이슈가 닫힐 때
 
@@ -13,20 +14,56 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       
+      - name: Get Current Price
+        id: price
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+            const data = await response.json();
+            return data.price;
+      
       - name: Create Prediction Issue
         uses: actions/github-script@v6
         with:
           script: |
             const now = new Date();
             const nextFourHour = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+            const price = steps.price.outputs.result;
             
             const title = `[4H Poll] BTCUSDT 방향성 예측 (${nextFourHour.toISOString().split('T')[0]} ${nextFourHour.getUTCHours()}:00)`;
+            
+            const body = `## 📊 4시간 방향성 투표
+
+### ⏰ 투표 기간
+- 시작: ${now.toISOString()}
+- 마감: ${nextFourHour.toISOString()}
+
+### 📈 현재 가격: $${parseFloat(price).toFixed(2)}
+
+### 투표 방법
+- 👍 (상승 예상)
+- 👎 (하락 예상)
+
+### 분석 공유
+- 코멘트로 자유롭게 분석을 공유해주세요
+- 기술적/펀더멘탈 분석 모두 환영합니다
+
+### 결과 집계
+- 4시간 후 종가 기준으로 판정
+- 시작 가격 대비 +/- 로 승패 결정
+- 정확도는 Wiki 페이지에서 확인 가능
+
+### 주의사항
+- 마감 전까지 예측을 변경할 수 있습니다
+- 여러 번 투표 시 마지막 투표만 인정
+- 결과는 자동으로 집계됩니다`;
             
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: title,
-              body: `## 📊 4시간 방향성 투표\n\n투표 진행 중...\n\n마감 시간: ${nextFourHour.toISOString()}`,
+              body: body,
               labels: ['prediction', 'active']
             });
 
@@ -38,10 +75,20 @@ jobs:
         with:
           repository: ${{github.repository}}.wiki
           
+      - name: Get Final Price
+        id: final_price
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+            const data = await response.json();
+            return data.price;
+            
       - name: Update Statistics
         uses: actions/github-script@v6
         with:
           script: |
+            const fs = require('fs');
             const issue = context.payload.issue;
             const reactions = await github.rest.reactions.listForIssue({
               owner: context.repo.owner,
@@ -49,12 +96,90 @@ jobs:
               issue_number: issue.number
             });
             
-            // 통계 업데이트 로직
+            // 이슈 본문에서 시작 가격 추출
+            const startPriceMatch = issue.body.match(/현재 가격: \$([0-9.]+)/);
+            const startPrice = startPriceMatch ? parseFloat(startPriceMatch[1]) : 0;
+            const finalPrice = parseFloat(steps.final_price.outputs.result);
+            
+            // 투표 결과 분석
             const stats = {
               upVotes: reactions.data.filter(r => r.content === '+1').length,
               downVotes: reactions.data.filter(r => r.content === '-1').length,
-              totalVotes: reactions.data.length
+              totalVotes: reactions.data.length,
+              startPrice,
+              finalPrice,
+              actualDirection: finalPrice > startPrice ? '상승' : '하락',
+              majorityPrediction: upVotes > downVotes ? '상승' : '하락',
+              isCorrect: (finalPrice > startPrice && upVotes > downVotes) || 
+                        (finalPrice < startPrice && downVotes > upVotes)
             };
             
-            // Wiki 페이지 업데이트
-            // TODO: 실제 통계 업데이트 로직 구현 
+            // Wiki 페이지 읽기
+            const wikiPath = 'Prediction-Statistics.md';
+            let wikiContent = '';
+            try {
+              wikiContent = fs.readFileSync(wikiPath, 'utf8');
+            } catch (error) {
+              console.log('Wiki file not found, creating new one');
+              wikiContent = `# 4시간 BTC 예측 통계\n\n## 전체 통계\n`;
+            }
+            
+            // 전체 통계 업데이트
+            let totalPredictions = (wikiContent.match(/총 예측 횟수: (\d+)/) || [0, 0])[1];
+            let correctPredictions = (wikiContent.match(/정확한 예측 횟수: (\d+)/) || [0, 0])[1];
+            
+            totalPredictions = parseInt(totalPredictions) + 1;
+            if (stats.isCorrect) {
+              correctPredictions = parseInt(correctPredictions) + 1;
+            }
+            
+            const accuracy = ((correctPredictions / totalPredictions) * 100).toFixed(1);
+            
+            // 최근 예측 기록 업데이트
+            const now = new Date();
+            const newRecord = `| ${now.toISOString().split('T')[0]} | $${stats.startPrice.toFixed(2)} | $${stats.finalPrice.toFixed(2)} | ${stats.upVotes} | ${stats.downVotes} | ${stats.actualDirection} | ${stats.majorityPrediction} | ${stats.isCorrect ? '✅' : '❌'} |`;
+            
+            // 기존 기록 가져오기 (최대 9개)
+            const recordsMatch = wikiContent.match(/\|.*\|/g) || [];
+            const headerRow = '| 날짜 | 시작가 | 종가 | 상승표 | 하락표 | 실제방향 | 다수결예측 | 정확여부 |';
+            const formatRow = '|------|--------|------|---------|---------|-----------|------------|----------|';
+            let records = [headerRow, formatRow, newRecord];
+            
+            if (recordsMatch.length > 2) {
+              records = records.concat(recordsMatch.slice(2, 11));
+            }
+            
+            // 새로운 Wiki 내용 생성
+            const newWikiContent = `# 4시간 BTC 예측 통계
+
+## 전체 통계
+- 총 예측 횟수: ${totalPredictions}
+- 정확한 예측 횟수: ${correctPredictions}
+- 전체 정확도: ${accuracy}%
+- 총 참여자 수: ${stats.totalVotes}
+
+## 최근 예측 기록 (최근 10개)
+${records.join('\n')}
+
+## 업데이트 내역
+마지막 업데이트: ${now.toISOString()}`;
+            
+            // Wiki 페이지 저장
+            fs.writeFileSync(wikiPath, newWikiContent);
+            
+            // 이슈에 결과 코멘트 작성
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `## 📊 예측 결과
+
+- 시작 가격: $${stats.startPrice.toFixed(2)}
+- 종료 가격: $${stats.finalPrice.toFixed(2)}
+- 실제 방향: ${stats.actualDirection}
+- 투표 결과: ${stats.upVotes}명 상승 vs ${stats.downVotes}명 하락
+- 다수결 예측: ${stats.majorityPrediction}
+- 정확도: ${stats.isCorrect ? '✅ 정확' : '❌ 오답'}
+
+통계가 Wiki 페이지에 업데이트되었습니다.`
+            }); 
