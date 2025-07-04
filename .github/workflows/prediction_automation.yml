@@ -1,4 +1,4 @@
-name: BTC Price Prediction
+name: BTC-Prediction
 
 on:
   schedule:
@@ -6,35 +6,32 @@ on:
   workflow_dispatch:  # 수동 실행 가능
 
 jobs:
-  prediction:
+  create-prediction:
     runs-on: ubuntu-latest
     permissions:
       issues: write
     steps:
-      - name: Get BTC Price
+      - name: Get-Price
         id: price
         run: |
           PRICE=$(curl -s https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT | jq -r .price)
           echo "price=$PRICE" >> $GITHUB_OUTPUT
 
-      - name: Create Issue
+      - name: Create-Issue
         uses: actions/github-script@v6
-        env:
-          PRICE: ${{ steps.price.outputs.price }}
         with:
           script: |
-            const price = parseFloat(process.env.PRICE).toFixed(2);
-            const date = new Date().toISOString().split('T')[0];
-            
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `BTC 가격 예측 ${date}`,
-              body: `현재 가격: $${price}\n\n👍 = 상승 예상\n👎 = 하락 예상\n\n4시간 후 자동 마감`,
+              title: 'BTC Price Prediction',
+              body: 'Current Price: $' + process.env.PRICE,
               labels: ['prediction']
             });
+        env:
+          PRICE: ${{ steps.price.outputs.price }}
 
-      - name: Close Old Issues
+      - name: Close-Old-Issues
         uses: actions/github-script@v6
         with:
           script: |
