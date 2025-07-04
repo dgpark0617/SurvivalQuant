@@ -15,29 +15,24 @@ jobs:
         id: price
         run: |
           PRICE=$(curl -s https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT | jq -r .price)
-          echo "price=${PRICE}" >> $GITHUB_OUTPUT
+          echo "price=$PRICE" >> $GITHUB_OUTPUT
 
       - name: Create Issue
         uses: actions/github-script@v6
+        env:
+          PRICE: ${{ steps.price.outputs.price }}
         with:
           script: |
             const price = parseFloat(process.env.PRICE).toFixed(2);
-            const now = new Date();
+            const date = new Date().toISOString().split('T')[0];
             
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `BTC 가격 예측 ${now.toISOString().split('T')[0]}`,
-              body: `현재 가격: $${price}
-
-👍 = 상승 예상
-👎 = 하락 예상
-
-4시간 후에 자동으로 마감됩니다.`,
+              title: `BTC 가격 예측 ${date}`,
+              body: `현재 가격: $${price}\n\n👍 = 상승 예상\n👎 = 하락 예상\n\n4시간 후 자동 마감`,
               labels: ['prediction']
             });
-        env:
-          PRICE: ${{ steps.price.outputs.price }}
 
       - name: Close Old Issues
         uses: actions/github-script@v6
@@ -53,8 +48,7 @@ jobs:
             const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
             
             for (const issue of issues.data) {
-              const createdAt = new Date(issue.created_at);
-              if (createdAt < fourHoursAgo) {
+              if (new Date(issue.created_at) < fourHoursAgo) {
                 await github.rest.issues.update({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
