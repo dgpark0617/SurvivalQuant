@@ -3,835 +3,332 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SurvivalQuant</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>SurvivalQuant Legacy</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary-color: #4e54c8;
+            --secondary-color: #8f94fb;
+            --text-color: #333;
+            --section-bg: #ffffff;
+            --border-color: #e9ecef;
         }
-        
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #ffffff;
+            background: #f8f9fa;
+            color: var(--text-color);
             min-height: 100vh;
-            color: #333;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
         }
-        
-        .main-container {
+
+        .grid-container {
+            display: grid;
+            grid-template-areas:
+                "header header"
+                "order-book vote";
+            gap: 20px;
             max-width: 1200px;
             margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 30px;
+            padding: 20px;
         }
-        
-        .section {
-            background: #ffffff;
-            border: 2px solid #e0e0e0;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            text-align: center;
-        }
-        
+
         .header-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            grid-area: header;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
-            border: none;
-            padding: 15px 30px;
-        }
-        
-        .chart-section {
-            background: #ffffff;
-            border: 2px solid #e0e0e0;
-            border-radius: 15px;
             padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            margin-bottom: 20px;
-        }
-        
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        
-        .chart-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #333;
-            margin: 0;
-        }
-        
-        .chart-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .control-btn {
-            background: #f8f9fa;
-            border: 2px solid #e9ecef;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-        
-        .control-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-color: #667eea;
-        }
-        
-        .control-btn:hover {
-            background: #e9ecef;
-        }
-        
-        .control-btn.active:hover {
-            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 450px;
-            width: 100%;
-            background: #ffffff;
-            border: 3px solid #007bff;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            box-shadow: 0 4px 20px rgba(0, 123, 255, 0.2);
-        }
-        
-        #realChart {
-            width: 100% !important;
-            height: 400px !important;
-            background: #ffffff;
-        }
-        
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-        
-        .stat-item {
-            background: #f8f9fa;
-            padding: 15px;
             border-radius: 10px;
             text-align: center;
-            border-left: 4px solid #e9ecef;
-            transition: all 0.3s ease;
         }
-        
-        .stat-item.positive {
-            border-left-color: #28a745;
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-        }
-        
-        .stat-item.negative {
-            border-left-color: #dc3545;
-            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-        }
-        
-        .stat-label {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .stat-value {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .stat-change {
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-        
-        .positive .stat-change {
-            color: #28a745;
-        }
-        
-        .negative .stat-change {
-            color: #dc3545;
-        }
-        
-        .loading {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 200px;
-            font-size: 1.1rem;
-            color: #666;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .loading::after {
-            content: '...';
-            animation: pulse 1.5s infinite;
-        }
-        
-        .links-section {
-            grid-column: 1;
-        }
-        
-        .ads-section {
-            background: #f8f9fa;
-            min-height: 200px;
-            border-style: dashed;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #6c757d;
-        }
-        
-        .future-section {
-            background: #f1f3f4;
-            min-height: 150px;
-            border-style: dashed;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #6c757d;
-        }
-        
-        @media (min-width: 768px) {
-            .main-container {
-                grid-template-columns: 2fr 1fr;
-                grid-template-areas: 
-                    "header header"
-                    "chart chart"
-                    "links ads"
-                    "games utilities";
-            }
-            
-            .header-section { grid-area: header; }
-            .chart-section { grid-area: chart; }
-            .links-section { grid-area: links; }
-            .ads-section { grid-area: ads; }
-            .games-section { grid-area: games; }
-            .utilities-section { grid-area: utilities; }
-        }
-        
-        h1 {
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-            font-weight: 400;
-        }
-        
-        h2 {
-            font-size: 1.8rem;
-            margin-bottom: 20px;
-            font-weight: 400;
-            color: #333;
-        }
-        
-        h3 {
-            font-size: 1.3rem;
-            margin-bottom: 10px;
-            font-weight: 500;
-            color: #555;
-        }
-        
-        .url-display {
-            background: #f8f9fa;
-            color: #333;
-            padding: 15px 20px;
+
+        .order-book-section {
+            grid-area: order-book;
+            background: var(--section-bg);
             border-radius: 10px;
-            font-size: 1.1rem;
-            font-weight: 500;
-            margin: 15px 0;
-            word-break: break-all;
-            border: 2px solid #e9ecef;
-            transition: all 0.3s ease;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
-        
-        .url-display:hover {
+
+        .vote-section {
+            grid-area: vote;
+            background: var(--section-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .vote-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .vote-btn {
+            padding: 10px 30px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .vote-up {
+            background: #28a745;
+            color: white;
+        }
+
+        .vote-down {
+            background: #dc3545;
+            color: white;
+        }
+
+        .vote-btn:hover {
+            opacity: 0.9;
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
-        
-        .copy-btn {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+
+        .vote-stats {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .login-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .login-input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .login-btn {
+            padding: 8px 20px;
+            background: var(--primary-color);
             color: white;
             border: none;
-            padding: 12px 25px;
-            border-radius: 25px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            margin-top: 15px;
         }
-        
-        .copy-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(238, 90, 36, 0.4);
-        }
-        
-        .description {
-            margin-top: 20px;
-            font-size: 1rem;
-            opacity: 0.9;
-            line-height: 1.6;
-        }
-        
-        .success-message {
-            display: none;
-            color: #2ecc71;
-            font-weight: 500;
-            margin-top: 10px;
-        }
-        
-        .link-display {
-            background: #f8f9fa;
-            color: #333;
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin: 15px 0;
-            border: 2px solid #e9ecef;
-            transition: all 0.3s ease;
-        }
-        
-        .link-display a {
-            color: #0066cc;
-            text-decoration: none;
-            font-size: 1.2rem;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-        
-        .link-display a:hover {
-            color: #004499;
-            text-decoration: underline;
-        }
-        
-        .section-link {
-            display: block;
-            text-decoration: none;
-            color: inherit;
-            transition: all 0.3s ease;
-            position: relative;
-            height: 100%;
-            width: 100%;
-        }
-        
-        .section-link:hover {
-            transform: translateY(-2px);
-            color: #333;
-        }
-        
-        .link-arrow {
-            position: absolute;
-            bottom: 15px;
-            right: 15px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            opacity: 0.7;
-            transition: all 0.3s ease;
-        }
-        
-        .section-link:hover .link-arrow {
-            opacity: 1;
-            transform: translateX(5px);
+
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-areas:
+                    "header"
+                    "order-book"
+                    "vote";
+            }
         }
     </style>
 </head>
 <body>
-    <div class="main-container">
-        <!-- 헤더 섹션 -->
-        <div class="section header-section">
-            <h1>🚀 SurvivalQuant</h1>
-            <p>EconomicEden - 실시간 코인 차트 및 투자 도구</p>
+    <div class="grid-container">
+        <div class="header-section">
+            <h1>🚀 생존형 퀀트의 경제적 낙원</h1>
+            <p>실시간 코인 거래 및 투자 도구</p>
         </div>
-        
-        <!-- 바이낸스 실시간 차트 섹션 -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2 class="chart-title">📊 바이낸스 실시간 코인 차트</h2>
-                <div class="chart-controls">
-                    <button class="control-btn active" id="changeBtn" onclick="switchMode('change')">변화율 (%)</button>
-                    <button class="control-btn" id="priceBtn" onclick="switchMode('price')">실제 가격</button>
-                    <button class="control-btn" id="resetBtn" onclick="resetChart()">차트 리셋</button>
-                </div>
-            </div>
-            
-            <!-- 차트 표시 공간 -->
-            <div class="chart-container">
-                <canvas id="realChart"></canvas>
-                <div id="loadingMessage" class="loading">바이낸스 API에서 코인 데이터 로딩중</div>
-            </div>
-            
-            <div class="stats-container" id="statsContainer">
-                <!-- 통계 정보가 여기에 동적으로 추가됩니다 -->
-            </div>
+
+        <div class="order-book-section">
+            <h2>주문장</h2>
+            <div id="orderBook"></div>
         </div>
-        
-        <!-- 링크 섹션 -->
-        <div class="section links-section">
-            <h2>🔗 주요 링크</h2>
-            
-            <div class="url-display" id="urlDisplay">
-                https://dgpark0617.github.io/SurvivalQuant/
+
+        <div class="vote-section">
+            <div class="login-container" id="loginSection">
+                <input type="text" id="userId" placeholder="닉네임 입력" class="login-input">
+                <button onclick="login()" class="login-btn">시작하기</button>
             </div>
-            <button class="copy-btn" onclick="copyToClipboard()">
-                📋 URL 복사하기
-            </button>
-            <div class="success-message" id="successMessage">
-                ✅ URL이 클립보드에 복사되었습니다!
+            <div class="vote-container" id="voteContainer" style="display: none;">
+                <div id="voteTimeInfo"></div>
+                <button class="vote-btn vote-up" onclick="vote('up')">상승 예상</button>
+                <button class="vote-btn vote-down" onclick="vote('down')">하락 예상</button>
+                <div class="vote-stats" id="voteStats"></div>
             </div>
-            
-            <div class="link-display">
-                <a href="https://www.bybit.com/copyMt5/trade-center/detail?providerMark=xkc2wsLqVomphpP%2FtV6RRQ%3D%3D" target="_blank">
-                    🌟 EconomicEden
-                </a>
-            </div>
-            
-            <div class="link-display">
-                <a href="https://m.blog.naver.com/economic_eden?tab=1" target="_blank">
-                    📖 개발블로그
-                </a>
-            </div>
-            
-            <div class="link-display">
-                <a href="https://youtube.com/@economiceden?si=OLHH8h2MZep0oAYA" target="_blank">
-                    📺 유튜브
-                </a>
-            </div>
-            
-            <div class="link-display">
-                <a href="https://cryptoinvest.cafe24.com:8080/m/dashboard" target="_blank">
-                    💰 크립토 대시보드
-                </a>
-            </div>
-        </div>
-        
-        <!-- 광고 섹션 -->
-        <div class="section ads-section">
-            <div>
-                <h3>📺 광고 공간</h3>
-                <p>YouTube 애드센스 및 광고가 표시될 예정입니다</p>
-            </div>
-        </div>
-        
-        <!-- 게임 섹션 -->
-        <div class="section future-section games-section">
-            <a href="games/" class="section-link">
-                <h3>🎮 미니 게임</h3>
-                <p>재미있는 게임들을 즐겨보세요!</p>
-                <div class="link-arrow">→</div>
-            </a>
-        </div>
-        
-        <!-- 유틸리티 섹션 -->
-        <div class="section future-section utilities-section">
-            <a href="utilities/" class="section-link">
-                <h3>🛠️ 유틸리티</h3>
-                <p>유용한 도구들을 사용해보세요!</p>
-                <div class="link-arrow">→</div>
-            </a>
         </div>
     </div>
 
     <script>
-        // 기존 URL 복사 기능
-        function copyToClipboard() {
-            const urlText = document.getElementById('urlDisplay').textContent;
-            navigator.clipboard.writeText(urlText).then(function() {
-                const successMessage = document.getElementById('successMessage');
-                successMessage.style.display = 'block';
-                setTimeout(() => {
-                    successMessage.style.display = 'none';
-                }, 3000);
-            });
+        // 전역 변수
+        let currentPrice = 0;
+        let selectedSymbol = 'BTCUSDT';
+
+        // 초기화 함수
+        function initialize() {
+            setupEventListeners();
+            initializeWebSocket();
         }
-        
-        // 차트 관련 변수들
-        let cryptoChart = null;
-        let displayMode = 'change'; // 'change' or 'price'
-        let coinData = new Map(); // 각 코인의 가격 데이터와 기준가격 저장
-        let basePrices = new Map(); // 최초 수집 시점의 기준가격
-        let isFirstCollection = true; // 최초 수집 여부
-        
-        // 바이낸스 실시간 차트 초기화
-        function initializeCryptoChart() {
-            console.log('=== 바이낸스 실시간 차트 시작 ===');
-            
-            const canvas = document.getElementById('realChart');
-            const ctx = canvas.getContext('2d');
-            
-            // Chart.js를 사용한 실시간 차트 생성
-            cryptoChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [
-                        {
-                            label: 'BTC (비트코인)',
-                            data: [],
-                            borderColor: '#000000',
-                            backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                            borderWidth: 2,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 3,
-                            pointBackgroundColor: '#000000'
-                        },
-                        {
-                            label: 'ETH (이더리움)',
-                            data: [],
-                            borderColor: '#627EEA',
-                            backgroundColor: 'rgba(98, 126, 234, 0.05)',
-                            borderWidth: 2,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 3,
-                            pointBackgroundColor: '#627EEA'
-                        },
-                        {
-                            label: 'SOL (솔라나)',
-                            data: [],
-                            borderColor: '#9945FF',
-                            backgroundColor: 'rgba(153, 69, 255, 0.05)',
-                            borderWidth: 2,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 3,
-                            pointBackgroundColor: '#9945FF'
-                        },
-                        {
-                            label: 'ADA (에이다)',
-                            data: [],
-                            borderColor: '#0033AD',
-                            backgroundColor: 'rgba(0, 51, 173, 0.05)',
-                            borderWidth: 2,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 3,
-                            pointBackgroundColor: '#0033AD'
-                        },
-                        {
-                            label: 'DOGE (도지코인)',
-                            data: [],
-                            borderColor: '#C2A633',
-                            backgroundColor: 'rgba(194, 166, 51, 0.05)',
-                            borderWidth: 2,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 3,
-                            pointBackgroundColor: '#C2A633'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        duration: 1000,
-                        easing: 'easeInOutQuart'
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,
-                                font: { size: 12, weight: 'bold' }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: '시간 (시:분:초)',
-                                font: { size: 12, weight: 'bold' }
-                            },
-                            grid: { 
-                                display: true, 
-                                color: 'rgba(0,0,0,0.1)',
-                                backgroundColor: '#ffffff'
-                            },
-                            ticks: {
-                                maxRotation: 90,
-                                minRotation: 90
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: '변화율 (%)',
-                                font: { size: 12, weight: 'bold' }
-                            },
-                            grid: { 
-                                display: true, 
-                                color: 'rgba(0,0,0,0.1)',
-                                backgroundColor: '#ffffff'
-                            },
-                            min: -2,
-                            max: 2,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    }
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            window.addEventListener('load', () => {
+                const userId = localStorage.getItem('userId');
+                if (userId) {
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('voteContainer').style.display = 'block';
+                    loadVoteStats();
                 }
             });
-            
-            console.log('✅ 바이낸스 차트 생성 성공!');
-            
-            // 바이낸스 API 연결
-            connectToBinanceAPI(cryptoChart);
         }
-        
-        // 바이낸스 API 연결
-        async function connectToBinanceAPI(chart) {
-            console.log('🔄 바이낸스 API 연결 시도...');
+
+        // 웹소켓 초기화
+        function initializeWebSocket() {
+            const ws = new WebSocket('wss://stream.binance.com:9443/ws');
+
+            ws.onopen = () => {
+                console.log('웹소켓 연결됨');
+                subscribeToSymbol(selectedSymbol);
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.e === 'trade') {
+                    currentPrice = parseFloat(data.p);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('웹소켓 오류:', error);
+            };
+
+            ws.onclose = () => {
+                console.log('웹소켓 연결 종료');
+                setTimeout(initializeWebSocket, 5000);
+            };
+        }
+
+        // 심볼 구독
+        function subscribeToSymbol(symbol) {
+            const subscribeMsg = {
+                method: 'SUBSCRIBE',
+                params: [`${symbol.toLowerCase()}@trade`],
+                id: 1
+            };
+            ws.send(JSON.stringify(subscribeMsg));
+        }
+
+        // 로그인 처리
+        function login() {
+            const userId = document.getElementById('userId').value.trim();
+            if (userId) {
+                localStorage.setItem('userId', userId);
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('voteContainer').style.display = 'block';
+                loadVoteStats();
+            }
+        }
+
+        // 투표 처리
+        function vote(direction) {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                alert('투표하려면 먼저 닉네임을 입력해주세요.');
+                return;
+            }
+
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+
+            if (minute >= 55 || minute < 5) {
+                alert('투표는 매시 5분부터 55분까지만 가능합니다.');
+                return;
+            }
+
+            const voteData = {
+                userId,
+                direction,
+                timestamp: now.toISOString(),
+                price: currentPrice,
+                hour
+            };
+
+            // 투표 데이터 저장 (실제로는 서버에 저장)
+            const votes = JSON.parse(localStorage.getItem('votes') || '[]');
+            votes.push(voteData);
+            localStorage.setItem('votes', JSON.stringify(votes));
+
+            loadVoteStats();
+            alert(`${hour}시 봉에 대한 ${direction === 'up' ? '상승' : '하락'} 예측 투표가 완료되었습니다.`);
+        }
+
+        // 투표 통계 로드
+        function loadVoteStats() {
+            const votes = JSON.parse(localStorage.getItem('votes') || '[]');
+            const now = new Date();
+            const currentHour = now.getHours();
+
+            // 현재 시간대의 투표만 필터링
+            const currentVotes = votes.filter(v => {
+                const voteDate = new Date(v.timestamp);
+                return voteDate.getHours() === currentHour;
+            });
+
+            const upVotes = currentVotes.filter(v => v.direction === 'up').length;
+            const downVotes = currentVotes.filter(v => v.direction === 'down').length;
+            const totalVotes = upVotes + downVotes;
+
+            const upPercentage = totalVotes > 0 ? Math.round((upVotes / totalVotes) * 100) : 0;
+            const downPercentage = totalVotes > 0 ? Math.round((downVotes / totalVotes) * 100) : 0;
+
+            // 투표 통계 HTML 업데이트
+            const statsHtml = `
+                <div style="margin: 20px 0;">
+                    <div style="margin-bottom: 10px;">
+                        <strong>${currentHour}시 봉 투표 현황</strong>
+                        <br>(총 ${totalVotes}명 참여)
+                    </div>
+                    <div style="display: flex; height: 30px; border-radius: 15px; overflow: hidden; margin: 10px 0;">
+                        <div style="width: ${upPercentage}%; background: #28a745; display: flex; align-items: center; justify-content: center; color: white;">
+                            ${upPercentage}%
+                        </div>
+                        <div style="width: ${downPercentage}%; background: #dc3545; display: flex; align-items: center; justify-content: center; color: white;">
+                            ${downPercentage}%
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9em;">
+                        <span>상승 예상: ${upVotes}표</span>
+                        <span>하락 예상: ${downVotes}표</span>
+                    </div>
+                </div>
+            `;
             
-            try {
-                // 주요 USDT 코인들 (5개로 축소, 비트코인 포함)
-                const targetSymbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'ADAUSDT', 'DOGEUSDT'];
-                
-                console.log('🎯 타겟 코인:', targetSymbols);
-                
-                // 첫 번째 데이터 포인트 추가
-                await addBinanceDataPoint(chart, targetSymbols);
-                
-                // 로딩 메시지 숨기기
-                document.getElementById('loadingMessage').style.display = 'none';
-                
-                // 1초마다 업데이트
-                setInterval(async () => {
-                    await addBinanceDataPoint(chart, targetSymbols);
-                }, 1000);
-                
-            } catch (error) {
-                console.error('❌ 바이낸스 API 연결 실패:', error);
-                
-                // 에러 메시지 표시
-                document.getElementById('loadingMessage').innerHTML = `
-                    <div style="text-align: center; color: #ff4757;">
-                        ❌ 바이낸스 API 연결에 실패했습니다<br>
-                        <small style="color: #666; font-size: 0.9rem;">에러: ${error.message}</small>
+            document.getElementById('voteStats').innerHTML = statsHtml;
+        }
+
+        // 투표 UI 업데이트
+        function updateVoteUI() {
+            const now = new Date();
+            const minute = now.getMinutes();
+            const remainingTime = minute < 5 ? 5 - minute : (minute >= 55 ? 65 - minute : 55 - minute);
+            const hour = now.getHours();
+            const nextHour = (hour + 1) % 24;
+
+            const voteContainer = document.getElementById('voteContainer');
+            if (minute >= 55 || minute < 5) {
+                voteContainer.style.display = 'none';
+            } else {
+                voteContainer.style.display = 'block';
+                document.getElementById('voteTimeInfo').innerHTML = `
+                    <div style="margin-bottom: 15px; color: #666;">
+                        <strong>${nextHour}시</strong> 봉 예측 투표 중<br>
+                        남은 시간: ${remainingTime}분
                     </div>
                 `;
             }
         }
-        
-        // 바이낸스 데이터 포인트 추가
-        async function addBinanceDataPoint(chart, symbols) {
-            try {
-                // 바이낸스 24시간 티커 API 호출
-                const symbolParam = symbols.map(s => `"${s}"`).join(',');
-                const response = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=[${symbolParam}]`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                console.log('💰 바이낸스 데이터 수신:', data.length, '개 코인');
-                
-                // 현재 시간 라벨
-                const now = new Date();
-                const timeLabel = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-                
-                chart.data.labels.push(timeLabel);
-                
-                // 각 코인의 데이터 처리
-                for (let i = 0; i < Math.min(5, data.length); i++) {
-                    const currentPrice = parseFloat(data[i].lastPrice);
-                    const symbol = data[i].symbol;
-                    
-                    // 최초 수집인 경우 기준가격 설정 (변화율 0으로 시작)
-                    if (isFirstCollection) {
-                        basePrices.set(symbol, currentPrice);
-                        coinData.set(symbol, {
-                            prices: [currentPrice],
-                            changes: [0] // 최초는 0%로 시작
-                        });
-                        
-                        // 차트에 0 추가 (최초 시점)
-                        const valueToAdd = displayMode === 'change' ? 0 : currentPrice;
-                        chart.data.datasets[i].data.push(valueToAdd);
-                        
-                        console.log(`${symbol}: 기준가격 설정 $${currentPrice.toFixed(4)}`);
-                    } else {
-                        // 이후 수집에서는 기준가격 대비 변화율 계산
-                        const basePrice = basePrices.get(symbol);
-                        const changePercent = ((currentPrice - basePrice) / basePrice) * 100;
-                        
-                        // 데이터 저장
-                        const coinInfo = coinData.get(symbol);
-                        coinInfo.prices.push(currentPrice);
-                        coinInfo.changes.push(changePercent);
-                        
-                        // 차트에 현재 모드에 따른 값 추가
-                        const valueToAdd = displayMode === 'change' ? changePercent : currentPrice;
-                        chart.data.datasets[i].data.push(valueToAdd);
-                        
-                        console.log(`${symbol}: $${currentPrice.toFixed(4)} (${changePercent.toFixed(3)}%)`);
-                    }
-                }
-                
-                // 최초 수집 완료 표시
-                if (isFirstCollection) {
-                    isFirstCollection = false;
-                    console.log('✅ 최초 수집 완료 - 기준가격 설정됨');
-                }
-                
-                // 50개 데이터 포인트 유지
-                if (chart.data.labels.length > 50) {
-                    chart.data.labels.shift();
-                    chart.data.datasets.forEach(dataset => dataset.data.shift());
-                    
-                    // 데이터도 50개로 제한
-                    coinData.forEach(coinInfo => {
-                        if (coinInfo.prices.length > 50) {
-                            coinInfo.prices.shift();
-                            coinInfo.changes.shift();
-                        }
-                    });
-                }
-                
-                // Y축 범위 동적 조정 (변화율 모드일 때만)
-                if (displayMode === 'change') {
-                    updateYAxisRange();
-                }
-                
-                chart.update('none');
-                
-                console.log(`📊 ${timeLabel} 차트 업데이트 완료`);
-                
-            } catch (error) {
-                console.error('❌ 바이낸스 데이터 업데이트 실패:', error);
-            }
-        }
-        
-        // 모드 전환 (변화율/가격)
-        function switchMode(mode) {
-            console.log(`🔄 모드 전환: ${displayMode} → ${mode}`);
-            displayMode = mode;
-            
-            // 버튼 활성화 상태 변경
-            document.querySelectorAll('.control-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.getElementById(mode + 'Btn').classList.add('active');
-            
-            if (cryptoChart && coinData.size > 0) {
-                // 차트 데이터를 현재 모드에 맞게 업데이트
-                updateChartForMode();
-                
-                // Y축 설정 변경
-                cryptoChart.options.scales.y.title.text = 
-                    displayMode === 'change' ? '변화율 (%)' : '가격 ($)';
-                    
-                if (displayMode === 'price') {
-                    cryptoChart.options.scales.y.min = undefined;
-                    cryptoChart.options.scales.y.max = undefined;
-                } else {
-                    cryptoChart.options.scales.y.min = -2;
-                    cryptoChart.options.scales.y.max = 2;
-                    // 동적 범위 조정
-                    updateYAxisRange();
-                }
-                
-                cryptoChart.update();
-                console.log(`✅ 모드 전환 완료: ${mode}`);
-            }
-        }
-        
-        // Y축 범위 동적 조정 함수
-        function updateYAxisRange() {
-            if (!cryptoChart || displayMode !== 'change') return;
-            
-            let allValues = [];
-            
-            // 모든 데이터셋의 값들을 수집
-            cryptoChart.data.datasets.forEach(dataset => {
-                allValues = allValues.concat(dataset.data.filter(val => val !== null && val !== undefined));
-            });
-            
-            if (allValues.length === 0) return;
-            
-            const maxValue = Math.max(...allValues);
-            const minValue = Math.min(...allValues);
-            
-            // 현재 범위 확인
-            const currentMax = cryptoChart.options.scales.y.max;
-            const currentMin = cryptoChart.options.scales.y.min;
-            
-            // 기본 범위 -2% ~ +2%에서 시작
-            let newMax = Math.max(2, maxValue + 0.5); // 최소 2%, 여유분 0.5% 추가
-            let newMin = Math.min(-2, minValue - 0.5); // 최소 -2%, 여유분 0.5% 추가
-            
-            // 범위가 변경되었을 때만 업데이트
-            if (Math.abs(newMax - currentMax) > 0.1 || Math.abs(newMin - currentMin) > 0.1) {
-                cryptoChart.options.scales.y.max = newMax;
-                cryptoChart.options.scales.y.min = newMin;
-                
-                console.log(`📏 Y축 범위 조정: ${newMin.toFixed(1)}% ~ ${newMax.toFixed(1)}%`);
-            }
-        }
-        
-        // 현재 모드에 맞게 차트 데이터 업데이트
-        function updateChartForMode() {
-            const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'ADAUSDT', 'DOGEUSDT'];
-            
-            symbols.forEach((symbol, index) => {
-                const coinInfo = coinData.get(symbol);
-                if (coinInfo && cryptoChart.data.datasets[index]) {
-                    // 현재 모드에 따라 데이터 교체
-                    const dataToShow = displayMode === 'change' ? coinInfo.changes : coinInfo.prices;
-                    cryptoChart.data.datasets[index].data = [...dataToShow];
-                }
-            });
-        }
-        
-        // 차트 리셋
-        function resetChart() {
-            console.log('🔄 차트 리셋 시작');
-            
-            if (cryptoChart) {
-                // 차트 데이터 초기화
-                cryptoChart.data.labels = [];
-                cryptoChart.data.datasets.forEach(dataset => {
-                    dataset.data = [];
-                });
-                cryptoChart.update();
-                
-                // 변수 초기화
-                coinData.clear();
-                basePrices.clear();
-                isFirstCollection = true;
-                
-                console.log('📊 차트 리셋 완료 - 다음 수집부터 새로운 기준가격 적용');
-            }
-        }
-        
-        // 페이지 로드 시 차트 초기화
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeCryptoChart();
-        });
+
+        // 1분마다 UI 업데이트
+        setInterval(updateVoteUI, 60000);
+        updateVoteUI();
+
+        // 초기화
+        initialize();
     </script>
 </body>
 </html>
