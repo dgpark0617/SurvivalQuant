@@ -14,13 +14,14 @@
     #turn-indicator { font-size:1.1em; margin:8px 0; }
     #board-wrap { position: relative; display: flex; justify-content: center; align-items: center; }
     #board {
+      position: relative;
       display: grid;
-      margin:0 auto;
+      margin: 0 auto;
       background: #eee;
       border-radius: 12px;
       padding: 8px;
       box-sizing: border-box;
-      overflow: auto;
+      overflow: visible;
       border: 2px solid #eee;
     }
     .cell {
@@ -65,19 +66,20 @@
       top: 0;
       left: 0;
       pointer-events: none;
+      border: 2px solid transparent;
     }
     .selected.p1-path::after {
-      border: 2px solid #4CAF50;
+      border-color: #4CAF50;
     }
     .selected.p2-path::after {
-      border: 2px solid #f44336;
+      border-color: #f44336;
     }
     .path-line {
       position: absolute;
       height: 3px;
       transform-origin: left center;
       pointer-events: none;
-      z-index: 1;
+      z-index: 3;
       border-radius: 1.5px;
     }
     .p1-line {
@@ -104,6 +106,9 @@
     #setup-modal .modal-box h3 { margin-top:0; margin-bottom:10px;}
     #setup-modal label { font-size:1.1em; }
     #setup-modal select { font-size:1.1em; margin-left:8px; }
+    #timer {
+      display: none !important;
+    }
     @media (max-width: 700px) {
       #board { max-width: 98vw; }
     }
@@ -173,13 +178,100 @@
     let player1Pos = [0, 0];
     let player2Pos = [0, 0];
     let turn = 1;
+    let turnTimer = null;
+    let timeLeft = 10;
+
+    // 레벨업 옵션 정의
+    const LEVEL_UP_OPTIONS = [
+      {
+        type: "stat",
+        name: "체력 강화",
+        effect: "최대 체력 +200",
+        apply: (stats) => { stats.maxHp += 200; stats.hp = stats.maxHp; }
+      },
+      {
+        type: "stat",
+        name: "공격력 강화",
+        effect: "기본 공격력 +1",
+        apply: (stats) => { stats.atk += 1; }
+      },
+      {
+        type: "stat",
+        name: "방어력 강화",
+        effect: "기본 방어력 +1",
+        apply: (stats) => { stats.shield += 1; }
+      },
+      {
+        type: "skill",
+        name: "흡혈",
+        effect: "몬스터 처치 시 체력 회복 +10",
+        apply: (stats) => { stats.vampiric = (stats.vampiric || 0) + 10; }
+      },
+      {
+        type: "skill",
+        name: "골드 러시",
+        effect: "코인 획득량 2배",
+        apply: (stats) => { stats.goldMultiplier = (stats.goldMultiplier || 1) * 2; }
+      },
+      {
+        type: "skill",
+        name: "경험 축적",
+        effect: "경험치 획득량 2배",
+        apply: (stats) => { stats.expMultiplier = (stats.expMultiplier || 1) * 2; }
+      }
+    ];
+
+    function randomMonster(type) {
+      const r = Math.random();
+      if(type === "troll") {
+        if(r < 0.5) { // 50% - 쉬운 난이도 (기본 공격력으로 처치 가능)
+          return {
+            hp: 1,
+            atk: 1,
+            emoji: "🐲"
+          };
+        } else if(r < 0.9) { // 40% - 중간 난이도 (칼 1개 필요)
+          return {
+            hp: 2,
+            atk: 1,
+            emoji: "🐲"
+          };
+        } else { // 10% - 어려운 난이도 (칼 2개 이상 필요)
+          return {
+            hp: 3 + Math.floor(Math.random() * 2), // 3~4 HP
+            atk: 2,
+            emoji: "🐲"
+          };
+        }
+      } else { // vampire
+        if(r < 0.5) { // 50% - 쉬운 난이도
+          return {
+            hp: 1,
+            atk: 1,
+            emoji: "🧛‍♀️"
+          };
+        } else if(r < 0.9) { // 40% - 중간 난이도
+          return {
+            hp: 2,
+            atk: 1,
+            emoji: "🧛‍♀️"
+          };
+        } else { // 10% - 어려운 난이도
+          return {
+            hp: 3 + Math.floor(Math.random() * 2), // 3~4 HP
+            atk: 2,
+            emoji: "🧛‍♀️"
+          };
+        }
+      }
+    }
 
     function randomTile() {
       let r = Math.random();
-      if(r < 0.18) return {...TILES[0]};
-      if(r < 0.36) return {...TILES[1]};
-      if(r < 0.54) return {...TILES[2]};
-      if(r < 0.72) return {...TILES[3]};
+      if(r < 0.18) return {...TILES[0]}; // 방패
+      if(r < 0.36) return {...TILES[1]}; // 포션
+      if(r < 0.54) return {...TILES[2]}; // 코인
+      if(r < 0.72) return {...TILES[3]}; // 칼
       if(r < 0.86) {
         let mon = randomMonster("troll");
         return {type:"troll", emoji:"🐲", mon};
@@ -187,21 +279,6 @@
       else {
         let mon = randomMonster("vampire");
         return {type:"vampire", emoji:"🧛‍♀️", mon};
-      }
-    }
-    function randomMonster(type) {
-      if(type === "troll") {
-        return {
-          hp: 6 + Math.floor(Math.random()*3),
-          atk: 2 + Math.floor(Math.random()*2),
-          emoji: "🐲"
-        };
-      } else {
-        return {
-          hp: 6 + Math.floor(Math.random()*3),
-          atk: 2 + Math.floor(Math.random()*2),
-          emoji: "🧛‍♀️"
-        };
       }
     }
 
@@ -220,6 +297,39 @@
       boardDiv.style.gridTemplateColumns = `repeat(${SIZE}, ${cellSize}px)`;
       boardDiv.style.gridTemplateRows = `repeat(${SIZE}, ${cellSize}px)`;
     }
+    function startTurnTimer() {
+      clearTimeout(turnTimer);
+      timeLeft = 10;
+      updateTimer();
+      
+      function tick() {
+        timeLeft--;
+        updateTimer();
+        
+        if(timeLeft <= 0) {
+          // 시간 초과 시 턴 넘기기
+          selectedPath = [];
+          turn = turn === 1 ? 2 : 1;
+          timeLeft = 10;
+          updateTimer();
+          updateTurnIndicator();
+          render();
+          startTurnTimer();
+          showMessage("시간 초과! 다음 플레이어의 턴입니다.");
+        } else {
+          turnTimer = setTimeout(tick, 1000);
+        }
+      }
+      
+      turnTimer = setTimeout(tick, 1000);
+    }
+
+    function updateTimer() {
+      const timerDiv = document.getElementById("timer");
+      timerDiv.textContent = timeLeft;
+      timerDiv.style.display = "";
+    }
+
     function startGame() {
       SIZE = parseInt(document.getElementById("sizeSelect").value, 10);
       document.getElementById("setup-modal").style.display = "none";
@@ -231,8 +341,30 @@
       initGame();
     }
     function initGame() {
-      stats1 = {hp:1000, shield:0, atk:1, gold:0, exp:0, level:1, expNext:10};
-      stats2 = {hp:1000, shield:0, atk:1, gold:0, exp:0, level:1, expNext:10};
+      stats1 = {
+        hp: 1000,
+        maxHp: 1000,
+        shield: 0,
+        atk: 1,
+        gold: 0,
+        exp: 0,
+        level: 1,
+        expNext: 10,
+        goldMultiplier: 1,
+        expMultiplier: 1
+      };
+      stats2 = {
+        hp: 1000,
+        maxHp: 1000,
+        shield: 0,
+        atk: 1,
+        gold: 0,
+        exp: 0,
+        level: 1,
+        expNext: 10,
+        goldMultiplier: 1,
+        expMultiplier: 1
+      };
       message = "자신의 영웅(🤺)에서 시작해 3개 이상 경로를 만들고 '실행'을 누르세요!";
       board = [];
       let px1 = Math.floor(Math.random() * SIZE);
@@ -336,7 +468,6 @@
       boardDiv.innerHTML = "";
       const cellSize = getCellSize();
       
-      // 보드의 position을 relative로 설정
       boardDiv.style.position = "relative";
       
       for(let i=0; i<SIZE; i++) {
@@ -345,8 +476,16 @@
           cell.className = "cell";
           if(board[i][j].type === "player1") cell.classList.add("hero1");
           if(board[i][j].type === "player2") cell.classList.add("hero2");
+          
+          // 선택된 경로 표시
+          if(selectedPath.find(([x,y]) => x===i && y===j)) {
+            cell.classList.add("selected");
+            cell.classList.add(turn === 1 ? "p1-path" : "p2-path");
+          }
+          
           cell.style.width = cell.style.height = cellSize + "px";
           cell.style.fontSize = (cellSize * 0.68) + "px";
+          
           if(board[i][j].type === "troll" || board[i][j].type === "vampire") {
             cell.innerHTML = `${board[i][j].emoji}<div class="info" style="font-size:${Math.max(10,cellSize*0.23)}px">${board[i][j].mon.hp}/${board[i][j].mon.atk}</div>`;
           } else if(board[i][j].type === "player1") {
@@ -358,16 +497,14 @@
           } else {
             cell.innerHTML = board[i][j].emoji;
           }
-          if(selectedPath.find(([x,y]) => x===i && y===j)) {
-            cell.classList.add("selected");
-            cell.classList.add(turn === 1 ? "p1-path" : "p2-path");
-          }
+          
           cell.onclick = () => handleSelect(i, j);
           cell.dataset.i = i;
           cell.dataset.j = j;
           boardDiv.appendChild(cell);
         }
       }
+      
       updateBoardGrid();
       drawPath();
     }
@@ -413,64 +550,63 @@
         return;
       }
 
-      // 선택 해제
-      if(selectedPath.length && selectedPath[selectedPath.length-1][0] === i && selectedPath[selectedPath.length-1][1] === j) {
-        if(selectedPath.length === 1) return; // 플레이어 위치는 해제 불가
-        selectedPath.pop();
+      // 이미 선택된 위치는 선택 취소
+      const existingIndex = selectedPath.findIndex(([x,y]) => x===i && y===j);
+      if(existingIndex !== -1) {
+        selectedPath = selectedPath.slice(0, existingIndex);
         render();
         updateActionBtn();
         return;
       }
 
-      // 이미 선택된 칸은 선택 불가
-      if(selectedPath.find(([x, y]) => x === i && y === j)) return;
+      // 인접한 위치만 선택 가능
+      const last = selectedPath[selectedPath.length-1];
+      if(!isAdjacent(last, pos)) return;
 
-      // 인접한 칸만 선택 가능
-      if(!isAdjacent(selectedPath[selectedPath.length-1], pos)) return;
-
-      // 자기 편 몬스터는 첫 타일이 아닐 경우에만 제한
-      if(selectedPath.length > 1 && isAllyMonster(i, j)) return;
-
-      // 첫 이동(두 번째 선택) 이후 칼/몬스터 규칙
-      if(selectedPath.length >= 1) {
-        const [firstI, firstJ] = selectedPath[1] || [null, null];
-        const firstType = firstI !== null ? board[firstI][firstJ].type : null;
-        const currType = board[i][j].type;
-        
-        // 몬스터나 상대 플레이어를 선택했을 때
-        if(isEnemyMonster(i, j) || (turn === 1 && isPlayer2(i, j)) || (turn === 2 && isPlayer1(i, j))) {
-          const swordCount = selectedPath.filter(([x, y]) => isSword(x, y)).length || 1;
-          let targetHP = 0;
-          
-          if(isMonster(i, j)) {
-            targetHP = board[i][j].mon.hp;
-          } else if(isPlayer1(i, j)) {
-            targetHP = stats1.hp;
-          } else if(isPlayer2(i, j)) {
-            targetHP = stats2.hp;
-          }
-          
-          // 공격력이 HP보다 작으면 선택은 되지만 더 이상 진행 불가
-          if(swordCount < targetHP) {
-            selectedPath.push(pos);
-            render();
-            updateActionBtn();
-            return;
-          }
-        }
-        
-        if(selectedPath.length === 1) {
+      // 첫 번째 아이템 종류 체크 (플레이어 선택 이후의 첫 아이템)
+      if(selectedPath.length === 1) {
+        // 아군 몬스터나 적 몬스터 첫 선택 허용
+        if(isAllyMonster(i, j) || isEnemyMonster(i, j)) {
           selectedPath.push(pos);
           render();
           updateActionBtn();
           return;
         }
+      } else if(selectedPath.length > 1) {
+        // 두 번째 선택부터는 첫 번째 선택한 아이템 종류에 따라 다르게 처리
+        const firstSelectedType = board[selectedPath[1][0]][selectedPath[1][1]].type;
+        const currentType = board[i][j].type;
         
-        // 첫 선택이 칼이면 칼이나 몬스터만 선택 가능
-        if(firstType === "sword") {
-          if(currType !== "sword" && !isMonster(i, j) && currType !== "player1" && currType !== "player2") return;
-        } else {
-          if(currType !== firstType) return;
+        // 첫 선택이 아군 몬스터였다면 더 이상 선택 불가
+        if(isAllyMonster(selectedPath[1][0], selectedPath[1][1])) {
+          showMessage("아군 몬스터는 첫 이동으로만 선택할 수 있습니다!");
+          return;
+        }
+
+        // 첫 선택이 적 몬스터인 경우
+        if(isEnemyMonster(selectedPath[1][0], selectedPath[1][1])) {
+          // 칼이나 다른 적 몬스터만 선택 가능
+          if(currentType !== "sword" && !isEnemyMonster(i, j)) {
+            showMessage("몬스터를 처치하기 위해서는 칼을 모으거나 다른 몬스터를 선택하세요!");
+            return;
+          }
+        }
+        // 첫 선택이 칼인 경우
+        if(firstSelectedType === "sword") {
+          // 칼이나 적 몬스터만 선택 가능
+          if(currentType !== "sword" && !isEnemyMonster(i, j)) {
+            showMessage("칼을 선택한 후에는 다른 칼이나 적 몬스터만 선택할 수 있습니다!");
+            return;
+          }
+        } 
+        // 첫 선택이 다른 아이템인 경우 (칼이나 몬스터가 아닌 경우)
+        if(!isEnemyMonster(selectedPath[1][0], selectedPath[1][1]) && 
+           firstSelectedType !== "sword") {
+          // 첫 번째 선택한 아이템과 같은 종류만 선택 가능
+          if(currentType !== firstSelectedType) {
+            showMessage("같은 종류의 아이템만 선택할 수 있습니다!");
+            return;
+          }
         }
       }
 
@@ -480,155 +616,297 @@
     }
 
     function updateActionBtn() {
-      const valid = selectedPath.length >= 3 &&
-        ((turn === 1 && isPlayer1(selectedPath[0][0], selectedPath[0][1])) ||
-         (turn === 2 && isPlayer2(selectedPath[0][0], selectedPath[0][1])));
-      document.getElementById('actionBtn').disabled = !valid;
+      // 시작 위치가 올바른지 확인
+      const validStart = (turn === 1 && isPlayer1(selectedPath[0][0], selectedPath[0][1])) ||
+                        (turn === 2 && isPlayer2(selectedPath[0][0], selectedPath[0][1]));
+      
+      if(!validStart || selectedPath.length < 2) {
+        document.getElementById('actionBtn').disabled = true;
+        return;
+      }
+
+      // 아군 몬스터로의 이동인 경우
+      if(selectedPath.length === 2) {
+        const [targetX, targetY] = selectedPath[1];
+        const isAllyMonsterMove = (turn === 1 && board[targetX][targetY].type === "troll") ||
+                                 (turn === 2 && board[targetX][targetY].type === "vampire");
+        if(isAllyMonsterMove) {
+          document.getElementById('actionBtn').disabled = false;
+          return;
+        }
+      }
+
+      // 1칸 이동이나 링크 연결 이동 모두 가능
+      document.getElementById('actionBtn').disabled = false;
     }
     function applyGravity() {
-      if(turn === 1) {
-        for(let col=0; col<SIZE; col++) {
-          let stack = [];
-          for(let row=0; row<SIZE; row++) {
-            if(board[row][col].type !== 'empty' && board[row][col].type !== 'player1' && board[row][col].type !== 'player2') stack.push(board[row][col]);
+      let moved;
+      do {
+        moved = false;
+        if(turn === 1) { // 플레이어1 턴 종료 후 - 아래로 중력
+          // 기존 타일 아래로 이동
+          for(let i = SIZE-2; i >= 0; i--) {
+            for(let j = 0; j < SIZE; j++) {
+              if(board[i][j].type !== "empty" && 
+                 board[i][j].type !== "player1" && 
+                 board[i][j].type !== "player2" && 
+                 board[i+1][j].type === "empty") {
+                board[i+1][j] = board[i][j];
+                board[i][j] = {type: "empty"};
+                moved = true;
+              }
+            }
           }
-          for(let row=SIZE-1; row>=0; row--) {
-            if(isPlayer1(row, col) || isPlayer2(row, col)) continue;
-            if(stack.length > 0) {
-              board[row][col] = stack.pop();
-            } else {
-              board[row][col] = randomTile();
+          // 맨 위 빈 공간 새로운 타일로 채우기
+          if(!moved) {
+            for(let j = 0; j < SIZE; j++) {
+              if(board[0][j].type === "empty") {
+                board[0][j] = randomTile();
+                moved = true;
+              }
+            }
+          }
+        } else { // 플레이어2 턴 종료 후 - 위로 중력
+          // 기존 타일 위로 이동
+          for(let i = 1; i < SIZE; i++) {
+            for(let j = 0; j < SIZE; j++) {
+              if(board[i][j].type !== "empty" && 
+                 board[i][j].type !== "player1" && 
+                 board[i][j].type !== "player2" && 
+                 board[i-1][j].type === "empty") {
+                board[i-1][j] = board[i][j];
+                board[i][j] = {type: "empty"};
+                moved = true;
+              }
+            }
+          }
+          // 맨 아래 빈 공간 새로운 타일로 채우기
+          if(!moved) {
+            for(let j = 0; j < SIZE; j++) {
+              if(board[SIZE-1][j].type === "empty") {
+                board[SIZE-1][j] = randomTile();
+                moved = true;
+              }
+            }
+          }
+        }
+      } while(moved);
+
+      // 마지막으로 한번 더 빈 공간 확인하고 채우기
+      if(turn === 1) {
+        for(let j = 0; j < SIZE; j++) {
+          for(let i = 0; i < SIZE; i++) {
+            if(board[i][j].type === "empty") {
+              board[i][j] = randomTile();
             }
           }
         }
       } else {
-        for(let col=0; col<SIZE; col++) {
-          let stack = [];
-          for(let row=SIZE-1; row>=0; row--) {
-            if(board[row][col].type !== 'empty' && board[row][col].type !== 'player1' && board[row][col].type !== 'player2') stack.push(board[row][col]);
-          }
-          for(let row=0; row<SIZE; row++) {
-            if(isPlayer1(row, col) || isPlayer2(row, col)) continue;
-            if(stack.length > 0) {
-              board[row][col] = stack.pop();
-            } else {
-              board[row][col] = randomTile();
+        for(let j = 0; j < SIZE; j++) {
+          for(let i = SIZE-1; i >= 0; i--) {
+            if(board[i][j].type === "empty") {
+              board[i][j] = randomTile();
             }
           }
         }
       }
     }
+    function showLevelUpModal(playerStats) {
+      // 랜덤하게 3개 옵션 선택
+      let options = [...LEVEL_UP_OPTIONS]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+      
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      `;
+      
+      const content = document.createElement('div');
+      content.style.cssText = `
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+      `;
+      
+      content.innerHTML = `
+        <h2>레벨 업!</h2>
+        <p>원하는 강화 효과를 선택하세요:</p>
+        ${options.map((opt, i) => `
+          <button onclick="applyLevelUpOption(${i})" style="display:block; width:100%; margin:10px 0; padding:10px;">
+            ${opt.name}<br>
+            <small>${opt.effect}</small>
+          </button>
+        `).join('')}
+      `;
+      
+      modal.appendChild(content);
+      document.body.appendChild(modal);
+      
+      // 전역 함수로 선택 핸들러 추가
+      window.applyLevelUpOption = (index) => {
+        const selectedOption = options[index];
+        selectedOption.apply(playerStats);
+        document.body.removeChild(modal);
+        updateStats();
+        showMessage(`레벨 ${playerStats.level}: ${selectedOption.name} 효과가 적용되었습니다!`);
+      };
+    }
+
+    function checkLevelUp(stats) {
+      if(stats.exp >= stats.expNext) {
+        stats.level += 1;
+        stats.exp -= stats.expNext;
+        stats.expNext = Math.floor(stats.expNext * 1.5); // 다음 레벨업에 필요한 경험치 1.5배
+        showLevelUpModal(stats);
+        return true;
+      }
+      return false;
+    }
+
     function applySelection() {
-      if(selectedPath.length < 3) return;
+      if(selectedPath.length < 2) return;
       
-      let currentStats = turn === 1 ? stats1 : stats2;
-      let attackPower = currentStats.atk;
       let messages = [];
-      let monstersDefeated = 0;
-      let swordsCollected = 0;
+      let currentStats = turn === 1 ? stats1 : stats2;
+      let totalAttackPower = currentStats.atk;
       
-      // 경로상의 칼 수집 및 공격력 계산
+      // 경로상의 칼 수집으로 인한 공격력 증가 계산
       for(let i = 0; i < selectedPath.length; i++) {
         const [x, y] = selectedPath[i];
         if(isSword(x, y)) {
-          swordsCollected++;
-          attackPower++;
+          totalAttackPower++;
         }
       }
 
-      // 몬스터 처치 시도
-      let canComplete = true;
-      let lastMonsterDamage = 0;
-      let lastMonsterPos = null;
-      
-      for(let i = 0; i < selectedPath.length; i++) {
-        const [x, y] = selectedPath[i];
-        if(isMonster(x, y)) {
-          const monster = board[x][y].mon;
-          if(attackPower >= monster.hp) {
-            monstersDefeated++;
-            messages.push(`몬스터(${monster.emoji})를 처치했습니다! (HP: ${monster.hp})`);
-          } else {
-            // 마지막 몬스터가 아니면 통과 불가
-            if(i < selectedPath.length - 1) {
-              canComplete = false;
-              messages.push(`몬스터(${monster.emoji})의 HP(${monster.hp})가 너무 높아 통과할 수 없습니다!`);
-              break;
-            } else {
-              // 마지막 몬스터는 데미지를 받음
-              lastMonsterDamage = attackPower;
-              lastMonsterPos = [x, y];
-              messages.push(`마지막 몬스터(${monster.emoji})에게 ${attackPower}만큼의 데미지를 입혔습니다!`);
-            }
-          }
-        }
+      // 경로 실행 - 시작 위치를 비움
+      if(turn === 1) {
+        board[player1Pos[0]][player1Pos[1]] = {type: "empty"};
+      } else {
+        board[player2Pos[0]][player2Pos[1]] = {type: "empty"};
       }
 
-      if(!canComplete) {
-        showMessage(messages.join(" "));
-        return;
-      }
+      let lastValidPosition = null;  // 마지막으로 이동 가능한 위치
 
-      // 경로 실행
+      // 경로상의 아이템 처리
       for(let i = 0; i < selectedPath.length; i++) {
         const [x, y] = selectedPath[i];
         const tile = board[x][y];
 
-        // 칼 사용 후 제거
-        if(isSword(x, y)) {
-          board[x][y] = {type: "empty"};
-        }
-        // 처치 가능한 몬스터 제거
-        else if(isMonster(x, y) && attackPower >= tile.mon.hp) {
-          board[x][y] = {type: "empty"};
-          if(turn === 1) {
-            stats1.exp += 2;
+        if(tile.type !== "player1" && tile.type !== "player2") {
+          // 아이템 효과 적용
+          if(tile.type === "potion") {
+            currentStats.hp = Math.min(currentStats.maxHp, currentStats.hp + 100);
+            messages.push("포션으로 체력을 회복했습니다! (+100)");
+          } else if(tile.type === "shield") {
+            currentStats.shield += 1;
+            messages.push("방패로 방어력이 증가했습니다! (+1)");
+          } else if(tile.type === "coin") {
+            const goldAmount = 10 * currentStats.goldMultiplier;
+            currentStats.gold += goldAmount;
+            messages.push(`코인을 획득했습니다! (+${goldAmount})`);
+          }
+          
+          // 몬스터 처리
+          if(isEnemyMonster(x, y)) {
+            const monster = tile.mon;
+            const damage = Math.min(totalAttackPower, monster.hp);
+            monster.hp -= damage;
+            
+            if(monster.hp <= 0) {
+              // 몬스터 처치
+              const expAmount = 2 * currentStats.expMultiplier;
+              currentStats.exp += expAmount;
+              messages.push(`몬스터를 처치하고 경험치를 획득했습니다! (+${expAmount})`);
+              
+              // 흡혈 효과 적용
+              if(currentStats.vampiric) {
+                const healAmount = currentStats.vampiric;
+                currentStats.hp = Math.min(currentStats.maxHp, currentStats.hp + healAmount);
+                messages.push(`흡혈 효과로 체력을 회복했습니다! (+${healAmount})`);
+              }
+
+              // 레벨업 체크
+              if(checkLevelUp(currentStats)) {
+                messages.push(`레벨 ${currentStats.level}로 레벨업!`);
+              }
+              
+              board[x][y] = {type: "empty"};
+              lastValidPosition = [x, y];
+            } else {
+              // 몬스터가 살아있으면 여기서 경로 종료
+              messages.push(`몬스터에게 ${damage}의 데미지를 입혔습니다! (남은 HP: ${monster.hp})`);
+              break;
+            }
           } else {
-            stats2.exp += 2;
+            // 몬스터가 아닌 타일은 비우고 이동 가능 위치로 표시
+            board[x][y] = {type: "empty"};
+            lastValidPosition = [x, y];
           }
         }
-        // 마지막 몬스터 데미지 적용
-        else if(lastMonsterPos && x === lastMonsterPos[0] && y === lastMonsterPos[1]) {
-          tile.mon.hp -= lastMonsterDamage;
+      }
+
+      // 마지막 유효 위치로 플레이어 이동
+      if(lastValidPosition) {
+        const [lastX, lastY] = lastValidPosition;
+        if(turn === 1) {
+          board[lastX][lastY] = {...PLAYER1};
+          player1Pos = [lastX, lastY];
+        } else {
+          board[lastX][lastY] = {...PLAYER2};
+          player2Pos = [lastX, lastY];
         }
       }
 
-      // 플레이어 이동
-      const [lastX, lastY] = selectedPath[selectedPath.length - 1];
-      if(turn === 1) {
-        board[player1Pos[0]][player1Pos[1]] = {type: "empty"};
-        board[lastX][lastY] = {...PLAYER1};
-        player1Pos = [lastX, lastY];
-      } else {
-        board[player2Pos[0]][player2Pos[1]] = {type: "empty"};
-        board[lastX][lastY] = {...PLAYER2};
-        player2Pos = [lastX, lastY];
-      }
+      // 중력 적용
+      applyGravity();
 
-      // 경험치 획득 및 레벨업 체크
-      if(turn === 1) {
-        stats1.exp += monstersDefeated * 2;
-        if(stats1.exp >= stats1.expNext) {
-          stats1.level++;
-          stats1.expNext *= 2;
-          stats1.atk++;
-          messages.push(`레벨 ${stats1.level}로 상승! 공격력이 ${stats1.atk}가 되었습니다!`);
+      // 남아있는 적 몬스터의 공격 처리
+      let totalEnemyAttack = 0;
+      for(let i = 0; i < SIZE; i++) {
+        for(let j = 0; j < SIZE; j++) {
+          if(turn === 1 && board[i][j].type === "vampire") {
+            totalEnemyAttack += Math.max(0, board[i][j].mon.atk - currentStats.shield);
+          } else if(turn === 2 && board[i][j].type === "troll") {
+            totalEnemyAttack += Math.max(0, board[i][j].mon.atk - currentStats.shield);
+          }
         }
-      } else {
-        stats2.exp += monstersDefeated * 2;
-        if(stats2.exp >= stats2.expNext) {
-          stats2.level++;
-          stats2.expNext *= 2;
-          stats2.atk++;
-          messages.push(`레벨 ${stats2.level}로 상승! 공격력이 ${stats2.atk}가 되었습니다!`);
+      }
+      
+      if(totalEnemyAttack > 0) {
+        currentStats.hp = Math.max(0, currentStats.hp - totalEnemyAttack);
+        messages.push(`남아있는 적 몬스터들의 공격으로 ${totalEnemyAttack}의 피해를 입었습니다!`);
+        
+        // 체력이 0이 되면 게임 종료
+        if(currentStats.hp <= 0) {
+          const winner = turn === 1 ? "플레이어2" : "플레이어1";
+          showMessage(`게임 종료! ${winner}의 승리!`);
+          // 게임 재시작 버튼만 활성화
+          document.getElementById('actionBtn').disabled = true;
+          return;
         }
       }
 
+      // 상태 업데이트
       selectedPath = [];
       turn = turn === 1 ? 2 : 1;
       updateStats();
       render();
-      showMessage(messages.join(" "));
+      if(messages.length > 0) {
+        showMessage(messages.join(" "));
+      } else {
+        showMessage("이동 완료!");
+      }
       updateActionBtn();
       updateTurnIndicator();
     }
