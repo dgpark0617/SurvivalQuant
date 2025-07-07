@@ -25,7 +25,7 @@
             background: #ffffff;
             border: 1px solid #e9ecef;
             border-radius: 8px;
-            padding: 15px;
+            padding: 10px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         .header-section {
@@ -301,7 +301,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px;
+            padding: 5px 10px;
             border-bottom: 1px solid #e9ecef;
         }
 
@@ -312,19 +312,20 @@
         .market-name {
             font-weight: 500;
             min-width: 120px;
+            font-size: 0.9rem;
         }
 
         .market-price {
-            font-size: 1rem;
+            font-size: 0.9rem;
             margin: 0 15px;
         }
 
         .market-change {
-            min-width: 70px;
+            min-width: 60px;
             text-align: right;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.9rem;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 0.85rem;
         }
 
         .market-change.positive {
@@ -337,18 +338,7 @@
             background: rgba(255, 118, 117, 0.1);
         }
 
-        .market-category {
-            font-weight: bold;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            margin-bottom: 10px;
-        }
 
-        .market-category.active {
-            background: #4e54c8;
-            color: white;
-        }
 
         .tooltip {
             position: relative;
@@ -650,6 +640,9 @@
             <a href="games/" class="quick-link">
                 🎮 게임
             </a>
+            <a href="games/DungeonDual4.html" class="quick-link">
+                🎲 던전듀얼4
+            </a>
             <a href="utilities/" class="quick-link">
                 🛠️ 유틸리티
             </a>
@@ -676,173 +669,121 @@
                     <h3>📊 글로벌 금융 대시보드</h3>
                 </div>
                 <div class="utility-content">
-                    <div class="market-categories">
-                        <div class="market-category active">전체</div>
-                        <div class="market-category">주요 지수</div>
-                        <div class="market-category">원자재</div>
-                        <div class="market-category">암호화폐</div>
-                        <div class="market-category">금리/통화</div>
-                        <div class="market-category">거시경제</div>
-                    </div>
+
                     <div class="market-grid">
                         <!-- 주요 지수 -->
-                        <div class="market-item" data-category="주요 지수">
-                            <div class="market-name">
-                                S&P 500
-                                <span class="tooltip" data-tooltip="미국 대표 주가지수">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="spx_price">$4,783.45</div>
-                            <div class="market-change change-up" id="spx_change">+0.8%</div>
+                        <div class="market-item">
+                            <span class="market-name">S&P 500</span>
+                            <span class="market-price" id="gspc_price">$4,783.45</span>
+                            <span class="market-change positive" id="gspc_change">+0.8%</span>
                         </div>
-                        <div class="market-item" data-category="주요 지수">
-                            <div class="market-name">
-                                나스닥
-                                <span class="tooltip" data-tooltip="미국 기술주 중심 지수">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="ndx_price">$16,832.92</div>
-                            <div class="market-change change-up" id="ndx_change">+1.2%</div>
+                        <div class="market-item">
+                            <span class="market-name">나스닥</span>
+                            <span class="market-price" id="ndx_price">$16,832.92</span>
+                            <span class="market-change positive" id="ndx_change">+1.2%</span>
                         </div>
-                        <div class="market-item" data-category="주요 지수">
-                            <div class="market-name">
-                                다우존스
-                                <span class="tooltip" data-tooltip="미국 30대 우량주 지수">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="dji_price">$37,592.98</div>
-                            <div class="market-change change-up" id="dji_change">+0.7%</div>
+                        <div class="market-item">
+                            <span class="market-name">다우존스</span>
+                            <span class="market-price" id="dji_price">$37,592.98</span>
+                            <span class="market-change positive" id="dji_change">+0.7%</span>
                         </div>
-                        <div class="market-item" data-category="주요 지수">
-                            <div class="market-name">코스피</div>
-                            <div class="market-price" id="ks11_price">2,568.72</div>
-                            <div class="market-change change-down" id="ks11_change">-0.5%</div>
+                        <div class="market-item">
+                            <span class="market-name">코스피</span>
+                            <span class="market-price" id="ks11_price">2,568.72</span>
+                            <span class="market-change negative" id="ks11_change">-0.5%</span>
                         </div>
-                        <div class="market-item" data-category="주요 지수">
-                            <div class="market-name">코스닥</div>
-                            <div class="market-price" id="kq11_price">842.65</div>
-                            <div class="market-change change-up" id="kq11_change">+0.3%</div>
+                        <div class="market-item">
+                            <span class="market-name">코스닥</span>
+                            <span class="market-price" id="kq11_price">842.65</span>
+                            <span class="market-change negative" id="kq11_change">-0.3%</span>
                         </div>
-                        <div class="market-item" data-category="주요 지수">
-                            <div class="market-name">니케이 225</div>
-                            <div class="market-price" id="n225_price">¥33,452.85</div>
-                            <div class="market-change change-up" id="n225_change">+0.9%</div>
+                        <div class="market-item">
+                            <span class="market-name">니케이 225</span>
+                            <span class="market-price" id="n225_price">¥33,452.50</span>
+                            <span class="market-change positive" id="n225_change">+0.9%</span>
                         </div>
-                        <div class="market-item" data-category="주요 지수">
-                            <div class="market-name">항셍</div>
-                            <div class="market-price" id="hsi_price">16,245.86</div>
-                            <div class="market-change change-down" id="hsi_change">-1.2%</div>
+                        <div class="market-item">
+                            <span class="market-name">항셍</span>
+                            <span class="market-price" id="hsi_price">16,245.30</span>
+                            <span class="market-change negative" id="hsi_change">-1.2%</span>
                         </div>
 
                         <!-- 원자재 -->
-                        <div class="market-item" data-category="원자재">
-                            <div class="market-name">
-                                금
-                                <span class="tooltip" data-tooltip="Gold Futures">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="gcf_price">$1,925.50</div>
-                            <div class="market-change change-up" id="gcf_change">+0.5%</div>
+                        <div class="market-item">
+                            <span class="market-name">금</span>
+                            <span class="market-price" id="gc_f_price">$2,032.50</span>
+                            <span class="market-change positive" id="gc_f_change">+0.4%</span>
                         </div>
-                        <div class="market-item" data-category="원자재">
-                            <div class="market-name">
-                                은
-                                <span class="tooltip" data-tooltip="Silver Futures">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="sif_price">$23.15</div>
-                            <div class="market-change change-down" id="sif_change">-0.3%</div>
+                        <div class="market-item">
+                            <span class="market-name">은</span>
+                            <span class="market-price" id="si_f_price">$23.15</span>
+                            <span class="market-change negative" id="si_f_change">-0.2%</span>
                         </div>
-                        <div class="market-item" data-category="원자재">
-                            <div class="market-name">
-                                WTI 원유
-                                <span class="tooltip" data-tooltip="서부 텍사스산 원유">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="cl_price">$72.45</div>
-                            <div class="market-change change-up" id="cl_change">+1.5%</div>
+                        <div class="market-item">
+                            <span class="market-name">WTI 원유</span>
+                            <span class="market-price" id="cl_f_price">$72.45</span>
+                            <span class="market-change positive" id="cl_f_change">+1.5%</span>
                         </div>
-                        <div class="market-item" data-category="원자재">
-                            <div class="market-name">
-                                천연가스
-                                <span class="tooltip" data-tooltip="Natural Gas Futures">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="ng_price">$3.25</div>
-                            <div class="market-change change-down" id="ng_change">-0.8%</div>
+                        <div class="market-item">
+                            <span class="market-name">천연가스</span>
+                            <span class="market-price" id="ng_f_price">$2.52</span>
+                            <span class="market-change negative" id="ng_f_change">-0.8%</span>
                         </div>
-                        <div class="market-item" data-category="원자재">
-                            <div class="market-name">
-                                구리
-                                <span class="tooltip" data-tooltip="Copper Futures">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="hg_price">$3.85</div>
-                            <div class="market-change change-up" id="hg_change">+0.6%</div>
+                        <div class="market-item">
+                            <span class="market-name">구리</span>
+                            <span class="market-price" id="hg_f_price">$3.85</span>
+                            <span class="market-change positive" id="hg_f_change">+0.6%</span>
                         </div>
 
                         <!-- 암호화폐 -->
-                        <div class="market-item" data-category="암호화폐">
-                            <div class="market-name">비트코인</div>
-                            <div class="market-price" id="btc_price">$43,250.00</div>
-                            <div class="market-change change-up" id="btc_change">+2.1%</div>
+                        <div class="market-item">
+                            <span class="market-name">비트코인</span>
+                            <span class="market-price" id="btc_price">$42,350.00</span>
+                            <span class="market-change positive" id="btc_change">+2.3%</span>
                         </div>
-                        <div class="market-item" data-category="암호화폐">
-                            <div class="market-name">이더리움</div>
-                            <div class="market-price" id="eth_price">$2,250.00</div>
-                            <div class="market-change change-up" id="eth_change">+1.8%</div>
+                        <div class="market-item">
+                            <span class="market-name">이더리움</span>
+                            <span class="market-price" id="eth_price">$2,245.80</span>
+                            <span class="market-change positive" id="eth_change">+1.8%</span>
                         </div>
 
                         <!-- 금리/통화 -->
-                        <div class="market-item" data-category="금리/통화">
-                            <div class="market-name">
-                                미국 10년 국채
-                                <span class="tooltip" data-tooltip="US 10Y Treasury Yield">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="us10y_price">4.15%</div>
-                            <div class="market-change change-up" id="us10y_change">+0.05%</div>
+                        <div class="market-item">
+                            <span class="market-name">미국 10년 국채</span>
+                            <span class="market-price" id="tnx_price">4.15%</span>
+                            <span class="market-change positive" id="tnx_change">+0.05%</span>
                         </div>
-                        <div class="market-item" data-category="금리/통화">
-                            <div class="market-name">
-                                한국 10년 국채
-                                <span class="tooltip" data-tooltip="KR 10Y Treasury Yield">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="kr10y_price">3.85%</div>
-                            <div class="market-change change-down" id="kr10y_change">-0.02%</div>
+                        <div class="market-item">
+                            <span class="market-name">한국 10년 국채</span>
+                            <span class="market-price" id="kr10yt_rr_price">3.28%</span>
+                            <span class="market-change negative" id="kr10yt_rr_change">-0.02%</span>
                         </div>
-                        <div class="market-item" data-category="금리/통화">
-                            <div class="market-name">
-                                달러 인덱스
-                                <span class="tooltip" data-tooltip="US Dollar Index">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="dxy_price">102.45</div>
-                            <div class="market-change change-down" id="dxy_change">-0.3%</div>
+                        <div class="market-item">
+                            <span class="market-name">달러 인덱스</span>
+                            <span class="market-price" id="dx_y_price">102.45</span>
+                            <span class="market-change negative" id="dx_y_change">-0.3%</span>
                         </div>
 
                         <!-- 거시경제 -->
-                        <div class="market-item" data-category="거시경제">
-                            <div class="market-name">
-                                미국 실업률
-                                <span class="tooltip" data-tooltip="US Unemployment Rate">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="us_unemployment">3.7%</div>
-                            <div class="market-info">최근 업데이트: 2024.01</div>
+                        <div class="market-item">
+                            <span class="market-name">미국 실업률</span>
+                            <span class="market-price" id="us_unemployment">3.7%</span>
+                            <span class="market-info">최근 업데이트: 2024.01</span>
                         </div>
-                        <div class="market-item" data-category="거시경제">
-                            <div class="market-name">
-                                미국 CPI
-                                <span class="tooltip" data-tooltip="Consumer Price Index YoY">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="us_cpi">3.4%</div>
-                            <div class="market-info">최근 업데이트: 2024.01</div>
+                        <div class="market-item">
+                            <span class="market-name">미국 CPI</span>
+                            <span class="market-price" id="us_cpi">3.4%</span>
+                            <span class="market-info">최근 업데이트: 2024.01</span>
                         </div>
-                        <div class="market-item" data-category="거시경제">
-                            <div class="market-name">
-                                연방기금금리
-                                <span class="tooltip" data-tooltip="Federal Funds Rate">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="fed_rate">5.25-5.50%</div>
-                            <div class="market-info">최근 업데이트: 2024.01</div>
+                        <div class="market-item">
+                            <span class="market-name">연방기금금리</span>
+                            <span class="market-price" id="fed_rate">5.25-5.50%</span>
+                            <span class="market-info">최근 업데이트: 2024.01</span>
                         </div>
-                        <div class="market-item" data-category="거시경제">
-                            <div class="market-name">
-                                한국 기준금리
-                                <span class="tooltip" data-tooltip="Bank of Korea Base Rate">ℹ️</span>
-                            </div>
-                            <div class="market-price" id="bok_rate">3.50%</div>
-                            <div class="market-info">최근 업데이트: 2024.01</div>
+                        <div class="market-item">
+                            <span class="market-name">한국 기준금리</span>
+                            <span class="market-price" id="bok_rate">3.50%</span>
+                            <span class="market-info">최근 업데이트: 2024.01</span>
                         </div>
                     </div>
                 </div>

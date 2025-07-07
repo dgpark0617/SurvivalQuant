@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>플레이어 & 한 자루 칼 퍼즐 (2인용)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html, body { height:100%; margin:0; padding:0; }
+    body { font-family: sans-serif; background: #fff; color: #222; text-align: center; margin:0; padding:0;}
+    #stats { margin: 5px 0 10px; font-size:0.98em;}
+    #stats span { margin: 0 10px; }
+    #stats2 { margin: 5px 0 10px; font-size:0.98em;}
+    #stats2 span { margin: 0 10px; }
+    #turn-indicator { font-size:1.1em; margin:8px 0; }
+    #board-wrap { position: relative; display: flex; justify-content: center; align-items: center; }
+    #board {
+      display: grid;
+      margin:0 auto;
+      background: #eee;
+      border-radius: 12px;
+      padding: 8px;
+      box-sizing: border-box;
+      overflow: auto;
+      border: 2px solid #eee;
+    }
+    .cell {
+      background: #fafafa;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+      border: 1px solid #ccc;
+      position: relative;
+      z-index: 2;
+      overflow: hidden;
+      font-size: 1em;
+    }
+    .cell.hero1 {
+      background: #b7ffb7 !important;
+    }
+    .cell.hero2 {
+      background: #ffb7e3 !important;
+    }
+    .cell .info {
+      font-size: 0.28em;
+      color: #444;
+      line-height: 1.0;
+      margin-top: -3px;
+      letter-spacing: -1px;
+      word-break: keep-all;
+    }
+    .selected { background: #ffe066 !important; }
+    #actions { margin: 8px 0; }
+    #message { min-height: 1.5em; margin: 8px 0 0 0; font-size:0.98em;}
+    button { margin: 6px 5px 0 5px; padding: 6px 14px; font-size: 0.98em; border-radius: 8px; border: none; background: #ffe066; color: #222; font-weight: bold; cursor: pointer; }
+    button:active { background: #ffd700; }
+    #setup-modal {
+      display: flex; flex-direction:column; align-items:center; justify-content:center;
+      position: fixed; left:0; top:0; width:100vw; height:100vh;
+      background: rgba(0,0,0,0.2); z-index: 99;
+    }
+    #setup-modal .modal-box {
+      background:#fff; border-radius:12px; padding:28px 18px 18px 18px; min-width:220px; box-shadow:0 2px 16px #0003;
+      display:inline-block;
+    }
+    #setup-modal .modal-box h3 { margin-top:0; margin-bottom:10px;}
+    #setup-modal label { font-size:1.1em; }
+    #setup-modal select { font-size:1.1em; margin-left:8px; }
+    @media (max-width: 700px) {
+      #board { max-width: 98vw; }
+    }
+  </style>
+</head>
+<body>
+  <div id="setup-modal">
+    <div class="modal-box">
+      <h3>보드 크기를 선택하세요</h3>
+      <label>
+        <select id="sizeSelect">
+          <option value="6">6 × 6 (아주 작음)</option>
+          <option value="8">8 × 8 (작음)</option>
+          <option value="10">10 × 10 (중간)</option>
+          <option value="13" selected>13 × 13 (큼)</option>
+          <option value="16">16 × 16 (대형)</option>
+          <option value="19">19 × 19 (초대형)</option>
+        </select>
+      </label>
+      <br>
+      <button onclick="startGame()">게임 시작</button>
+    </div>
+  </div>
+  <h2>플레이어 & 한 자루 칼 퍼즐 (2인용)</h2>
+  <div id="turn-indicator" style="display:none;"></div>
+  <div id="stats" style="display:none;">
+    <b>플레이어1</b>
+    <span>❤️ <span id="hp1">1000</span></span>
+    <span>🛡️ <span id="shield1">0</span></span>
+    <span>🗡️ <span id="atk1">1</span></span>
+    <span>💰 <span id="gold1">0</span></span>
+    <span>⭐ <span id="exp1">0</span></span>
+    <span>레벨 <span id="level1">1</span></span>
+  </div>
+  <div id="stats2" style="display:none;">
+    <b>플레이어2</b>
+    <span>❤️ <span id="hp2">1000</span></span>
+    <span>🛡️ <span id="shield2">0</span></span>
+    <span>🗡️ <span id="atk2">1</span></span>
+    <span>💰 <span id="gold2">0</span></span>
+    <span>⭐ <span id="exp2">0</span></span>
+    <span>레벨 <span id="level2">1</span></span>
+  </div>
+  <div id="board-wrap" style="display:none;">
+    <div id="board"></div>
+  </div>
+  <div id="actions" style="display:none;">
+    <button id="actionBtn" onclick="applySelection()" disabled>실행</button>
+    <button onclick="initGame()">다시 시작</button>
+  </div>
+  <div id="message"></div>
+  <script>
+    const TILES = [
+      {type:"shield", emoji:"🛡️"},
+      {type:"potion", emoji:"🧪"},
+      {type:"coin", emoji:"💰"},
+      {type:"sword", emoji:"🗡️"},
+    ];
+    const PLAYER1 = {type: "player1", emoji: "🤺"};
+    const PLAYER2 = {type: "player2", emoji: "🤺"};
+    let SIZE = 13;
+    let board = [];
+    let selectedPath = [];
+    let stats1 = {};
+    let stats2 = {};
+    let message = "";
+    let player1Pos = [0, 0];
+    let player2Pos = [0, 0];
+    let turn = 1;
+
+    function randomTile() {
+      let r = Math.random();
+      if(r < 0.18) return {...TILES[0]};
+      if(r < 0.36) return {...TILES[1]};
+      if(r < 0.54) return {...TILES[2]};
+      if(r < 0.72) return {...TILES[3]};
+      if(r < 0.86) {
+        let mon = randomMonster("troll");
+        return {type:"troll", emoji:"🧌", mon};
+      }
+      else {
+        let mon = randomMonster("vampire");
+        return {type:"vampire", emoji:"🧛‍♀️", mon};
+      }
+    }
+    function randomMonster(type) {
+      if(type === "troll") {
+        return {
+          hp: 6 + Math.floor(Math.random()*3),
+          atk: 2 + Math.floor(Math.random()*2),
+          emoji: "🧌"
+        };
+      } else {
+        return {
+          hp: 6 + Math.floor(Math.random()*3),
+          atk: 2 + Math.floor(Math.random()*2),
+          emoji: "🧛‍♀️"
+        };
+      }
+    }
+
+    function getCellSize() {
+      const boardPadding = 8 * 2;
+      const boardBorder = 2 * 2;
+      const boardGap = (SIZE - 1) * 1;
+      const h = window.innerHeight - 250 - boardPadding - boardBorder - boardGap;
+      const w = window.innerWidth - 32 - boardPadding - boardBorder - boardGap;
+      const cell = Math.floor(Math.min(w, h) / SIZE);
+      return Math.max(cell, 16);
+    }
+    function updateBoardGrid() {
+      const boardDiv = document.getElementById("board");
+      const cellSize = getCellSize();
+      boardDiv.style.gridTemplateColumns = `repeat(${SIZE}, ${cellSize}px)`;
+      boardDiv.style.gridTemplateRows = `repeat(${SIZE}, ${cellSize}px)`;
+    }
+    function startGame() {
+      SIZE = parseInt(document.getElementById("sizeSelect").value, 10);
+      document.getElementById("setup-modal").style.display = "none";
+      document.getElementById("stats").style.display = "";
+      document.getElementById("stats2").style.display = "";
+      document.getElementById("board-wrap").style.display = "";
+      document.getElementById("actions").style.display = "";
+      document.getElementById("turn-indicator").style.display = "";
+      initGame();
+    }
+    function initGame() {
+      stats1 = {hp:1000, shield:0, atk:1, gold:0, exp:0, level:1, expNext:10};
+      stats2 = {hp:1000, shield:0, atk:1, gold:0, exp:0, level:1, expNext:10};
+      message = "자신의 영웅(🤺)에서 시작해 3개 이상 경로를 만들고 '실행'을 누르세요!";
+      board = [];
+      let px1 = Math.floor(Math.random() * SIZE);
+      let py1 = Math.floor(Math.random() * SIZE);
+      let px2, py2;
+      do {
+        px2 = Math.floor(Math.random() * SIZE);
+        py2 = Math.floor(Math.random() * SIZE);
+      } while (px1 === px2 && py1 === py2);
+      for(let i=0; i<SIZE; i++) {
+        board[i] = [];
+        for(let j=0; j<SIZE; j++) {
+          if(i === px1 && j === py1) {
+            board[i][j] = {...PLAYER1};
+          } else if(i === px2 && j === py2) {
+            board[i][j] = {...PLAYER2};
+          } else {
+            let tile = randomTile();
+            board[i][j] = tile;
+          }
+        }
+      }
+      player1Pos = [px1, py1];
+      player2Pos = [px2, py2];
+      selectedPath = [];
+      turn = 1;
+      updateStats();
+      render();
+      showMessage(message);
+      updateActionBtn();
+      updateBoardGrid();
+      updateTurnIndicator();
+    }
+    function updateStats() {
+      document.getElementById("hp1").textContent = stats1.hp;
+      document.getElementById("shield1").textContent = stats1.shield;
+      document.getElementById("atk1").textContent = stats1.atk;
+      document.getElementById("gold1").textContent = stats1.gold;
+      document.getElementById("exp1").textContent = stats1.exp;
+      document.getElementById("level1").textContent = stats1.level;
+      document.getElementById("hp2").textContent = stats2.hp;
+      document.getElementById("shield2").textContent = stats2.shield;
+      document.getElementById("atk2").textContent = stats2.atk;
+      document.getElementById("gold2").textContent = stats2.gold;
+      document.getElementById("exp2").textContent = stats2.exp;
+      document.getElementById("level2").textContent = stats2.level;
+    }
+    function showMessage(msg) {
+      document.getElementById("message").textContent = msg;
+    }
+    function updateTurnIndicator() {
+      document.getElementById("turn-indicator").style.display = "";
+      document.getElementById("turn-indicator").textContent =
+        turn === 1 ? "플레이어1(연두) 턴 - 중력 ↓" : "플레이어2(핑크) 턴 - 중력 ↑";
+    }
+    function render() {
+      const boardDiv = document.getElementById("board");
+      boardDiv.innerHTML = "";
+      const cellSize = getCellSize();
+      for(let i=0; i<SIZE; i++) {
+        for(let j=0; j<SIZE; j++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          if(board[i][j].type === "player1") cell.classList.add("hero1");
+          if(board[i][j].type === "player2") cell.classList.add("hero2");
+          cell.style.width = cell.style.height = cellSize + "px";
+          cell.style.fontSize = (cellSize * 0.68) + "px";
+          if(board[i][j].type === "troll" || board[i][j].type === "vampire") {
+            cell.innerHTML = `${board[i][j].emoji}<div class="info" style="font-size:${Math.max(10,cellSize*0.23)}px">${board[i][j].mon.hp}/${board[i][j].mon.atk}</div>`;
+          } else if(board[i][j].type === "player1") {
+            cell.innerHTML = `🤺<div class="info" style="font-size:${Math.max(10,cellSize*0.23)}px">${stats1.hp}</div>`;
+          } else if(board[i][j].type === "player2") {
+            cell.innerHTML = `🤺<div class="info" style="font-size:${Math.max(10,cellSize*0.23)}px">${stats2.hp}</div>`;
+          } else if(board[i][j].type === "empty") {
+            cell.innerHTML = "";
+          } else {
+            cell.innerHTML = board[i][j].emoji;
+          }
+          if(selectedPath.find(([x,y]) => x===i && y===j)) {
+            cell.classList.add("selected");
+          }
+          cell.onclick = () => handleSelect(i, j);
+          cell.dataset.i = i;
+          cell.dataset.j = j;
+          boardDiv.appendChild(cell);
+        }
+      }
+      updateBoardGrid();
+    }
+    function isAdjacent(a, b) {
+      return Math.abs(a[0]-b[0]) <= 1 && Math.abs(a[1]-b[1]) <= 1;
+    }
+    function isSword(i, j) {
+      return board[i][j].type === "sword";
+    }
+    function isTroll(i, j) {
+      return board[i][j].type === "troll";
+    }
+    function isVampire(i, j) {
+      return board[i][j].type === "vampire";
+    }
+    function isMonster(i, j) {
+      return isTroll(i, j) || isVampire(i, j);
+    }
+    function isPlayer1(i, j) {
+      return board[i][j].type === "player1";
+    }
+    function isPlayer2(i, j) {
+      return board[i][j].type === "player2";
+    }
+    function isAllyMonster(i, j) {
+      return (turn === 1 && isTroll(i, j)) || (turn === 2 && isVampire(i, j));
+    }
+    function isEnemyMonster(i, j) {
+      return (turn === 1 && isVampire(i, j)) || (turn === 2 && isTroll(i, j));
+    }
+
+    // 경로 연결 규칙 + 자기 말만 선택 + 실시간 공격력 검사
+    function handleSelect(i, j) {
+      if(stats1.hp <= 0 || stats2.hp <= 0) return;
+      const pos = [i, j];
+
+      // 첫 선택은 반드시 자기 플레이어 위치에서만!
+      if(selectedPath.length === 0) {
+        if((turn === 1 && !isPlayer1(i, j)) || (turn === 2 && !isPlayer2(i, j))) return;
+        selectedPath.push(pos);
+        render();
+        updateActionBtn();
+        return;
+      }
+
+      // 선택 해제
+      if(selectedPath.length && selectedPath[selectedPath.length-1][0] === i && selectedPath[selectedPath.length-1][1] === j) {
+        if(selectedPath.length === 1) return; // 플레이어 위치는 해제 불가
+        selectedPath.pop();
+        render();
+        updateActionBtn();
+        return;
+      }
+
+      // 이미 선택된 칸은 선택 불가
+      if(selectedPath.find(([x, y]) => x === i && y === j)) return;
+
+      // 인접한 칸만 선택 가능
+      if(!isAdjacent(selectedPath[selectedPath.length-1], pos)) return;
+
+      // 자기 편 몬스터는 경로에 포함 불가
+      if(isAllyMonster(i, j)) return;
+
+      // 규칙 적용(칼/몬스터 선택 시마다 실시간 검사)
+      // 임시로 경로에 추가해보고, 경로 내 적 몬스터를 모두 누적 공격력으로 죽일 수 있는지 검사
+      const tempPath = selectedPath.concat([[i, j]]);
+      let swordCount = 0;
+      for (let k = 1; k < tempPath.length; ++k) {
+        const [x, y] = tempPath[k];
+        if (isSword(x, y)) swordCount++;
+      }
+      let canKillAll = true;
+      let swordSoFar = swordCount || 1;
+      for (let k = 1; k < tempPath.length; ++k) {
+        const [x, y] = tempPath[k];
+        if (isEnemyMonster(x, y)) {
+          if (board[x][y].mon.hp > swordSoFar) {
+            canKillAll = false;
+            break;
+          }
+        }
+      }
+      if (!canKillAll) return; // 공격력 부족으로 경로 확장 불가
+
+      // 첫 이동(두 번째 선택) 이후 칼/몬스터 규칙
+      if(selectedPath.length >= 1) {
+        const [firstI, firstJ] = selectedPath[1] || [null, null];
+        const firstType = firstI !== null ? board[firstI][firstJ].type : null;
+        const currType = board[i][j].type;
+        if(selectedPath.length === 1) {
+          selectedPath.push(pos);
+          render();
+          updateActionBtn();
+          return;
+        }
+        if(firstType === "sword") {
+          if(currType !== "sword" && !isMonster(i, j) && currType !== "player1" && currType !== "player2") return;
+        } else {
+          if(currType !== firstType) return;
+        }
+      }
+
+      selectedPath.push(pos);
+      render();
+      updateActionBtn();
+    }
+
+    function updateActionBtn() {
+      const valid = selectedPath.length >= 3 &&
+        ((turn === 1 && isPlayer1(selectedPath[0][0], selectedPath[0][1])) ||
+         (turn === 2 && isPlayer2(selectedPath[0][0], selectedPath[0][1])));
+      document.getElementById('actionBtn').disabled = !valid;
+    }
+    function applyGravity() {
+      if(turn === 1) {
+        for(let col=0; col<SIZE; col++) {
+          let stack = [];
+          for(let row=0; row<SIZE; row++) {
+            if(board[row][col].type !== 'empty' && board[row][col].type !== 'player1' && board[row][col].type !== 'player2') stack.push(board[row][col]);
+          }
+          for(let row=SIZE-1; row>=0; row--) {
+            if(isPlayer1(row, col) || isPlayer2(row, col)) continue;
+            if(stack.length > 0) {
+              board[row][col] = stack.pop();
+            } else {
+              board[row][col] = randomTile();
+            }
+          }
+        }
+      } else {
+        for(let col=0; col<SIZE; col++) {
+          let stack = [];
+          for(let row=SIZE-1; row>=0; row--) {
+            if(board[row][col].type !== 'empty' && board[row][col].type !== 'player1' && board[row][col].type !== 'player2') stack.push(board[row][col]);
+          }
+          for(let row=0; row<SIZE; row++) {
+            if(isPlayer1(row, col) || isPlayer2(row, col)) continue;
+            if(stack.length > 0) {
+              board[row][col] = stack.pop();
+            } else {
+              board[row][col] = randomTile();
+            }
+          }
+        }
+      }
+    }
+    function applySelection() {
+      if(selectedPath.length < 3) return;
+      const [lastI, lastJ] = selectedPath[selectedPath.length - 1];
+      let oldI, oldJ;
+      let meType, enemyType, meStats, enemyStats, enemyPos;
+      if(turn === 1) {
+        [oldI, oldJ] = player1Pos;
+        meType = "player1"; enemyType = "player2";
+        meStats = stats1; enemyStats = stats2;
+        enemyPos = player2Pos;
+      } else {
+        [oldI, oldJ] = player2Pos;
+        meType = "player2"; enemyType = "player1";
+        meStats = stats2; enemyStats = stats1;
+        enemyPos = player1Pos;
+      }
+      const swordCount = selectedPath.filter(([x, y]) => isSword(x, y)).length || 1;
+      if(isMonster(lastI, lastJ) || (turn === 1 && isPlayer2(lastI, lastJ)) || (turn === 2 && isPlayer1(lastI, lastJ))) {
+        let targetHP = 0;
+        let targetName = "";
+        if(isTroll(lastI, lastJ) || isVampire(lastI, lastJ)) {
+          targetHP = board[lastI][lastJ].mon.hp;
+          targetName = isTroll(lastI, lastJ) ? "트롤" : "뱀파이어";
+        } else if(isPlayer1(lastI, lastJ)) {
+          targetHP = stats1.hp;
+          targetName = "플레이어1";
+        } else if(isPlayer2(lastI, lastJ)) {
+          targetHP = stats2.hp;
+          targetName = "플레이어2";
+        }
+        let damage = swordCount;
+        let newHP = targetHP - damage;
+        if(newHP > 0) {
+          showMessage(`${targetName}에게 데미지 ${damage}! HP가 남아 있어 통과할 수 없습니다.`);
+          if(isTroll(lastI, lastJ) || isVampire(lastI, lastJ)) {
+            board[lastI][lastJ].mon.hp = newHP;
+          } else if(isPlayer1(lastI, lastJ)) {
+            stats1.hp = newHP;
+          } else if(isPlayer2(lastI, lastJ)) {
+            stats2.hp = newHP;
+          }
+          updateStats();
+          render();
+          updateActionBtn();
+          return;
+        } else {
+          showMessage(`${targetName}에게 데미지 ${damage}! 격파!`);
+          if(isTroll(lastI, lastJ) || isVampire(lastI, lastJ)) {
+            board[lastI][lastJ] = {type: "empty"};
+          } else if(isPlayer1(lastI, lastJ)) {
+            stats1.hp = 0;
+            board[lastI][lastJ] = {type: "empty"};
+          } else if(isPlayer2(lastI, lastJ)) {
+            stats2.hp = 0;
+            board[lastI][lastJ] = {type: "empty"};
+          }
+          let removed = [];
+          for(let k=1; k<selectedPath.length; ++k) {
+            const [i, j] = selectedPath[k];
+            if(isMonster(i, j) || ((turn === 1 && isPlayer2(i, j)) || (turn === 2 && isPlayer1(i, j)))) {
+              removed.push([i, j]);
+            }
+          }
+          removed = removed.filter(([i,j]) => !(i === oldI && j === oldJ));
+          removed.forEach(([i,j]) => {
+            board[i][j] = {type: "empty"};
+          });
+          board[oldI][oldJ] = randomTile();
+          board[lastI][lastJ] = {...(turn === 1 ? PLAYER1 : PLAYER2)};
+          if(turn === 1) player1Pos = [lastI, lastJ];
+          else player2Pos = [lastI, lastJ];
+          selectedPath = [];
+          updateStats();
+          render();
+          updateActionBtn();
+          setTimeout(() => {
+            applyGravity();
+            render();
+            setTimeout(monsterAttackPhase, 200);
+          }, 200);
+          return;
+        }
+      }
+      let removed = [];
+      for(let k=1; k<selectedPath.length; ++k) {
+        const [i, j] = selectedPath[k];
+        if(isTroll(i, j) || isVampire(i, j)) {
+          let mon = board[i][j].mon;
+          mon.hp -= swordCount;
+          if(mon.hp <= 0) removed.push([i, j]);
+        } else if(isPlayer1(i, j)) {
+          stats1.hp -= swordCount;
+          if(stats1.hp <= 0) removed.push([i, j]);
+        } else if(isPlayer2(i, j)) {
+          stats2.hp -= swordCount;
+          if(stats2.hp <= 0) removed.push([i, j]);
+        } else {
+          removed.push([i, j]);
+        }
+      }
+      removed = removed.filter(([i,j]) => !(i === oldI && j === oldJ));
+      removed.forEach(([i,j]) => {
+        board[i][j] = {type: "empty"};
+      });
+      board[oldI][oldJ] = randomTile();
+      board[lastI][lastJ] = {...(turn === 1 ? PLAYER1 : PLAYER2)};
+      if(turn === 1) player1Pos = [lastI, lastJ];
+      else player2Pos = [lastI, lastJ];
+
+      showMessage(`경로 실행!`);
+      selectedPath = [];
+      updateStats();
+      render();
+      updateActionBtn();
+      setTimeout(() => {
+        applyGravity();
+        render();
+        setTimeout(monsterAttackPhase, 200);
+      }, 200);
+    }
+    function monsterAttackPhase() {
+      if(stats1.hp <= 0 || stats2.hp <= 0) return;
+      let atk1 = 0, atk2 = 0;
+      for(let i=0; i<SIZE; i++) {
+        for(let j=0; j<SIZE; j++) {
+          if(board[i][j].type === "troll" && board[i][j].mon.hp > 0) {
+            atk1 += board[i][j].mon.atk;
+          }
+          if(board[i][j].type === "vampire" && board[i][j].mon.hp > 0) {
+            atk2 += board[i][j].mon.atk;
+          }
+        }
+      }
+      let msg = "";
+      if(turn === 1 && atk2 > 0) {
+        let shieldHit2 = Math.max(0, atk2 - stats2.shield);
+        stats2.shield = Math.max(0, stats2.shield - atk2);
+        stats2.hp -= shieldHit2;
+        msg = `뱀파이어의 공격! 플레이어2 피해 ${shieldHit2} (총 공격력 ${atk2})`;
+      }
+      if(turn === 2 && atk1 > 0) {
+        let shieldHit1 = Math.max(0, atk1 - stats1.shield);
+        stats1.shield = Math.max(0, stats1.shield - atk1);
+        stats1.hp -= shieldHit1;
+        msg = `트롤의 공격! 플레이어1 피해 ${shieldHit1} (총 공격력 ${atk1})`;
+      }
+      if(msg) showMessage(msg);
+      updateStats();
+      if(stats1.hp <= 0 || stats2.hp <= 0) {
+        showMessage("Game Over! 다시 시작을 누르세요.");
+      }
+      turn = 3 - turn;
+      updateTurnIndicator();
+      render();
+      updateActionBtn();
+    }
+    window.addEventListener('resize', function() {
+      render();
+      updateBoardGrid();
+    });
+  </script>
+</body>
+</html>
