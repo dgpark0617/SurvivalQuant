@@ -53,7 +53,41 @@
       letter-spacing: -1px;
       word-break: keep-all;
     }
-    .selected { background: #ffe066 !important; }
+    .selected { 
+      background: #ffe066 !important; 
+      position: relative;
+    }
+    .selected::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+    .selected.p1-path::after {
+      border: 2px solid #4CAF50;
+    }
+    .selected.p2-path::after {
+      border: 2px solid #f44336;
+    }
+    .path-line {
+      position: absolute;
+      height: 3px;
+      transform-origin: left center;
+      pointer-events: none;
+      z-index: 1;
+      border-radius: 1.5px;
+    }
+    .p1-line {
+      background: rgba(76, 175, 80, 0.8);
+      box-shadow: 0 0 4px rgba(76, 175, 80, 0.5);
+    }
+    .p2-line {
+      background: rgba(244, 67, 54, 0.8);
+      box-shadow: 0 0 4px rgba(244, 67, 54, 0.5);
+    }
     #actions { margin: 8px 0; }
     #message { min-height: 1.5em; margin: 8px 0 0 0; font-size:0.98em;}
     button { margin: 6px 5px 0 5px; padding: 6px 14px; font-size: 0.98em; border-radius: 8px; border: none; background: #ffe066; color: #222; font-weight: bold; cursor: pointer; }
@@ -148,7 +182,7 @@
       if(r < 0.72) return {...TILES[3]};
       if(r < 0.86) {
         let mon = randomMonster("troll");
-        return {type:"troll", emoji:"🧌", mon};
+        return {type:"troll", emoji:"🐲", mon};
       }
       else {
         let mon = randomMonster("vampire");
@@ -160,7 +194,7 @@
         return {
           hp: 6 + Math.floor(Math.random()*3),
           atk: 2 + Math.floor(Math.random()*2),
-          emoji: "🧌"
+          emoji: "🐲"
         };
       } else {
         return {
@@ -254,10 +288,57 @@
       document.getElementById("turn-indicator").textContent =
         turn === 1 ? "플레이어1(연두) 턴 - 중력 ↓" : "플레이어2(핑크) 턴 - 중력 ↑";
     }
+    function drawPath() {
+      // 이전 경로 제거
+      const oldLines = document.querySelectorAll('.path-line');
+      oldLines.forEach(line => line.remove());
+
+      // 새 경로 그리기
+      const board = document.getElementById('board');
+      const boardRect = board.getBoundingClientRect();
+
+      for(let i = 0; i < selectedPath.length - 1; i++) {
+        const [x1, y1] = selectedPath[i];
+        const [x2, y2] = selectedPath[i + 1];
+        
+        const cell1 = document.querySelector(`[data-i="${x1}"][data-j="${y1}"]`);
+        const cell2 = document.querySelector(`[data-i="${x2}"][data-j="${y2}"]`);
+        
+        if(!cell1 || !cell2) continue;
+        
+        const rect1 = cell1.getBoundingClientRect();
+        const rect2 = cell2.getBoundingClientRect();
+        
+        const line = document.createElement('div');
+        line.className = `path-line ${turn === 1 ? 'p1-line' : 'p2-line'}`;
+        
+        // 보드 내부의 상대적 위치 계산
+        const startX = rect1.left + (rect1.width / 2) - boardRect.left;
+        const startY = rect1.top + (rect1.height / 2) - boardRect.top;
+        
+        // 선의 길이와 각도 계산
+        const dx = rect2.left - rect1.left;
+        const dy = rect2.top - rect1.top;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        
+        // 선 스타일 설정
+        line.style.width = `${length}px`;
+        line.style.left = `${startX}px`;
+        line.style.top = `${startY}px`;
+        line.style.transform = `rotate(${angle}deg)`;
+        
+        board.appendChild(line);
+      }
+    }
     function render() {
       const boardDiv = document.getElementById("board");
       boardDiv.innerHTML = "";
       const cellSize = getCellSize();
+      
+      // 보드의 position을 relative로 설정
+      boardDiv.style.position = "relative";
+      
       for(let i=0; i<SIZE; i++) {
         for(let j=0; j<SIZE; j++) {
           const cell = document.createElement("div");
@@ -279,6 +360,7 @@
           }
           if(selectedPath.find(([x,y]) => x===i && y===j)) {
             cell.classList.add("selected");
+            cell.classList.add(turn === 1 ? "p1-path" : "p2-path");
           }
           cell.onclick = () => handleSelect(i, j);
           cell.dataset.i = i;
@@ -287,6 +369,7 @@
         }
       }
       updateBoardGrid();
+      drawPath();
     }
     function isAdjacent(a, b) {
       return Math.abs(a[0]-b[0]) <= 1 && Math.abs(a[1]-b[1]) <= 1;
@@ -345,41 +428,45 @@
       // 인접한 칸만 선택 가능
       if(!isAdjacent(selectedPath[selectedPath.length-1], pos)) return;
 
-      // 자기 편 몬스터는 경로에 포함 불가
-      if(isAllyMonster(i, j)) return;
-
-      // 규칙 적용(칼/몬스터 선택 시마다 실시간 검사)
-      // 임시로 경로에 추가해보고, 경로 내 적 몬스터를 모두 누적 공격력으로 죽일 수 있는지 검사
-      const tempPath = selectedPath.concat([[i, j]]);
-      let swordCount = 0;
-      for (let k = 1; k < tempPath.length; ++k) {
-        const [x, y] = tempPath[k];
-        if (isSword(x, y)) swordCount++;
-      }
-      let canKillAll = true;
-      let swordSoFar = swordCount || 1;
-      for (let k = 1; k < tempPath.length; ++k) {
-        const [x, y] = tempPath[k];
-        if (isEnemyMonster(x, y)) {
-          if (board[x][y].mon.hp > swordSoFar) {
-            canKillAll = false;
-            break;
-          }
-        }
-      }
-      if (!canKillAll) return; // 공격력 부족으로 경로 확장 불가
+      // 자기 편 몬스터는 첫 타일이 아닐 경우에만 제한
+      if(selectedPath.length > 1 && isAllyMonster(i, j)) return;
 
       // 첫 이동(두 번째 선택) 이후 칼/몬스터 규칙
       if(selectedPath.length >= 1) {
         const [firstI, firstJ] = selectedPath[1] || [null, null];
         const firstType = firstI !== null ? board[firstI][firstJ].type : null;
         const currType = board[i][j].type;
+        
+        // 몬스터나 상대 플레이어를 선택했을 때
+        if(isEnemyMonster(i, j) || (turn === 1 && isPlayer2(i, j)) || (turn === 2 && isPlayer1(i, j))) {
+          const swordCount = selectedPath.filter(([x, y]) => isSword(x, y)).length || 1;
+          let targetHP = 0;
+          
+          if(isMonster(i, j)) {
+            targetHP = board[i][j].mon.hp;
+          } else if(isPlayer1(i, j)) {
+            targetHP = stats1.hp;
+          } else if(isPlayer2(i, j)) {
+            targetHP = stats2.hp;
+          }
+          
+          // 공격력이 HP보다 작으면 선택은 되지만 더 이상 진행 불가
+          if(swordCount < targetHP) {
+            selectedPath.push(pos);
+            render();
+            updateActionBtn();
+            return;
+          }
+        }
+        
         if(selectedPath.length === 1) {
           selectedPath.push(pos);
           render();
           updateActionBtn();
           return;
         }
+        
+        // 첫 선택이 칼이면 칼이나 몬스터만 선택 가능
         if(firstType === "sword") {
           if(currType !== "sword" && !isMonster(i, j) && currType !== "player1" && currType !== "player2") return;
         } else {
@@ -433,123 +520,117 @@
     }
     function applySelection() {
       if(selectedPath.length < 3) return;
-      const [lastI, lastJ] = selectedPath[selectedPath.length - 1];
-      let oldI, oldJ;
-      let meType, enemyType, meStats, enemyStats, enemyPos;
-      if(turn === 1) {
-        [oldI, oldJ] = player1Pos;
-        meType = "player1"; enemyType = "player2";
-        meStats = stats1; enemyStats = stats2;
-        enemyPos = player2Pos;
-      } else {
-        [oldI, oldJ] = player2Pos;
-        meType = "player2"; enemyType = "player1";
-        meStats = stats2; enemyStats = stats1;
-        enemyPos = player1Pos;
-      }
-      const swordCount = selectedPath.filter(([x, y]) => isSword(x, y)).length || 1;
-      if(isMonster(lastI, lastJ) || (turn === 1 && isPlayer2(lastI, lastJ)) || (turn === 2 && isPlayer1(lastI, lastJ))) {
-        let targetHP = 0;
-        let targetName = "";
-        if(isTroll(lastI, lastJ) || isVampire(lastI, lastJ)) {
-          targetHP = board[lastI][lastJ].mon.hp;
-          targetName = isTroll(lastI, lastJ) ? "트롤" : "뱀파이어";
-        } else if(isPlayer1(lastI, lastJ)) {
-          targetHP = stats1.hp;
-          targetName = "플레이어1";
-        } else if(isPlayer2(lastI, lastJ)) {
-          targetHP = stats2.hp;
-          targetName = "플레이어2";
+      
+      let currentStats = turn === 1 ? stats1 : stats2;
+      let attackPower = currentStats.atk;
+      let messages = [];
+      let monstersDefeated = 0;
+      let swordsCollected = 0;
+      
+      // 경로상의 칼 수집 및 공격력 계산
+      for(let i = 0; i < selectedPath.length; i++) {
+        const [x, y] = selectedPath[i];
+        if(isSword(x, y)) {
+          swordsCollected++;
+          attackPower++;
         }
-        let damage = swordCount;
-        let newHP = targetHP - damage;
-        if(newHP > 0) {
-          showMessage(`${targetName}에게 데미지 ${damage}! HP가 남아 있어 통과할 수 없습니다.`);
-          if(isTroll(lastI, lastJ) || isVampire(lastI, lastJ)) {
-            board[lastI][lastJ].mon.hp = newHP;
-          } else if(isPlayer1(lastI, lastJ)) {
-            stats1.hp = newHP;
-          } else if(isPlayer2(lastI, lastJ)) {
-            stats2.hp = newHP;
-          }
-          updateStats();
-          render();
-          updateActionBtn();
-          return;
-        } else {
-          showMessage(`${targetName}에게 데미지 ${damage}! 격파!`);
-          if(isTroll(lastI, lastJ) || isVampire(lastI, lastJ)) {
-            board[lastI][lastJ] = {type: "empty"};
-          } else if(isPlayer1(lastI, lastJ)) {
-            stats1.hp = 0;
-            board[lastI][lastJ] = {type: "empty"};
-          } else if(isPlayer2(lastI, lastJ)) {
-            stats2.hp = 0;
-            board[lastI][lastJ] = {type: "empty"};
-          }
-          let removed = [];
-          for(let k=1; k<selectedPath.length; ++k) {
-            const [i, j] = selectedPath[k];
-            if(isMonster(i, j) || ((turn === 1 && isPlayer2(i, j)) || (turn === 2 && isPlayer1(i, j)))) {
-              removed.push([i, j]);
+      }
+
+      // 몬스터 처치 시도
+      let canComplete = true;
+      let lastMonsterDamage = 0;
+      let lastMonsterPos = null;
+      
+      for(let i = 0; i < selectedPath.length; i++) {
+        const [x, y] = selectedPath[i];
+        if(isMonster(x, y)) {
+          const monster = board[x][y].mon;
+          if(attackPower >= monster.hp) {
+            monstersDefeated++;
+            messages.push(`몬스터(${monster.emoji})를 처치했습니다! (HP: ${monster.hp})`);
+          } else {
+            // 마지막 몬스터가 아니면 통과 불가
+            if(i < selectedPath.length - 1) {
+              canComplete = false;
+              messages.push(`몬스터(${monster.emoji})의 HP(${monster.hp})가 너무 높아 통과할 수 없습니다!`);
+              break;
+            } else {
+              // 마지막 몬스터는 데미지를 받음
+              lastMonsterDamage = attackPower;
+              lastMonsterPos = [x, y];
+              messages.push(`마지막 몬스터(${monster.emoji})에게 ${attackPower}만큼의 데미지를 입혔습니다!`);
             }
           }
-          removed = removed.filter(([i,j]) => !(i === oldI && j === oldJ));
-          removed.forEach(([i,j]) => {
-            board[i][j] = {type: "empty"};
-          });
-          board[oldI][oldJ] = randomTile();
-          board[lastI][lastJ] = {...(turn === 1 ? PLAYER1 : PLAYER2)};
-          if(turn === 1) player1Pos = [lastI, lastJ];
-          else player2Pos = [lastI, lastJ];
-          selectedPath = [];
-          updateStats();
-          render();
-          updateActionBtn();
-          setTimeout(() => {
-            applyGravity();
-            render();
-            setTimeout(monsterAttackPhase, 200);
-          }, 200);
-          return;
         }
       }
-      let removed = [];
-      for(let k=1; k<selectedPath.length; ++k) {
-        const [i, j] = selectedPath[k];
-        if(isTroll(i, j) || isVampire(i, j)) {
-          let mon = board[i][j].mon;
-          mon.hp -= swordCount;
-          if(mon.hp <= 0) removed.push([i, j]);
-        } else if(isPlayer1(i, j)) {
-          stats1.hp -= swordCount;
-          if(stats1.hp <= 0) removed.push([i, j]);
-        } else if(isPlayer2(i, j)) {
-          stats2.hp -= swordCount;
-          if(stats2.hp <= 0) removed.push([i, j]);
-        } else {
-          removed.push([i, j]);
-        }
-      }
-      removed = removed.filter(([i,j]) => !(i === oldI && j === oldJ));
-      removed.forEach(([i,j]) => {
-        board[i][j] = {type: "empty"};
-      });
-      board[oldI][oldJ] = randomTile();
-      board[lastI][lastJ] = {...(turn === 1 ? PLAYER1 : PLAYER2)};
-      if(turn === 1) player1Pos = [lastI, lastJ];
-      else player2Pos = [lastI, lastJ];
 
-      showMessage(`경로 실행!`);
+      if(!canComplete) {
+        showMessage(messages.join(" "));
+        return;
+      }
+
+      // 경로 실행
+      for(let i = 0; i < selectedPath.length; i++) {
+        const [x, y] = selectedPath[i];
+        const tile = board[x][y];
+
+        // 칼 사용 후 제거
+        if(isSword(x, y)) {
+          board[x][y] = {type: "empty"};
+        }
+        // 처치 가능한 몬스터 제거
+        else if(isMonster(x, y) && attackPower >= tile.mon.hp) {
+          board[x][y] = {type: "empty"};
+          if(turn === 1) {
+            stats1.exp += 2;
+          } else {
+            stats2.exp += 2;
+          }
+        }
+        // 마지막 몬스터 데미지 적용
+        else if(lastMonsterPos && x === lastMonsterPos[0] && y === lastMonsterPos[1]) {
+          tile.mon.hp -= lastMonsterDamage;
+        }
+      }
+
+      // 플레이어 이동
+      const [lastX, lastY] = selectedPath[selectedPath.length - 1];
+      if(turn === 1) {
+        board[player1Pos[0]][player1Pos[1]] = {type: "empty"};
+        board[lastX][lastY] = {...PLAYER1};
+        player1Pos = [lastX, lastY];
+      } else {
+        board[player2Pos[0]][player2Pos[1]] = {type: "empty"};
+        board[lastX][lastY] = {...PLAYER2};
+        player2Pos = [lastX, lastY];
+      }
+
+      // 경험치 획득 및 레벨업 체크
+      if(turn === 1) {
+        stats1.exp += monstersDefeated * 2;
+        if(stats1.exp >= stats1.expNext) {
+          stats1.level++;
+          stats1.expNext *= 2;
+          stats1.atk++;
+          messages.push(`레벨 ${stats1.level}로 상승! 공격력이 ${stats1.atk}가 되었습니다!`);
+        }
+      } else {
+        stats2.exp += monstersDefeated * 2;
+        if(stats2.exp >= stats2.expNext) {
+          stats2.level++;
+          stats2.expNext *= 2;
+          stats2.atk++;
+          messages.push(`레벨 ${stats2.level}로 상승! 공격력이 ${stats2.atk}가 되었습니다!`);
+        }
+      }
+
       selectedPath = [];
+      turn = turn === 1 ? 2 : 1;
       updateStats();
       render();
+      showMessage(messages.join(" "));
       updateActionBtn();
-      setTimeout(() => {
-        applyGravity();
-        render();
-        setTimeout(monsterAttackPhase, 200);
-      }, 200);
+      updateTurnIndicator();
     }
     function monsterAttackPhase() {
       if(stats1.hp <= 0 || stats2.hp <= 0) return;
