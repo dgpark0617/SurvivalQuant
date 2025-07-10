@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유틸리티 - SurvivalQuant</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            color: #333;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        .utilities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .utility-item {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+        .utility-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .utility-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .utility-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+            color: #4e54c8;
+        }
+        .utility-content {
+            margin-top: 15px;
+        }
+        .utility-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .utility-button {
+            background: #4e54c8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        .utility-button:hover {
+            background: #3a3f9d;
+        }
+        .utility-result {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            word-wrap: break-word;
+        }
+
+        /* Styles for new utility items from index.html */
+        .market-dashboard {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .market-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .market-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .market-item:last-child {
+            border-bottom: none;
+        }
+
+        .market-name {
+            font-weight: 500;
+            min-width: 120px;
+            font-size: 0.9rem;
+        }
+
+        .market-price {
+            font-size: 0.9rem;
+            margin: 0 15px;
+        }
+
+        .market-change {
+            min-width: 60px;
+            text-align: right;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 0.85rem;
+        }
+
+        .market-change.positive {
+            color: #00b894;
+            background: rgba(0, 184, 148, 0.1);
+        }
+
+        .market-change.negative {
+            color: #ff7675;
+            background: rgba(255, 118, 117, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/" class="back-btn">← 메인으로 돌아가기</a>
+            <h1>🛠️ 유용한 도구들</h1>
+        </div>
+
+        <div class="utilities-grid">
+            <!-- QR 코드 생성기 -->
+            <div class="utility-item">
+                <div class="utility-header">
+                    <h3>📱 QR 코드 생성기</h3>
+                </div>
+                <div class="utility-content">
+                    <input type="text" id="qr-text" class="utility-input" placeholder="텍스트 또는 URL 입력">
+                    <button onclick="generateQR()" class="utility-button">생성</button>
+                    <div class="utility-result" id="qr-result">
+                        <img id="qr-image" style="display: none; margin: 10px auto; max-width: 100%;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- URL 단축기 -->
+            <div class="utility-item">
+                <div class="utility-header">
+                    <h3>🔗 URL 단축기</h3>
+                </div>
+                <div class="utility-content">
+                    <input type="url" id="long-url" class="utility-input" placeholder="URL 입력">
+                    <button onclick="shortenURL()" class="utility-button">단축</button>
+                    <div class="utility-result" id="short-url-result"></div>
+                </div>
+            </div>
+
+            
+        </div>
+    </div>
+
+    <script>
+        // QR 코드 생성기
+        function generateQR() {
+            const text = document.getElementById('qr-text').value;
+            if (!text) {
+                document.getElementById('qr-result').textContent = '텍스트를 입력하세요.';
+                return;
+            }
+            
+            const qrImage = document.getElementById('qr-image');
+            qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(text)}`;
+            qrImage.style.display = 'block';
+            document.getElementById('qr-result').prepend(qrImage);
+        }
+
+        // URL 단축기
+        async function shortenURL() {
+            const url = document.getElementById('long-url').value;
+            const resultDiv = document.getElementById('short-url-result');
+            if (!url) {
+                resultDiv.textContent = 'URL을 입력하세요.';
+                return;
+            }
+
+            try {
+                resultDiv.textContent = '단축 중...';
+                const response = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(url));
+                if (!response.ok) {
+                    throw new Error('서버 응답 오류');
+                }
+                const shortUrl = await response.text();
+                resultDiv.innerHTML = 
+                    `단축된 URL: <a href="${shortUrl}" target="_blank">${shortUrl}</a>`;
+            } catch (error) {
+                resultDiv.textContent = 'URL 단축에 실패했습니다. 다시 시도해주세요.';
+            }
+        }
+
+        // 초기화
+        window.addEventListener('load', function() {
+            // getIPAddress();
+            // getMarketPrices();
+            // setInterval(getMarketPrices, 60000);
+        });
+    </script>
+</body>
+</html>
