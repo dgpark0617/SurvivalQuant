@@ -7,10 +7,8 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Noto Sans KR', sans-serif;
             background: #f8f9fa;
-            min-height: 100vh;
-            color: #333;
             padding: 20px;
         }
         .container {
@@ -19,224 +17,151 @@
         }
         .header {
             text-align: center;
-            margin-bottom: 40px;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 15px;
+            margin-bottom: 30px;
         }
-        .back-btn {
-            display: inline-block;
-            margin-bottom: 20px;
-            padding: 10px 20px;
-            background: rgba(255,255,255,0.2);
-            color: white;
-            text-decoration: none;
-            border-radius: 25px;
-            transition: all 0.3s ease;
-        }
-        .back-btn:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
-        }
-        .utilities-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-top: 30px;
-        }
-        .utility-item {
-            background: #fff;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 25px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-        }
-        .utility-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-        .utility-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        .utility-header h3 {
-            margin: 0;
-            font-size: 1.3rem;
+        .header h1 {
             color: #4e54c8;
-        }
-        .utility-content {
-            margin-top: 15px;
-        }
-        .utility-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
             margin-bottom: 10px;
         }
-        .utility-button {
+        .header p {
+            color: #666;
+        }
+        .utility-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .utility-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .utility-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .utility-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .utility-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4e54c8;
+        }
+        .utility-description {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        .back-link {
+            display: inline-block;
+            padding: 10px 20px;
             background: #4e54c8;
             color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
         }
-        .utility-button:hover {
-            background: #3a3f9d;
-        }
-        .utility-result {
-            margin-top: 15px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            word-wrap: break-word;
-        }
-
-        /* Styles for new utility items from index.html */
-        .market-dashboard {
-            background: #fff;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .market-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-        }
-
-        .market-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 5px 10px;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .market-item:last-child {
-            border-bottom: none;
-        }
-
-        .market-name {
-            font-weight: 500;
-            min-width: 120px;
-            font-size: 0.9rem;
-        }
-
-        .market-price {
-            font-size: 0.9rem;
-            margin: 0 15px;
-        }
-
-        .market-change {
-            min-width: 60px;
-            text-align: right;
-            padding: 1px 6px;
-            border-radius: 3px;
-            font-size: 0.85rem;
-        }
-
-        .market-change.positive {
-            color: #00b894;
-            background: rgba(0, 184, 148, 0.1);
-        }
-
-        .market-change.negative {
-            color: #ff7675;
-            background: rgba(255, 118, 117, 0.1);
+        .back-link:hover {
+            background: #3f44a0;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <a href="/" class="back-btn">← 메인으로 돌아가기</a>
-            <h1>🛠️ 유용한 도구들</h1>
+            <h1>🛠️ 유틸리티</h1>
+            <p>유용한 도구 모음입니다</p>
         </div>
 
-        <div class="utilities-grid">
-            <!-- QR 코드 생성기 -->
-            <div class="utility-item">
-                <div class="utility-header">
-                    <h3>📱 QR 코드 생성기</h3>
+        <div class="utility-grid">
+            <a href="ads/index.html" class="utility-card">
+                <div class="utility-icon">📊</div>
+                <div class="utility-title">코인 거래대금 순위</div>
+                <div class="utility-description">
+                    실시간 코인 거래대금을 확인하고
+                    순위를 볼 수 있습니다.
                 </div>
-                <div class="utility-content">
-                    <input type="text" id="qr-text" class="utility-input" placeholder="텍스트 또는 URL 입력">
-                    <button onclick="generateQR()" class="utility-button">생성</button>
-                    <div class="utility-result" id="qr-result">
-                        <img id="qr-image" style="display: none; margin: 10px auto; max-width: 100%;">
-                    </div>
-                </div>
-            </div>
-
-            <!-- URL 단축기 -->
-            <div class="utility-item">
-                <div class="utility-header">
-                    <h3>🔗 URL 단축기</h3>
-                </div>
-                <div class="utility-content">
-                    <input type="url" id="long-url" class="utility-input" placeholder="URL 입력">
-                    <button onclick="shortenURL()" class="utility-button">단축</button>
-                    <div class="utility-result" id="short-url-result"></div>
-                </div>
-            </div>
-
+            </a>
             
+            <div class="utility-card">
+                <div class="utility-icon">📱</div>
+                <div class="utility-title">QR코드 생성기</div>
+                <div class="utility-description">
+                    텍스트나 URL을 QR코드로
+                    변환할 수 있습니다.
+                </div>
+                <div class="utility-content" style="margin-top: 15px;">
+                    <input type="text" id="qr-input" placeholder="텍스트 또는 URL 입력" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <button onclick="generateQR()" style="background: #4e54c8; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">생성</button>
+                    <div id="qr-output" style="margin-top: 15px;"></div>
+                </div>
+            </div>
+
+            <div class="utility-card">
+                <div class="utility-icon">🔗</div>
+                <div class="utility-title">URL 단축</div>
+                <div class="utility-description">
+                    긴 URL을 짧게 줄여서
+                    공유하기 쉽게 만듭니다.
+                </div>
+                <div class="utility-content" style="margin-top: 15px;">
+                    <input type="text" id="url-input" placeholder="URL 입력" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <button onclick="shortenURL()" style="background: #4e54c8; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">단축</button>
+                    <div id="shortened-url" style="margin-top: 15px; word-break: break-all;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="index.html" class="back-link">메인으로 돌아가기</a>
         </div>
     </div>
 
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
     <script>
-        // QR 코드 생성기
         function generateQR() {
-            const text = document.getElementById('qr-text').value;
+            const text = document.getElementById('qr-input').value;
             if (!text) {
-                document.getElementById('qr-result').textContent = '텍스트를 입력하세요.';
+                alert('텍스트를 입력해주세요.');
                 return;
             }
+
+            const qrOutput = document.getElementById('qr-output');
+            qrOutput.innerHTML = '';
             
-            const qrImage = document.getElementById('qr-image');
-            qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(text)}`;
-            qrImage.style.display = 'block';
-            document.getElementById('qr-result').prepend(qrImage);
+            new QRCode(qrOutput, {
+                text: text,
+                width: 128,
+                height: 128
+            });
         }
 
-        // URL 단축기
         async function shortenURL() {
-            const url = document.getElementById('long-url').value;
-            const resultDiv = document.getElementById('short-url-result');
-            if (!url) {
-                resultDiv.textContent = 'URL을 입력하세요.';
+            const input = document.getElementById('url-input').value;
+            if (!input) {
+                alert('URL을 입력해주세요.');
                 return;
             }
 
             try {
-                resultDiv.textContent = '단축 중...';
-                const response = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(url));
-                if (!response.ok) {
-                    throw new Error('서버 응답 오류');
-                }
+                const response = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(input));
                 const shortUrl = await response.text();
-                resultDiv.innerHTML = 
-                    `단축된 URL: <a href="${shortUrl}" target="_blank">${shortUrl}</a>`;
+                
+                const output = document.getElementById('shortened-url');
+                output.innerHTML = `<a href="${shortUrl}" target="_blank" style="color: #4e54c8; word-break: break-all;">${shortUrl}</a>`;
             } catch (error) {
-                resultDiv.textContent = 'URL 단축에 실패했습니다. 다시 시도해주세요.';
+                alert('URL 단축에 실패했습니다. 다시 시도해주세요.');
             }
         }
-
-        // 초기화
-        window.addEventListener('load', function() {
-            // getIPAddress();
-            // getMarketPrices();
-            // setInterval(getMarketPrices, 60000);
-        });
     </script>
 </body>
 </html>

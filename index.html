@@ -45,6 +45,7 @@
             border: 1px solid #e9ecef;
         }
 
+        /* 링크 섹션 스타일 수정 */
         .quick-links {
             display: flex;
             gap: 10px;
@@ -53,16 +54,28 @@
         }
 
         .quick-link {
-            display: inline-flex;
+            display: flex;
             align-items: center;
-            padding: 6px 12px;
-            background: #fff;
+            padding: 8px 15px;
+            background: #ffffff;
             border: 1px solid #e9ecef;
-            border-radius: 20px;
-            text-decoration: none;
+            border-radius: 8px;
             color: #4e54c8;
-            font-size: 0.9rem;
-            height: 32px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+            gap: 6px;
+        }
+
+        .quick-link:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .quick-link img {
+            width: 20px;
+            height: 20px;
         }
 
         /* 3. 데이터 디스플레이 영역 */
@@ -144,6 +157,7 @@
             color: #4e54c8;
             background: #f8f9fa;
             border-radius: 4px 4px 0 0;
+            min-height: 40px;
         }
 
         .coin-table-header .coin-rank,
@@ -156,28 +170,35 @@
 
         /* 기존 코인 아이템 스타일 수정 */
         .coin-rank {
-            width: 60px;
+            flex: 0 0 50px;
             text-align: center;
+            white-space: nowrap;
         }
 
         .coin-symbol {
-            width: 120px;
+            flex: 0 0 120px;
             padding-left: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .coin-price {
-            width: 150px;
+            flex: 0 0 150px;
             text-align: right;
+            white-space: nowrap;
         }
 
         .coin-volume {
-            width: 150px;
+            flex: 0 0 120px;
             text-align: right;
+            white-space: nowrap;
         }
 
         .coin-change {
-            width: 100px;
+            flex: 0 0 100px;
             text-align: right;
+            white-space: nowrap;
         }
 
         .coin-item {
@@ -188,6 +209,8 @@
             border-radius: 4px;
             background: #ffffff;
             transition: background-color 0.2s;
+            min-height: 40px;
+            margin: 2px 0;
         }
 
         .coin-item:hover {
@@ -298,11 +321,21 @@
         <!-- 2. 링크 섹션 -->
         <div class="links-section">
             <div class="quick-links">
-                <a href="https://economiceden.com" class="quick-link">🏠 EconomicEden</a>
-                <a href="games/index.html" class="quick-link">📝 개발블로그</a>
-                <a href="utilities.html" class="quick-link">🛠️ 유틸리티</a>
-                <a href="games/DungeonDual4.html" class="quick-link">🎮 게임</a>
-                <a href="ads/index.html" class="quick-link">📊 대시보드</a>
+                <a href="https://www.bybit.com/copyMt5/trade-center/detail?providerMark=xkc2wsLqVomphpP%2FtV6RRQ%3D%3D" class="quick-link">
+                    🏠 EconomicEden
+                </a>
+                <a href="https://blog.naver.com/economic_eden" class="quick-link">
+                    📝 개발블로그
+                </a>
+                <a href="utilities.html" class="quick-link">
+                    🛠️ 유틸리티
+                </a>
+                <a href="games/index.html" class="quick-link">
+                    🎮 게임목록
+                </a>
+                <a href="https://www.youtube.com/@economiceden" class="quick-link">
+                    📺 유튜브
+                </a>
             </div>
         </div>
 
@@ -354,7 +387,7 @@
                     <span class="coin-rank">순위</span>
                     <span class="coin-symbol">코인명</span>
                     <span class="coin-price">현재가</span>
-                    <span class="coin-volume">시간 거래대금</span>
+                    <span class="coin-volume">1시간 거래대금</span>
                     <span class="coin-change">등락률</span>
                 </div>
                 <div class="coin-list" id="top-coins">
@@ -495,71 +528,186 @@
         }
     }
 
-        // 업비트 API를 통해 코인 데이터 가져오기
-        async function getUpbitMarketData() {
+        let upbitWebSocket = null;
+        let marketCoins = new Map(); // 코인 정보 저장용 Map
+        let tradeVolumes = new Map(); // 1시간 거래대금 저장용 Map
+        let startPrices = new Map(); // 시작 가격 저장용 Map
+        let firstTrades = new Map(); // 첫 거래 시간 저장용 Map
+
+        // 웹소켓 연결 및 데이터 구독
+        async function connectWebSocket() {
             try {
                 // 1. 원화 마켓 코인 목록 가져오기
                 const marketsResponse = await fetch('https://api.upbit.com/v1/market/all');
                 const markets = await marketsResponse.json();
                 const krwMarkets = markets.filter(market => market.market.startsWith('KRW-'));
 
-                // 2. 각 코인의 한시간 봉 데이터 가져오기
-                const coinDataPromises = krwMarkets.map(async market => {
-                    try {
-                        const candleResponse = await fetch(
-                            `https://api.upbit.com/v1/candles/minutes/60?market=${market.market}&count=1`
-                        );
-                        const [candleData] = await candleResponse.json();
-                        
-                        return {
-                            market: market.market,
-                            korean_name: market.korean_name,
-                            english_name: market.english_name,
-                            opening_price: candleData.opening_price,
-                            trade_price: candleData.trade_price,
-                            candle_acc_trade_volume: candleData.candle_acc_trade_volume,
-                            candle_acc_trade_price: candleData.candle_acc_trade_price,
-                            change: ((candleData.trade_price - candleData.opening_price) / candleData.opening_price) * 100
-                        };
-                    } catch (error) {
-                        console.error(`${market.market} 데이터 조회 실패:`, error);
-                        return null;
-                    }
+                // 코인 정보 초기화
+                krwMarkets.forEach(market => {
+                    marketCoins.set(market.market, {
+                        market: market.market,
+                        korean_name: market.korean_name,
+                        trade_price: 0,
+                        acc_trade_price: 0,
+                        change_rate: 0
+                    });
+                    tradeVolumes.set(market.market, 0);
                 });
 
-                // 3. 모든 데이터 수집 후 거래대금 기준 정렬
-                const coinsData = (await Promise.all(coinDataPromises))
-                    .filter(data => data !== null)
-                    .sort((a, b) => b.candle_acc_trade_price - a.candle_acc_trade_price)
-                    .slice(0, 10);
+                // 2. 웹소켓 연결
+                upbitWebSocket = new WebSocket('wss://api.upbit.com/websocket/v1');
 
-                // 4. UI 업데이트
-                updateCoinList(coinsData);
+                upbitWebSocket.onopen = () => {
+                    console.log('웹소켓 연결됨');
+                    const subscribeMsg = JSON.stringify([
+                        { ticket: "UNIQUE_TICKET" },
+                        {
+                            type: "trade",
+                            codes: krwMarkets.map(market => market.market)
+                        }
+                    ]);
+                    upbitWebSocket.send(subscribeMsg);
+                };
+
+                upbitWebSocket.onclose = () => {
+                    console.log('웹소켓 연결 끊김');
+                    setTimeout(connectWebSocket, 3000);
+                };
+
+                upbitWebSocket.onerror = (error) => {
+                    console.error('웹소켓 에러:', error);
+                };
+
+                upbitWebSocket.onmessage = (event) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        try {
+                            const data = JSON.parse(reader.result);
+                            handleTradeMessage(data);
+                        } catch (error) {
+                            console.error('메시지 파싱 에러:', error);
+                        }
+                    };
+                    reader.readAsText(event.data);
+                };
 
             } catch (error) {
-                console.error('업비트 데이터 조회 실패:', error);
+                console.error('웹소켓 연결 실패:', error);
+                setTimeout(connectWebSocket, 3000);
             }
+        }
+
+        // 거래 메시지 처리
+        function handleTradeMessage(data) {
+            if (!data || !data.code || data.type !== 'trade') return;
+
+            const market = data.code;
+            const tradePrice = data.trade_price * data.trade_volume;
+            const currentTime = Date.now();
+            
+            // 첫 거래 시 시작가 기록
+            if (!firstTrades.has(market)) {
+                firstTrades.set(market, currentTime);
+                startPrices.set(market, data.trade_price);
+            }
+
+            // 1시간이 지났는지 체크
+            const oneHourAgo = currentTime - 3600000; // 1시간 = 3600000ms
+            if (firstTrades.get(market) < oneHourAgo) {
+                firstTrades.set(market, currentTime);
+                startPrices.set(market, data.trade_price);
+                tradeVolumes.set(market, 0);
+            }
+
+            // 거래대금 누적
+            tradeVolumes.set(market, (tradeVolumes.get(market) || 0) + tradePrice);
+            
+            const coinInfo = marketCoins.get(market);
+            if (coinInfo) {
+                coinInfo.trade_price = data.trade_price;
+                coinInfo.acc_trade_price = tradeVolumes.get(market);
+                
+                // 등락률 계산 (시작가 대비)
+                const startPrice = startPrices.get(market);
+                if (startPrice) {
+                    coinInfo.change_rate = ((data.trade_price - startPrice) / startPrice) * 100;
+                }
+            }
+
+            // 상위 10개 코인 업데이트
+            updateTopCoins();
+        }
+
+        // 상위 10개 코인 정보 업데이트
+        function updateTopCoins() {
+            const topCoins = Array.from(marketCoins.values())
+                .sort((a, b) => tradeVolumes.get(b.market) - tradeVolumes.get(a.market))
+                .slice(0, 10);
+
+            updateCoinList(topCoins);
         }
 
         // 코인 목록 UI 업데이트
         function updateCoinList(coinsData) {
             const coinListElement = document.getElementById('top-coins');
+            if (!coinListElement) return;
+            
+            // 테이블 헤더 업데이트
+            const headerElement = document.querySelector('.coin-table-header');
+            if (headerElement) {
+                headerElement.innerHTML = `
+                    <span class="coin-rank">순위</span>
+                    <span class="coin-symbol">코인명</span>
+                    <span class="coin-price">현재가</span>
+                    <span class="coin-volume">1시간 거래대금</span>
+                    <span class="coin-change">등락률</span>
+                `;
+            }
+
             coinListElement.innerHTML = '';
 
             coinsData.forEach((coin, index) => {
                 const coinElement = document.createElement('div');
                 coinElement.className = 'coin-item';
+                
+                const tradeAmount = formatTradeAmount(tradeVolumes.get(coin.market));
+                const changeClass = coin.change_rate >= 0 ? 'positive' : 'negative';
+                const changeSign = coin.change_rate >= 0 ? '+' : '';
+                const timePassed = firstTrades.has(coin.market) 
+                    ? Math.floor((Date.now() - firstTrades.get(coin.market)) / 60000)
+                    : 0;
+                
                 coinElement.innerHTML = `
                     <span class="coin-rank">${index + 1}</span>
                     <span class="coin-symbol">${coin.korean_name}</span>
-                    <span class="coin-price">${coin.trade_price.toLocaleString()} 원</span>
-                    <span class="coin-volume">${Math.round(coin.candle_acc_trade_price / 1000000).toLocaleString()}백만</span>
-                    <span class="coin-change ${coin.change >= 0 ? 'positive' : 'negative'}">
-                        ${coin.change >= 0 ? '+' : ''}${coin.change.toFixed(2)}%
+                    <span class="coin-price">${formatNumber(coin.trade_price)} 원</span>
+                    <span class="coin-volume">${tradeAmount}</span>
+                    <span class="coin-change ${changeClass}">
+                        ${changeSign}${coin.change_rate.toFixed(2)}%
+                        <small>(${timePassed}분)</small>
                     </span>
                 `;
+                
                 coinListElement.appendChild(coinElement);
             });
+        }
+
+        // 거래대금 포맷팅 함수
+        function formatTradeAmount(amount) {
+            if (amount >= 1000000000000) { // 1조 이상
+                return `${(amount / 1000000000000).toFixed(1)}조`;
+            } else if (amount >= 100000000) { // 1억 이상
+                return `${(amount / 100000000).toFixed(1)}억`;
+            } else if (amount >= 10000000) { // 1천만 이상
+                return `${(amount / 10000000).toFixed(1)}천만`;
+            } else {
+                return `${(amount / 10000).toFixed(1)}만`;
+            }
+        }
+
+        // 숫자 포맷팅 함수
+        function formatNumber(num) {
+            return num ? num.toLocaleString('ko-KR') : '0';
         }
 
         // 아날로그 시계 관련 코드
@@ -736,12 +884,12 @@
         ctx.rotate(-angle);
     }
 
-        // 초기화 및 주기적 업데이트
+        // 초기화 및 연결
         window.addEventListener('load', function() {
             resizeClock();
             drawClock();
             getIPAddress();  // IP 주소 확인
-            getUpbitMarketData();
+            connectWebSocket(); // 웹소켓 연결
             
             // 1분마다 데이터 업데이트
             setInterval(getUpbitMarketData, 60000);
@@ -749,8 +897,32 @@
             setInterval(getIPAddress, 300000);
         });
 
+        // 페이지 언로드 시 웹소켓 연결 종료
+        window.addEventListener('beforeunload', function() {
+            if (upbitWebSocket) {
+                upbitWebSocket.close();
+            }
+        });
+
         // 반응형 처리
         window.addEventListener('resize', resizeClock);
+
+        // CSS 스타일 추가
+        const style = document.createElement('style');
+        style.textContent = `
+            .coin-change small {
+                font-size: 0.8em;
+                color: #666;
+                margin-left: 4px;
+            }
+            .coin-change.positive {
+                color: #00b894;
+            }
+            .coin-change.negative {
+                color: #ff7675;
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
