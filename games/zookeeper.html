@@ -117,8 +117,10 @@
   <div id="board"></div>
   <button onclick="restart()">다시 시작</button>
   <script>
-    const animals = ["🐶", "🐱", "🐵", "🦁", "🐸", "🐼", "🦊", "🐨"];
+    const animals = ["🐶", "🐱", "🐵", "🦁", "🐸", "🐼", "🦊"]; // 🐨 제거
     const explosionEmojis = ["💥", "💫", "✨", "🎇", "🎆", "⚡"];
+    const RAINBOW_TILE = "🌈"; // 무지개 타일 (어떤 타일과도 매치 가능)
+    const BOMB_TILE = "💣"; // 폭탄 타일 (주변 8방향 타일 제거)
     const N = 8; // 보드 크기 확장
     let board = [];
     let selected = null;
@@ -126,6 +128,8 @@
     let lastMoveTime = Date.now();
     let hintTimer = null;
     let animating = false;
+    let lastSwap = null; // 마지막으로 교환한 두 타일 저장
+    let comboCount = 0; // 연쇄 매치 카운트
 
     function randomAnimal() {
       return animals[Math.floor(Math.random() * animals.length)];
@@ -186,23 +190,240 @@
       if (selected) {
         if (selected.x === x && selected.y === y) {
           selected = null;
+          drawBoard();
         } else if (adjacent(selected, {x, y})) {
+          lastSwap = { a: { x: selected.x, y: selected.y }, b: { x, y } };
+          
+          // 폭탄 타일 처리
+          const isBomb = board[selected.y][selected.x] === BOMB_TILE || board[y][x] === BOMB_TILE;
+          
+          // 무지개 타일 처리
+          const isRainbow = board[selected.y][selected.x] === RAINBOW_TILE || board[y][x] === RAINBOW_TILE;
+          let rainbowPos = null;
+          let matchedTileType = null;
+          
+          if (isRainbow) {
+            if (board[selected.y][selected.x] === RAINBOW_TILE) {
+              rainbowPos = {x: selected.x, y: selected.y};
+              matchedTileType = board[y][x];
+            } else {
+              rainbowPos = {x, y};
+              matchedTileType = board[selected.y][selected.x];
+            }
+          }
+          
           swap(selected, {x, y});
-          if (findMatches().length > 0) {
-            // 매치 성공 시 힌트 시간 초기화
+          
+          if (isBomb) {
+            // 폭탄 타일이 있는 경우 즉시 폭발 처리
             lastMoveTime = Date.now();
+            selected = null;
+            explodeBomb(x, y);
+          } else if (isRainbow && matchedTileType !== RAINBOW_TILE && matchedTileType !== BOMB_TILE) {
+            // 무지개 타일이 있는 경우 해당 타입의 모든 타일 제거
+            lastMoveTime = Date.now();
+            selected = null;
+            explodeRainbow(rainbowPos, matchedTileType);
+          } else if (findMatches().length > 0) {
+            // 일반 매치 처리
+            lastMoveTime = Date.now();
+            selected = null;
             resolveMatches();
           } else {
             swap(selected, {x, y}); // 되돌리기
+            lastSwap = null;
+            selected = null;
+            drawBoard();
           }
-          selected = null;
         } else {
           selected = {x, y};
+          drawBoard();
         }
       } else {
         selected = {x, y};
+        drawBoard();
       }
+    }
+    
+    function explodeBomb(x, y) {
+      animating = true;
+      
+      // 보드 다시 그리기 (선택 상태 제거)
       drawBoard();
+      
+      // 폭탄 주변 8방향 타일 매치 처리
+      let matched = Array.from(Array(N), () => Array(N).fill(false));
+      
+      // 폭탄 위치 찾기
+      let bombX = -1, bombY = -1;
+      
+      if (board[y][x] === BOMB_TILE) {
+        bombX = x;
+        bombY = y;
+      } else {
+        // 인접한 위치에서 폭탄 찾기
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx >= 0 && nx < N && ny >= 0 && ny < N && board[ny][nx] === BOMB_TILE) {
+              bombX = nx;
+              bombY = ny;
+              break;
+            }
+          }
+          if (bombX !== -1) break;
+        }
+      }
+      
+      // 폭탄 자체와 주변 8방향 타일 매치 처리
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const ny = bombY + dy;
+          const nx = bombX + dx;
+          if (ny >= 0 && ny < N && nx >= 0 && nx < N) {
+            matched[ny][nx] = true;
+            const cell = document.querySelector(`.cell[data-x="${nx}"][data-y="${ny}"]`);
+            if (cell) {
+              cell.textContent = randomExplosion();
+              cell.classList.add('exploding');
+            }
+          }
+        }
+      }
+      
+      // 점수 계산
+      let removed = 0;
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          if (matched[y][x]) {
+            removed++;
+          }
+        }
+      }
+      
+      score += removed * 10;
+      document.getElementById('score').textContent = `점수: ${score}`;
+      
+      // 잠시 대기 후 타일 제거 및 내리기
+      setTimeout(() => {
+        // 매치된 셀 제거
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            if (matched[y][x]) {
+              board[y][x] = null;
+            }
+          }
+        }
+        
+        // 아래로 내리기
+        for (let x = 0; x < N; x++) {
+          let col = [];
+          for (let y = N-1; y >= 0; y--) {
+            if (board[y][x]) col.push(board[y][x]);
+          }
+          while (col.length < N) col.push(randomAnimal());
+          for (let y = N-1; y >= 0; y--) board[y][x] = col[N-1-y];
+        }
+        
+        drawBoard();
+        
+        // 연쇄 매치 확인
+        if (findMatches().length > 0) {
+          resolveMatches();
+        } else {
+          // 가능한 움직임이 없는지 확인
+          if (findPossibleMoves().length === 0) {
+            shuffleBoard();
+          } else {
+            animating = false;
+          }
+        }
+      }, 600);
+    }
+
+    function explodeRainbow(rainbowPos, matchedTileType) {
+      animating = true;
+      
+      // 보드 다시 그리기 (선택 상태 제거)
+      drawBoard();
+      
+      // 매치된 타일 타입과 같은 모든 타일 찾기
+      let matched = Array.from(Array(N), () => Array(N).fill(false));
+      let matchCount = 0;
+      
+      // 무지개 타일 자체도 매치에 포함
+      matched[rainbowPos.y][rainbowPos.x] = true;
+      matchCount++;
+      
+      // 매치된 타일 타입과 같은 모든 타일 찾기
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          if (board[y][x] === matchedTileType) {
+            matched[y][x] = true;
+            matchCount++;
+          }
+        }
+      }
+      
+      // 매치된 타일을 폭발 이모티콘으로 변경하고 애니메이션 효과 적용
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          if (matched[y][x]) {
+            const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+            if (cell) {
+              cell.textContent = randomExplosion();
+              cell.classList.add('exploding');
+            }
+          }
+        }
+      }
+      
+      // 점수 계산 (무지개 타일 효과는 더 높은 점수)
+      const baseScore = matchCount * 15; // 일반보다 높은 점수
+      score += baseScore;
+      document.getElementById('score').textContent = `점수: ${score}`;
+      
+      // 메시지 표시
+      showMessage(`무지개 타일 발동! ${matchCount}개의 타일 제거! +${baseScore} 점수!`);
+      
+      // 잠시 대기 후 타일 제거 및 내리기
+      setTimeout(() => {
+        // 매치된 셀 제거
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            if (matched[y][x]) {
+              board[y][x] = null;
+            }
+          }
+        }
+        
+        // 아래로 내리기
+        for (let x = 0; x < N; x++) {
+          let col = [];
+          for (let y = N-1; y >= 0; y--) {
+            if (board[y][x]) col.push(board[y][x]);
+          }
+          while (col.length < N) col.push(randomAnimal());
+          for (let y = N-1; y >= 0; y--) board[y][x] = col[N-1-y];
+        }
+        
+        drawBoard();
+        
+        // 연쇄 매치 확인
+        if (findMatches().length > 0) {
+          comboCount++; // 연쇄 매치 카운트 증가
+          resolveMatches();
+        } else {
+          // 가능한 움직임이 없는지 확인
+          if (findPossibleMoves().length === 0) {
+            shuffleBoard();
+          } else {
+            animating = false;
+            comboCount = 0; // 연쇄 매치 카운트 초기화
+          }
+        }
+      }, 600);
     }
 
     function swap(a, b) {
@@ -217,38 +438,94 @@
       // 가로 검사 (3개 이상)
       for (let y = 0; y < N; y++) {
         let cnt = 1;
-        for (let x = 1; x < N; x++) {
-          if (board[y][x] === board[y][x-1]) {
+        let currentType = null;
+        
+        for (let x = 0; x < N; x++) {
+          const tile = board[y][x];
+          
+          // 무지개 타일은 일반 매칭에서 제외
+          if (tile === RAINBOW_TILE) {
+            if (cnt >= 3) {
+              matches.push({y, x1: x-cnt, x2: x-1, length: cnt});
+            }
+            cnt = 0;
+            currentType = null;
+            continue;
+          }
+          
+          if (x === 0 || currentType === null) {
+            currentType = tile;
+            cnt = 1;
+          } else if (tile === currentType) {
             cnt++;
           } else {
-            if (cnt >= 3) matches.push({y, x1:x-cnt, x2:x-1});
+            if (cnt >= 3) {
+              matches.push({y, x1: x-cnt, x2: x-1, length: cnt});
+            }
             cnt = 1;
+            currentType = tile;
           }
         }
-        if (cnt >= 3) matches.push({y, x1:N-cnt, x2:N-1});
+        
+        if (cnt >= 3) {
+          matches.push({y, x1: N-cnt, x2: N-1, length: cnt});
+        }
       }
       
       // 세로 검사 (3개 이상)
       for (let x = 0; x < N; x++) {
         let cnt = 1;
-        for (let y = 1; y < N; y++) {
-          if (board[y][x] === board[y-1][x]) {
+        let currentType = null;
+        
+        for (let y = 0; y < N; y++) {
+          const tile = board[y][x];
+          
+          // 무지개 타일은 일반 매칭에서 제외
+          if (tile === RAINBOW_TILE) {
+            if (cnt >= 3) {
+              matches.push({x, y1: y-cnt, y2: y-1, vertical: true, length: cnt});
+            }
+            cnt = 0;
+            currentType = null;
+            continue;
+          }
+          
+          if (y === 0 || currentType === null) {
+            currentType = tile;
+            cnt = 1;
+          } else if (tile === currentType) {
             cnt++;
           } else {
-            if (cnt >= 3) matches.push({x, y1:y-cnt, y2:y-1, vertical:true});
+            if (cnt >= 3) {
+              matches.push({x, y1: y-cnt, y2: y-1, vertical: true, length: cnt});
+            }
             cnt = 1;
+            currentType = tile;
           }
         }
-        if (cnt >= 3) matches.push({x, y1:N-cnt, y2:N-1, vertical:true});
+        
+        if (cnt >= 3) {
+          matches.push({x, y1: N-cnt, y2: N-1, vertical: true, length: cnt});
+        }
       }
       
       // 2x2 정사각형 패턴 검사 추가
       for (let y = 0; y < N-1; y++) {
         for (let x = 0; x < N-1; x++) {
-          const current = board[y][x];
-          if (current === board[y][x+1] && 
-              current === board[y+1][x] && 
-              current === board[y+1][x+1]) {
+          const tiles = [
+            board[y][x],
+            board[y][x+1],
+            board[y+1][x],
+            board[y+1][x+1]
+          ];
+          
+          // 무지개 타일은 일반 매칭에서 제외
+          if (tiles.includes(RAINBOW_TILE)) {
+            continue;
+          }
+          
+          // 모든 타일이 같은 경우 정사각형 매치
+          if (tiles[0] === tiles[1] && tiles[0] === tiles[2] && tiles[0] === tiles[3]) {
             matches.push({square: true, x, y});
           }
         }
@@ -260,6 +537,9 @@
     function resolveMatches() {
       animating = true;
       
+      // 보드 다시 그리기 (선택 상태 제거)
+      drawBoard();
+      
       // 원래 로직과 유사하게 do-while 루프 사용
       let matched, anyMatch = false;
       do {
@@ -269,20 +549,44 @@
         
         if (!anyMatch) {
           animating = false;
+          comboCount = 0; // 연쇄 매치 카운트 초기화
           break;
         }
+        
+        // 연쇄 매치 카운트 증가
+        comboCount++;
+        
+        // 특수 타일 생성 위치 저장
+        let specialTiles = [];
         
         // 매치된 셀 표시
         for (const m of matches) {
           if (m.vertical) {
             for (let y = m.y1; y <= m.y2; y++) matched[y][m.x] = true;
+            
+            // 5개 이상 매치된 경우 무지개 타일 생성
+            if (m.length >= 5) {
+              // 중간 위치에 무지개 타일 생성
+              const middleY = Math.floor((m.y1 + m.y2) / 2);
+              specialTiles.push({x: m.x, y: middleY, type: RAINBOW_TILE});
+            }
           } else if (m.square) {
             matched[m.y][m.x] = true;
             matched[m.y][m.x+1] = true;
             matched[m.y+1][m.x] = true;
             matched[m.y+1][m.x+1] = true;
+            
+            // 정사각형 매치의 경우 폭탄 타일 생성
+            specialTiles.push({x: m.x, y: m.y, type: BOMB_TILE});
           } else {
             for (let x = m.x1; x <= m.x2; x++) matched[m.y][x] = true;
+            
+            // 5개 이상 매치된 경우 무지개 타일 생성
+            if (m.length >= 5) {
+              // 중간 위치에 무지개 타일 생성
+              const middleX = Math.floor((m.x1 + m.x2) / 2);
+              specialTiles.push({x: middleX, y: m.y, type: RAINBOW_TILE});
+            }
           }
         }
         
@@ -299,6 +603,29 @@
           }
         }
         
+        // 폭탄 타일 처리 (주변 8방향 타일도 매치에 포함)
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            if (board[y][x] === BOMB_TILE && matched[y][x]) {
+              // 주변 8방향 타일 매치 처리
+              for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                  const ny = y + dy;
+                  const nx = x + dx;
+                  if (ny >= 0 && ny < N && nx >= 0 && nx < N) {
+                    matched[ny][nx] = true;
+                    const cell = document.querySelector(`.cell[data-x="${nx}"][data-y="${ny}"]`);
+                    if (cell && !cell.classList.contains('exploding')) {
+                      cell.textContent = randomExplosion();
+                      cell.classList.add('exploding');
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        
         // 점수 계산
         let removed = 0;
         for (let y = 0; y < N; y++) {
@@ -309,8 +636,17 @@
           }
         }
         
-        score += removed * 10;
+        // 연쇄 매치 보너스 점수 적용
+        const comboBonus = comboCount > 1 ? comboCount * 5 : 0;
+        const baseScore = removed * 10;
+        const totalScore = baseScore + comboBonus;
+        
+        score += totalScore;
         document.getElementById('score').textContent = `점수: ${score}`;
+        
+        if (comboCount > 1) {
+          showMessage(`${comboCount}연쇄! +${comboBonus} 보너스 점수!`);
+        }
         
         // 잠시 대기 후 타일 제거 및 내리기
         setTimeout(() => {
@@ -333,6 +669,11 @@
             for (let y = N-1; y >= 0; y--) board[y][x] = col[N-1-y];
           }
           
+          // 특수 타일 생성
+          for (const tile of specialTiles) {
+            board[tile.y][tile.x] = tile.type;
+          }
+          
           drawBoard();
           
           // 연쇄 매치 확인
@@ -344,6 +685,7 @@
               shuffleBoard();
             } else {
               animating = false;
+              comboCount = 0; // 연쇄 매치 카운트 초기화
             }
           }
         }, 600);
@@ -379,25 +721,61 @@
     function findPossibleMoves() {
       const possibleMoves = [];
       
-      // 모든 인접한 셀 쌍을 확인
+      // 특수 타일(무지개 타일, 폭탄 타일) 이동 가능성 확인
       for (let y = 0; y < N; y++) {
         for (let x = 0; x < N; x++) {
-          // 오른쪽과 교환
-          if (x < N-1) {
-            swap({x, y}, {x: x+1, y});
-            if (findMatches().length > 0) {
-              possibleMoves.push({x1: x, y1: y, x2: x+1, y2: y});
-            }
-            swap({x, y}, {x: x+1, y}); // 되돌리기
+          // 폭탄 타일은 어떤 타일과도 교환 가능
+          if (board[y][x] === BOMB_TILE) {
+            if (x < N-1) possibleMoves.push({x1: x, y1: y, x2: x+1, y2: y});
+            if (y < N-1) possibleMoves.push({x1: x, y1: y, x2: x, y2: y+1});
+            if (x > 0) possibleMoves.push({x1: x, y1: y, x2: x-1, y2: y});
+            if (y > 0) possibleMoves.push({x1: x, y1: y, x2: x, y2: y-1});
           }
           
-          // 아래와 교환
-          if (y < N-1) {
-            swap({x, y}, {x, y: y+1});
-            if (findMatches().length > 0) {
+          // 무지개 타일은 일반 타일과 교환 가능 (폭탄 타일 제외)
+          else if (board[y][x] === RAINBOW_TILE) {
+            // 오른쪽 확인
+            if (x < N-1 && board[y][x+1] !== RAINBOW_TILE && board[y][x+1] !== BOMB_TILE) {
+              possibleMoves.push({x1: x, y1: y, x2: x+1, y2: y});
+            }
+            // 아래쪽 확인
+            if (y < N-1 && board[y+1][x] !== RAINBOW_TILE && board[y+1][x] !== BOMB_TILE) {
               possibleMoves.push({x1: x, y1: y, x2: x, y2: y+1});
             }
-            swap({x, y}, {x, y: y+1}); // 되돌리기
+            // 왼쪽 확인
+            if (x > 0 && board[y][x-1] !== RAINBOW_TILE && board[y][x-1] !== BOMB_TILE) {
+              possibleMoves.push({x1: x, y1: y, x2: x-1, y2: y});
+            }
+            // 위쪽 확인
+            if (y > 0 && board[y-1][x] !== RAINBOW_TILE && board[y-1][x] !== BOMB_TILE) {
+              possibleMoves.push({x1: x, y1: y, x2: x, y2: y-1});
+            }
+          }
+        }
+      }
+      
+      // 일반 타일 매칭 확인
+      if (possibleMoves.length === 0) {
+        // 모든 인접한 셀 쌍을 확인
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            // 오른쪽과 교환
+            if (x < N-1) {
+              swap({x, y}, {x: x+1, y});
+              if (findMatches().length > 0) {
+                possibleMoves.push({x1: x, y1: y, x2: x+1, y2: y});
+              }
+              swap({x, y}, {x: x+1, y}); // 되돌리기
+            }
+            
+            // 아래와 교환
+            if (y < N-1) {
+              swap({x, y}, {x, y: y+1});
+              if (findMatches().length > 0) {
+                possibleMoves.push({x1: x, y1: y, x2: x, y2: y+1});
+              }
+              swap({x, y}, {x, y: y+1}); // 되돌리기
+            }
           }
         }
       }
