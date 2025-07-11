@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>주키퍼 매치3</title>
+  <style>
+    body { 
+      font-family: 'Segoe UI Emoji', sans-serif;
+      background: #fff;
+      color: #333;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { 
+      margin-top: 20px; 
+      color: #764ba2;
+    }
+    #score { 
+      font-size: 1.5em; 
+      margin: 10px; 
+      color: #4e54c8;
+      font-weight: bold;
+    }
+    #board { 
+      display: inline-grid; 
+      grid-template-columns: repeat(8, 50px); 
+      grid-gap: 3px; 
+      margin-top: 20px;
+      user-select: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      padding: 10px;
+      border-radius: 10px;
+      background: #f8f9fa;
+    }
+    .cell {
+      width: 50px; height: 50px; 
+      background: #eee;
+      border-radius: 8px;
+      font-size: 2em;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .cell:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    }
+    .selected { 
+      background: #fb0; 
+      color: #222; 
+      transform: scale(1.1);
+      box-shadow: 0 0 10px rgba(251, 176, 0, 0.7);
+    }
+    .hint {
+      background: #c7f0d8;
+      animation: pulse 1.5s infinite;
+    }
+    .removing {
+      animation: pop 0.5s;
+      opacity: 0;
+    }
+    .falling {
+      animation: fall 0.5s;
+    }
+    @keyframes pulse {
+      0% { background-color: #c7f0d8; }
+      50% { background-color: #8ed1ab; }
+      100% { background-color: #c7f0d8; }
+    }
+    @keyframes pop {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.5; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+    @keyframes fall {
+      0% { transform: translateY(-50px); }
+      100% { transform: translateY(0); }
+    }
+    button {
+      background: linear-gradient(45deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: all 0.3s;
+      margin-top: 20px;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    #timer {
+      margin: 10px;
+      font-size: 1.2em;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>주키퍼 매치3 🦁🐼🐸</h1>
+  <div id="score">점수: 0</div>
+  <div id="timer">움직임 힌트까지: 10초</div>
+  <div id="board"></div>
+  <button onclick="restart()">다시 시작</button>
+  <script>
+    const animals = ["🐶", "🐱", "🐵", "🦁", "🐸", "🐼", "🦊", "🐨"];
+    const N = 8; // 보드 크기 확장
+    let board = [];
+    let selected = null;
+    let score = 0;
+    let lastMoveTime = Date.now();
+    let hintTimer = null;
+    let animating = false;
+
+    function randomAnimal() {
+      return animals[Math.floor(Math.random() * animals.length)];
+    }
+
+    function makeBoard() {
+      board = [];
+      for (let y = 0; y < N; y++) {
+        let row = [];
+        for (let x = 0; x < N; x++) {
+          row.push(randomAnimal());
+        }
+        board.push(row);
+      }
+      // 시작부터 매치가 있으면 다시 생성
+      while (findMatches().length > 0) {
+        for (let y = 0; y < N; y++)
+          for (let x = 0; x < N; x++)
+            board[y][x] = randomAnimal();
+      }
+    }
+
+    function drawBoard() {
+      const boardDiv = document.getElementById('board');
+      boardDiv.innerHTML = '';
+      boardDiv.style.gridTemplateColumns = `repeat(${N}, 50px)`;
+      
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          if (selected && selected.x === x && selected.y === y) {
+            cell.classList.add('selected');
+          }
+          cell.textContent = board[y][x];
+          cell.onclick = () => selectCell(x, y);
+          cell.dataset.x = x;
+          cell.dataset.y = y;
+          boardDiv.appendChild(cell);
+        }
+      }
+      document.getElementById('score').textContent = `점수: ${score}`;
+    }
+
+    function adjacent(a, b) {
+      return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1;
+    }
+
+    function selectCell(x, y) {
+      if (animating) return; // 애니메이션 중에는 선택 불가
+      
+      lastMoveTime = Date.now();
+      clearHints();
+      
+      if (selected) {
+        if (selected.x === x && selected.y === y) {
+          selected = null;
+        } else if (adjacent(selected, {x, y})) {
+          swap(selected, {x, y});
+          if (findMatches().length > 0) {
+            resolveMatches();
+          } else {
+            swap(selected, {x, y}); // 되돌리기
+          }
+          selected = null;
+        } else {
+          selected = {x, y};
+        }
+      } else {
+        selected = {x, y};
+      }
+      drawBoard();
+    }
+
+    function swap(a, b) {
+      const tmp = board[a.y][a.x];
+      board[a.y][a.x] = board[b.y][b.x];
+      board[b.y][b.x] = tmp;
+    }
+
+    function findMatches() {
+      const matches = [];
+      
+      // 가로 검사 (3개 이상)
+      for (let y = 0; y < N; y++) {
+        let cnt = 1;
+        for (let x = 1; x < N; x++) {
+          if (board[y][x] === board[y][x-1]) {
+            cnt++;
+          } else {
+            if (cnt >= 3) matches.push({y, x1:x-cnt, x2:x-1});
+            cnt = 1;
+          }
+        }
+        if (cnt >= 3) matches.push({y, x1:N-cnt, x2:N-1});
+      }
+      
+      // 세로 검사 (3개 이상)
+      for (let x = 0; x < N; x++) {
+        let cnt = 1;
+        for (let y = 1; y < N; y++) {
+          if (board[y][x] === board[y-1][x]) {
+            cnt++;
+          } else {
+            if (cnt >= 3) matches.push({x, y1:y-cnt, y2:y-1, vertical:true});
+            cnt = 1;
+          }
+        }
+        if (cnt >= 3) matches.push({x, y1:N-cnt, y2:N-1, vertical:true});
+      }
+      
+      // 2x2 정사각형 패턴 검사 추가
+      for (let y = 0; y < N-1; y++) {
+        for (let x = 0; x < N-1; x++) {
+          const current = board[y][x];
+          if (current === board[y][x+1] && 
+              current === board[y+1][x] && 
+              current === board[y+1][x+1]) {
+            matches.push({square: true, x, y});
+          }
+        }
+      }
+      
+      return matches;
+    }
+
+    function resolveMatches() {
+      animating = true;
+      
+      let matched = Array.from(Array(N), () => Array(N).fill(false));
+      const matches = findMatches();
+      let anyMatch = matches.length > 0;
+      
+      if (!anyMatch) {
+        animating = false;
+        return;
+      }
+      
+      // 매치된 셀 표시
+      for (const m of matches) {
+        if (m.vertical) {
+          for (let y = m.y1; y <= m.y2; y++) matched[y][m.x] = true;
+        } else if (m.square) {
+          matched[m.y][m.x] = true;
+          matched[m.y][m.x+1] = true;
+          matched[m.y+1][m.x] = true;
+          matched[m.y+1][m.x+1] = true;
+        } else {
+          for (let x = m.x1; x <= m.x2; x++) matched[m.y][x] = true;
+        }
+      }
+      
+      // 애니메이션 효과와 점수 계산
+      let removed = 0;
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          if (matched[y][x]) {
+            const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+            if (cell) {
+              cell.classList.add('removing');
+              removed++;
+            }
+          }
+        }
+      }
+      
+      score += removed * 10;
+      document.getElementById('score').textContent = `점수: ${score}`;
+      
+      // 애니메이션 후 처리
+      setTimeout(() => {
+        // 매치된 셀 제거
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            if (matched[y][x]) {
+              board[y][x] = null;
+            }
+          }
+        }
+        
+        // 아래로 내리기
+        for (let x = 0; x < N; x++) {
+          let col = [];
+          for (let y = N-1; y >= 0; y--) {
+            if (board[y][x]) col.push(board[y][x]);
+          }
+          while (col.length < N) col.push(randomAnimal());
+          for (let y = N-1; y >= 0; y--) board[y][x] = col[N-1-y];
+        }
+        
+        drawBoard();
+        
+        // 떨어지는 애니메이션 적용
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+            if (cell) cell.classList.add('falling');
+          }
+        }
+        
+        // 연쇄 매치 확인
+        setTimeout(() => {
+          if (findMatches().length > 0) {
+            resolveMatches();
+          } else {
+            animating = false;
+          }
+        }, 500);
+      }, 500);
+    }
+
+    function findPossibleMoves() {
+      const possibleMoves = [];
+      
+      // 모든 인접한 셀 쌍을 확인
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          // 오른쪽과 교환
+          if (x < N-1) {
+            swap({x, y}, {x: x+1, y});
+            if (findMatches().length > 0) {
+              possibleMoves.push({x1: x, y1: y, x2: x+1, y2: y});
+            }
+            swap({x, y}, {x: x+1, y}); // 되돌리기
+          }
+          
+          // 아래와 교환
+          if (y < N-1) {
+            swap({x, y}, {x, y: y+1});
+            if (findMatches().length > 0) {
+              possibleMoves.push({x1: x, y1: y, x2: x, y2: y+1});
+            }
+            swap({x, y}, {x, y: y+1}); // 되돌리기
+          }
+        }
+      }
+      
+      return possibleMoves;
+    }
+
+    function showHints() {
+      if (Date.now() - lastMoveTime < 10000) return; // 10초 미만이면 힌트 표시 안함
+      
+      clearHints();
+      const moves = findPossibleMoves();
+      
+      if (moves.length > 0) {
+        // 랜덤하게 하나의 가능한 움직임 선택
+        const move = moves[Math.floor(Math.random() * moves.length)];
+        
+        // 힌트 표시
+        const cell1 = document.querySelector(`.cell[data-x="${move.x1}"][data-y="${move.y1}"]`);
+        const cell2 = document.querySelector(`.cell[data-x="${move.x2}"][data-y="${move.y2}"]`);
+        
+        if (cell1) cell1.classList.add('hint');
+        if (cell2) cell2.classList.add('hint');
+      }
+    }
+
+    function clearHints() {
+      const hints = document.querySelectorAll('.hint');
+      hints.forEach(hint => hint.classList.remove('hint'));
+    }
+
+    function updateTimer() {
+      const elapsed = Math.floor((Date.now() - lastMoveTime) / 1000);
+      const remaining = Math.max(0, 10 - elapsed);
+      document.getElementById('timer').textContent = `움직임 힌트까지: ${remaining}초`;
+      
+      if (elapsed >= 10) {
+        showHints();
+      }
+    }
+
+    function restart() {
+      score = 0;
+      selected = null;
+      lastMoveTime = Date.now();
+      clearHints();
+      makeBoard();
+      drawBoard();
+    }
+
+    // 초기화
+    restart();
+    
+    // 타이머 설정
+    setInterval(updateTimer, 1000);
+  </script>
+</body>
+</html> 

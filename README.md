@@ -95,9 +95,3 @@ SurvivalQuant/
 - 몬테카를로 시뮬레이션 도구
 - 다양한 미니 게임
 - 유틸리티 도구 (시계, QR 코드 생성기, URL 단축기 등)
-
-## 🔗 포함된 링크
-1. 바이빗 카피트레이딩: https://www.bybit.com/copyMt5/trade-center/detail?providerMark=xkc2wsLqVomphpP%2FtV6RRQ%3D%3D
-2. 개발블로그: https://blog.naver.com/economic_eden
-3. 유튜브: https://www.youtube.com/@economiceden
-
