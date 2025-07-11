@@ -36,6 +36,11 @@
       line-height: 20px;
       text-align: center;
       user-select: none;
+      background-color: #fff; /* 모든 셀의 기본 배경색을 흰색으로 설정 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
     #status-bar {
       font-size: 16px;
@@ -92,6 +97,15 @@
     .action-btn {
       background-color: #553355;
     }
+    /* 데스크탑 최적화 */
+    @media (min-width: 769px) {
+      .cell {
+        width: 22px;
+        height: 22px;
+        font-size: 16px;
+        line-height: 1;
+      }
+    }
     /* 모바일 최적화 */
     @media (max-width: 768px) {
       body {
@@ -101,6 +115,7 @@
         width: 18px;
         height: 18px;
         font-size: 16px;
+        line-height: 1;
       }
       .dir-btn, .action-btn {
         width: 45px;
@@ -114,6 +129,7 @@
         width: 16px;
         height: 16px;
         font-size: 14px;
+        line-height: 1;
       }
       .dir-btn, .action-btn {
         width: 40px;
@@ -124,8 +140,15 @@
     .hidden {
       visibility: hidden;
     }
-    .wall { background-color: #555; }
-    .floor { background-color: #222; }  /* 바닥 배경색 어둡게 설정 */
+    /* 시야 밖 영역만 검은색으로 설정 */
+    .wall { background-color: #fff; } /* 벽도 흰색 배경으로 변경 */
+    .floor { background-color: #fff; } /* 바닥 배경색을 흰색으로 유지 */
+    .hidden-cell { background-color: #000; } /* 시야 밖 영역은 검은색 */
+    .grass { background-color: #fff; } /* 잔디 배경색도 흰색으로 변경 */
+    .desert { background-color: #fff; } /* 사막 배경색도 흰색으로 변경 */
+    .water { background-color: #fff; } /* 물 배경색도 흰색으로 변경 */
+    .mountain { background-color: #fff; } /* 산 배경색도 흰색으로 변경 */
+    .lava { background-color: #fff; } /* 화산/용암 배경색도 흰색으로 변경 */
   </style>
 </head>
 <body>
@@ -172,17 +195,63 @@ const GUN_DAMAGE_MIN = 2;     // Gun minimum damage
 const GUN_DAMAGE_MAX = 3;     // Gun maximum damage (inclusive)
 // ==========================================================
 
+// 지형 타입 상수
+const TERRAIN_TYPES = {
+  FLOOR: 'FLOOR',
+  WALL: 'WALL',
+  GRASS: 'GRASS',
+  TREE: 'TREE',
+  ROCK: 'ROCK',
+  HOUSE: 'HOUSE',
+  CASTLE: 'CASTLE',
+  CHURCH: 'CHURCH',
+  DESERT: 'DESERT',
+  WATER: 'WATER',
+  MOUNTAIN: 'MOUNTAIN',
+  LAVA: 'LAVA'
+};
+
+// 몬스터 타입 상수
+const MONSTER_TYPES = {
+  ZOMBIE: 'ZOMBIE',
+  ORC: 'ORC',
+  VAMPIRE: 'VAMPIRE',
+  FAIRY: 'FAIRY',
+  GOBLIN: 'GOBLIN',
+  DRAGON: 'DRAGON'
+};
+
 // Map symbols with emoji
 const TILES = {
-  FLOOR: { symbol: '.', emoji: '⬜' },  // 바닥은 흰색 사각형으로 변경
-  WALL: { symbol: '#', emoji: '🧱' },   // 벽은 벽돌 이모지
-  PLAYER: { symbol: '@', emoji: '🤺' },
-  MONSTER: { symbol: 'M', emoji: '👹' },
-  MONSTER_WEAK: { symbol: 'M', emoji: '👺' },
-  MONSTER_STRONG: { symbol: 'M', emoji: '👿' },
-  MONSTER_DEAD: { symbol: 'M', emoji: '💀' },
-  BULLET: { symbol: '*', emoji: '💥' },
-  HIDDEN: { symbol: ' ', emoji: '⬛' }  // 시야 밖은 검은색 사각형
+  // 지형 타일 - 색상 기반으로 변경
+  FLOOR: { symbol: '.', emoji: '⬜' },  // 기본 바닥은 흰색 사각형
+  WALL: { symbol: '#', emoji: '⬛' },   // 벽은 검은색 사각형으로 변경
+  GRASS: { symbol: ',', emoji: '⬜' },  // 잔디/들판도 흰색 사각형으로 변경
+  TREE: { symbol: 'T', emoji: '🌲' },   // 나무
+  ROCK: { symbol: '^', emoji: '🟫' },   // 바위 이모티콘을 갈색 사각형으로 대체
+  HOUSE: { symbol: 'H', emoji: '🏠' },  // 집
+  CASTLE: { symbol: 'C', emoji: '🏰' },  // 성
+  CHURCH: { symbol: 'R', emoji: '⛪' },  // 교회
+  DESERT: { symbol: 'D', emoji: '⬜' },  // 사막도 흰색 사각형으로 변경
+  WATER: { symbol: 'W', emoji: '⬜' },   // 물도 흰색 사각형으로 변경
+  MOUNTAIN: { symbol: 'M', emoji: '⬜' }, // 산도 흰색 사각형으로 변경
+  LAVA: { symbol: 'L', emoji: '⬜' },    // 화산/용암도 흰색 사각형으로 변경
+  
+  // 플레이어
+  PLAYER: { symbol: '@', emoji: '🤺' },  // 펜싱 선수
+  
+  // 몬스터 타입
+  ZOMBIE: { symbol: 'Z', emoji: '🧟' },   // 좀비
+  ORC: { symbol: 'O', emoji: '👹' },      // 오크
+  VAMPIRE: { symbol: 'V', emoji: '🧛' },  // 드라큘라/뱀파이어
+  FAIRY: { symbol: 'F', emoji: '🧚' },    // 요정
+  GOBLIN: { symbol: 'G', emoji: '👺' },   // 고블린
+  DRAGON: { symbol: 'D', emoji: '🐉' },   // 드래곤
+  
+  // 기타
+  MONSTER_DEAD: { symbol: 'M', emoji: '💀' },  // 죽은 몬스터
+  BULLET: { symbol: '*', emoji: '💥' },        // 총알 효과
+  HIDDEN: { symbol: ' ', emoji: '⬛' }          // 시야 밖은 검은색 사각형
 };
 
 // For compatibility with existing code
@@ -190,6 +259,7 @@ const FLOOR = '.', WALL = '#', PLAYER = '@', MONSTER = 'M', BULLET = '*';
 
 // Game state
 let map = [];
+let terrainMap = []; // 지형 정보를 저장하는 배열
 let player = {
   x: Math.floor(MAP_W / 2),
   y: Math.floor(MAP_H / 2),
@@ -227,15 +297,136 @@ function addMsg(s) {
   if (msg.length > 5) msg.length = 5; 
 }
 
-// Map generation: simple empty with border and some random walls
+// Map generation: fantasy world with various terrain types
 function genMap() {
+  // 기본 맵 초기화
   for (let y = 0; y < MAP_H; ++y) {
     map[y] = [];
+    terrainMap[y] = [];
     for (let x = 0; x < MAP_W; ++x) {
-      if (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1)
+      if (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1) {
         map[y][x] = WALL;
-      else
-        map[y][x] = (Math.random() < WALL_RATIO) ? WALL : FLOOR;
+        terrainMap[y][x] = TERRAIN_TYPES.WALL;
+      } else {
+        // 기본적으로 잔디 지형으로 설정
+        map[y][x] = FLOOR;
+        terrainMap[y][x] = TERRAIN_TYPES.GRASS;
+      }
+    }
+  }
+  
+  // 숲 지역 생성 (나무 클러스터)
+  createForestClusters(5, 10, 15);
+  
+  // 바위 지역 생성
+  createRockClusters(3, 8, 10);
+  
+  // 건물 배치 (텐트, 집, 성)
+  placeBuildingRandomly(TERRAIN_TYPES.TENT, 8);
+  placeBuildingRandomly(TERRAIN_TYPES.HOUSE, 5);
+  placeBuildingRandomly(TERRAIN_TYPES.CASTLE, 1);
+  
+  // 벽 추가 (미로 형태)
+  addMazeWalls(WALL_RATIO);
+}
+
+// 숲 클러스터 생성 함수
+function createForestClusters(numClusters, minSize, maxSize) {
+  for (let i = 0; i < numClusters; i++) {
+    // 클러스터 중심점 선택
+    const centerX = Math.floor(Math.random() * (MAP_W - 20)) + 10;
+    const centerY = Math.floor(Math.random() * (MAP_H - 20)) + 10;
+    
+    // 클러스터 크기 결정
+    const clusterSize = Math.floor(Math.random() * (maxSize - minSize + 1)) + minSize;
+    
+    // 나무 배치
+    for (let j = 0; j < clusterSize; j++) {
+      const offsetX = Math.floor(Math.random() * 15) - 7;
+      const offsetY = Math.floor(Math.random() * 15) - 7;
+      const x = Math.min(Math.max(centerX + offsetX, 1), MAP_W - 2);
+      const y = Math.min(Math.max(centerY + offsetY, 1), MAP_H - 2);
+      
+      // 20% 확률로 나무를 배치, 나머지는 잔디로 유지
+      if (Math.random() < 0.2) {
+        map[y][x] = WALL; // 나무는 벽으로 취급 (통과 불가)
+        terrainMap[y][x] = TERRAIN_TYPES.TREE;
+      }
+    }
+  }
+}
+
+// 바위 클러스터 생성 함수
+function createRockClusters(numClusters, minSize, maxSize) {
+  for (let i = 0; i < numClusters; i++) {
+    // 클러스터 중심점 선택
+    const centerX = Math.floor(Math.random() * (MAP_W - 20)) + 10;
+    const centerY = Math.floor(Math.random() * (MAP_H - 20)) + 10;
+    
+    // 클러스터 크기 결정
+    const clusterSize = Math.floor(Math.random() * (maxSize - minSize + 1)) + minSize;
+    
+    // 바위 배치
+    for (let j = 0; j < clusterSize; j++) {
+      const offsetX = Math.floor(Math.random() * 10) - 5;
+      const offsetY = Math.floor(Math.random() * 10) - 5;
+      const x = Math.min(Math.max(centerX + offsetX, 1), MAP_W - 2);
+      const y = Math.min(Math.max(centerY + offsetY, 1), MAP_H - 2);
+      
+      map[y][x] = WALL; // 바위는 벽으로 취급 (통과 불가)
+      terrainMap[y][x] = TERRAIN_TYPES.ROCK;
+    }
+  }
+}
+
+// 건물 랜덤 배치 함수
+function placeBuildingRandomly(buildingType, count) {
+  for (let i = 0; i < count; i++) {
+    let x, y;
+    let placed = false;
+    let attempts = 0;
+    
+    // 적절한 위치 찾기 (최대 100번 시도)
+    while (!placed && attempts < 100) {
+      x = Math.floor(Math.random() * (MAP_W - 10)) + 5;
+      y = Math.floor(Math.random() * (MAP_H - 10)) + 5;
+      
+      // 주변 공간이 비어있는지 확인
+      let isEmpty = true;
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (inMap(nx, ny) && terrainMap[ny][nx] !== TERRAIN_TYPES.GRASS) {
+            isEmpty = false;
+            break;
+          }
+        }
+        if (!isEmpty) break;
+      }
+      
+      if (isEmpty) {
+        map[y][x] = WALL; // 건물은 벽으로 취급 (통과 불가)
+        terrainMap[y][x] = buildingType;
+        placed = true;
+      }
+      
+      attempts++;
+    }
+  }
+}
+
+// 미로 형태의 벽 추가
+function addMazeWalls(ratio) {
+  for (let y = 1; y < MAP_H - 1; y++) {
+    for (let x = 1; x < MAP_W - 1; x++) {
+      // 이미 특별한 지형이 있는 경우 건너뛰기
+      if (terrainMap[y][x] !== TERRAIN_TYPES.GRASS) continue;
+      
+      if (Math.random() < ratio) {
+        map[y][x] = WALL;
+        terrainMap[y][x] = TERRAIN_TYPES.WALL;
+      }
     }
   }
 }
@@ -259,19 +450,37 @@ function placeEntities() {
   player.ammo = PLAYER_AMMO_MAX;
   player.aiming = false;
   player.reloading = false;
+  
   // Place monsters
   monsters = [];
   for (let i = 0; i < MONSTER_COUNT; ++i) {
     let m = randPos();
-    // Create different monster types
-    let monsterType = Math.random();
-    if (monsterType < 0.7) { // Regular monster
-      monsters.push({ x: m.x, y: m.y, hp: MONSTER_HP, type: 'MONSTER' });
-    } else if (monsterType < 0.9) { // Weak monster
-      monsters.push({ x: m.x, y: m.y, hp: MONSTER_HP - 2, type: 'MONSTER_WEAK' });
-    } else { // Strong monster
-      monsters.push({ x: m.x, y: m.y, hp: MONSTER_HP + 2, type: 'MONSTER_STRONG' });
+    
+    // 몬스터 타입 결정
+    const monsterRoll = Math.random();
+    let monsterType, hp;
+    
+    if (monsterRoll < 0.3) { // 30% 확률로 좀비
+      monsterType = MONSTER_TYPES.ZOMBIE;
+      hp = MONSTER_HP;
+    } else if (monsterRoll < 0.6) { // 30% 확률로 오크
+      monsterType = MONSTER_TYPES.ORC;
+      hp = MONSTER_HP + 1;
+    } else if (monsterRoll < 0.8) { // 20% 확률로 고블린
+      monsterType = MONSTER_TYPES.GOBLIN;
+      hp = MONSTER_HP - 2;
+    } else if (monsterRoll < 0.9) { // 10% 확률로 뱀파이어
+      monsterType = MONSTER_TYPES.VAMPIRE;
+      hp = MONSTER_HP + 3;
+    } else if (monsterRoll < 0.98) { // 8% 확률로 요정
+      monsterType = MONSTER_TYPES.FAIRY;
+      hp = MONSTER_HP - 3;
+    } else { // 2% 확률로 드래곤
+      monsterType = MONSTER_TYPES.DRAGON;
+      hp = MONSTER_HP * 3;
     }
+    
+    monsters.push({ x: m.x, y: m.y, hp: hp, type: monsterType });
   }
 }
 
@@ -470,7 +679,7 @@ function render() {
             if (m.hp <= 0) {
               cellType = 'MONSTER_DEAD';
             } else {
-              cellType = m.type || 'MONSTER';
+              cellType = m.type; // 몬스터 타입 사용
               // Add monster HP display
               cell.style.position = 'relative';
               let hpDisplay = document.createElement('div');
@@ -485,23 +694,50 @@ function render() {
               cell.appendChild(hpDisplay);
             }
           } else {
-            cellType = map[y][x] === WALL ? 'WALL' : 'FLOOR';
+            // 지형 타입에 따라 타일 결정
+            if (inMap(x, y) && terrainMap[y] && terrainMap[y][x]) {
+              cellType = terrainMap[y][x];
+            } else {
+              cellType = map[y][x] === WALL ? 'WALL' : 'FLOOR';
+            }
           }
         }
       } else if (isExplored) {
         // 시야 밖이지만 이전에 탐사한 지역인 경우
-        cellType = exploredMap[`${x},${y}`] === WALL ? 'WALL' : 'FLOOR';
+        // 지형 타입에 따라 타일 결정
+        if (inMap(x, y) && terrainMap[y] && terrainMap[y][x]) {
+          cellType = terrainMap[y][x];
+        } else {
+          cellType = exploredMap[`${x},${y}`] === WALL ? 'WALL' : 'FLOOR';
+        }
+        
         // 어두운 반투명 효과 적용
         cell.style.filter = 'brightness(0.5)';
         cell.style.opacity = '0.7';
+      } else {
+        // 시야 밖이고 탐사하지 않은 지역은 검은색으로 표시
+        cell.classList.add('hidden-cell');
       }
       
       // Add appropriate CSS class
-      if (cellType === 'WALL') cell.classList.add('wall');
-      if (cellType === 'FLOOR') cell.classList.add('floor');
+      if (cellType === 'WALL' || cellType === TERRAIN_TYPES.TREE || 
+          cellType === TERRAIN_TYPES.ROCK || cellType === TERRAIN_TYPES.CASTLE || 
+          cellType === TERRAIN_TYPES.HOUSE || cellType === TERRAIN_TYPES.CHURCH) {
+        cell.classList.add('wall');
+      } else if (cellType === 'FLOOR' || cellType === TERRAIN_TYPES.GRASS) {
+        cell.classList.add('floor');
+      } else if (cellType === TERRAIN_TYPES.DESERT) {
+        cell.classList.add('desert');
+      } else if (cellType === TERRAIN_TYPES.WATER) {
+        cell.classList.add('water');
+      } else if (cellType === TERRAIN_TYPES.MOUNTAIN) {
+        cell.classList.add('mountain');
+      } else if (cellType === TERRAIN_TYPES.LAVA) {
+        cell.classList.add('lava');
+      }
       
       // Set emoji content
-      cell.textContent = TILES[cellType].emoji;
+      cell.textContent = TILES[cellType] ? TILES[cellType].emoji : TILES['FLOOR'].emoji;
       
       // 조준 모드일 때 클릭 이벤트 추가
       if (player.aiming && vis[`${x},${y}`]) {
