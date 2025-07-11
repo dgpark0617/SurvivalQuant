@@ -41,6 +41,12 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
+      box-sizing: border-box; /* 추가: border와 padding을 요소 크기에 포함 */
+    }
+    /* 조준 경로 하이라이트를 위한 클래스 */
+    .aim-path {
+      position: relative;
+      background-color: rgba(255, 255, 0, 0.3) !important; /* 반투명 노란색 배경 */
     }
     #status-bar {
       font-size: 16px;
@@ -606,8 +612,10 @@ function showAimPath(startX, startY, endX, endY) {
     
     if (cellIndex >= 0 && cellIndex < cells.length) {
       const cell = cells[cellIndex];
-      cell.style.border = '1px solid yellow';
-      cell.style.boxShadow = 'inset 0 0 5px yellow';
+      
+      // CSS 클래스 추가로 하이라이트
+      cell.classList.add('aim-path');
+      
       highlightedCells.push(cell);
     }
   });
@@ -616,9 +624,10 @@ function showAimPath(startX, startY, endX, endY) {
 // 하이라이트 제거 함수
 function clearHighlights() {
   highlightedCells.forEach(cell => {
-    cell.style.border = '';
-    cell.style.boxShadow = '';
+    // CSS 클래스 제거
+    cell.classList.remove('aim-path');
   });
+  
   highlightedCells = [];
   player.aimPath = [];
 }
