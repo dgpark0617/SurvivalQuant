@@ -61,6 +61,16 @@
       border: 1px solid #555;
       text-align: left;
     }
+    #turn-timer {
+      margin-bottom: 10px;
+      padding: 5px;
+      background-color: #333;
+      border: 1px solid #555;
+    }
+    #turn-timer-bar {
+      height: 10px;
+      background-color: #444;
+    }
     #mobile-controls {
       display: flex;
       flex-direction: column;
@@ -156,6 +166,9 @@
   <div id="status-bar"></div>
   <div id="game-grid"></div>
   <div id="message-log"></div>
+  <div id="turn-timer">
+    <div id="turn-timer-bar"></div>
+  </div>
   <div id="mobile-controls">
     <div class="controls-row">
       <button class="dir-btn" data-dir="6">↖️</button>
@@ -187,9 +200,11 @@ const VIEW_R = 8;             // Sight radius
 const SCREEN_W = 30;          // Displayed area width
 const SCREEN_H = 20;          // Displayed area height
 const MONSTER_COUNT = 100;     // Number of monsters
+const UNICORN_COUNT = 10;     // Number of unicorns
 const PLAYER_START_HP = 10;   // Player HP
 const PLAYER_AMMO_MAX = 6;    // Gun max ammo
 const MONSTER_HP = 5;         // Monster HP (raise for harder game)
+const UNICORN_HP = 15;        // Unicorn HP (stronger than normal monsters)
 const WALL_RATIO = 0.08;      // Wall generation ratio (0~1)
 const GUN_DAMAGE_MIN = 2;     // Gun minimum damage
 const GUN_DAMAGE_MAX = 3;     // Gun maximum damage (inclusive)
@@ -218,7 +233,8 @@ const MONSTER_TYPES = {
   VAMPIRE: 'VAMPIRE',
   FAIRY: 'FAIRY',
   GOBLIN: 'GOBLIN',
-  DRAGON: 'DRAGON'
+  DRAGON: 'DRAGON',
+  UNICORN: 'UNICORN' // 유니콘 타입 추가
 };
 
 // Map symbols with emoji
@@ -247,6 +263,7 @@ const TILES = {
   FAIRY: { symbol: 'F', emoji: '🧚' },    // 요정
   GOBLIN: { symbol: 'G', emoji: '👺' },   // 고블린
   DRAGON: { symbol: 'D', emoji: '🐉' },   // 드래곤
+  UNICORN: { symbol: 'U', emoji: '🦄' },  // 유니콘
   
   // 기타
   MONSTER_DEAD: { symbol: 'M', emoji: '💀' },  // 죽은 몬스터
@@ -276,6 +293,13 @@ let msg = [];
 let gameOver = false;
 let highlightedCells = []; // 하이라이트된 셀 추적
 let exploredMap = {}; // 탐사한 지역을 기억하는 객체
+
+// 시야 공유 시스템 관련 변수
+let sightGroups = [];  // 시야 공유 그룹 목록
+let realTimeTurnActive = false;  // 실시간 턴 시스템 활성화 상태
+let currentTurnTime = 0;  // 현재 턴의 시작 시간
+let turnDuration = 500;   // 턴 지속 시간 (밀리초)
+let playerActedThisTurn = false;  // 현재 턴에 플레이어가 행동했는지 여부
 
 // Directions for keypad (1-9, skip 5)
 const DIRS = [
@@ -482,6 +506,21 @@ function placeEntities() {
     
     monsters.push({ x: m.x, y: m.y, hp: hp, type: monsterType });
   }
+  
+  // 유니콘 배치 (특별한 몬스터)
+  for (let i = 0; i < UNICORN_COUNT; ++i) {
+    let m = randPos();
+    monsters.push({ 
+      x: m.x, 
+      y: m.y, 
+      hp: UNICORN_HP, 
+      type: MONSTER_TYPES.UNICORN,
+      isUnicorn: true,  // 유니콘 식별자
+      nextMoveTime: 0,  // 다음 행동 시간 (실시간 턴 시스템용)
+      lastSeenPlayer: false, // 플레이어를 마지막으로 본 상태
+      targetMonster: null // 공격 대상 몬스터
+    });
+  }
 }
 
 // Check if in map
@@ -644,6 +683,8 @@ function render() {
   let gameGrid = document.getElementById('game-grid');
   let statusBar = document.getElementById('status-bar');
   let messageLog = document.getElementById('message-log');
+  let turnTimer = document.getElementById('turn-timer');
+  let turnTimerBar = document.getElementById('turn-timer-bar');
   
   // Clear previous content
   gameGrid.innerHTML = '';
@@ -774,7 +815,36 @@ function render() {
   }
   
   // Update status bar
-  statusBar.innerHTML = `HP: ${player.hp} | Ammo: ${player.ammo} | 무기: ${getWeaponEmoji(player.currentWeapon)} ${getWeaponName(player.currentWeapon)} | 몬스터: ${monsters.filter(m => m.hp > 0).length}`;
+  let statusText = `HP: ${player.hp} | Ammo: ${player.ammo} | 무기: ${getWeaponEmoji(player.currentWeapon)} ${getWeaponName(player.currentWeapon)} | 몬스터: ${monsters.filter(m => m.hp > 0).length}`;
+  
+  // 실시간 턴 시스템 상태 표시
+  if (realTimeTurnActive) {
+    statusText += ' | 실시간 턴 활성화!';
+  }
+  
+  statusBar.innerHTML = statusText;
+  
+  // Update turn timer display
+  if (realTimeTurnActive) {
+    turnTimer.style.display = 'block';
+    const now = Date.now();
+    const elapsed = now - currentTurnTime;
+    const remaining = Math.max(0, turnDuration - elapsed);
+    const percent = (remaining / turnDuration) * 100;
+    
+    turnTimerBar.style.width = `${percent}%`;
+    
+    // 남은 시간에 따라 색상 변경
+    if (percent > 60) {
+      turnTimerBar.style.backgroundColor = '#0f0'; // 녹색
+    } else if (percent > 30) {
+      turnTimerBar.style.backgroundColor = '#ff0'; // 노란색
+    } else {
+      turnTimerBar.style.backgroundColor = '#f00'; // 빨간색
+    }
+  } else {
+    turnTimer.style.display = 'none';
+  }
   
   // Update message log
   messageLog.innerHTML = '';
@@ -863,9 +933,23 @@ function tryMove(dx, dy) {
     m.hp -= 2 + Math.floor(Math.random() * 2); // melee attack
     addMsg('You punch the monster!');
     if (m.hp <= 0) addMsg('Monster dies!');
+    
+    // 실시간 턴 시스템에서 플레이어 행동 처리
+    if (realTimeTurnActive) {
+      playerActedThisTurn = true;
+    }
   } else {
     player.x = nx; player.y = ny;
+    
+    // 실시간 턴 시스템에서 플레이어 행동 처리
+    if (realTimeTurnActive) {
+      playerActedThisTurn = true;
+    }
   }
+  
+  // 이동 후 시야 공유 상태 업데이트
+  updateSightGroups();
+  
   return true;
 }
 
@@ -873,10 +957,22 @@ function tryMove(dx, dy) {
 function monsterTurn() {
   let vis = calcFOV();
   monsters.forEach(m => {
+    // 유니콘은 실시간 턴 시스템에 속해 있을 때만 일반 턴에서 제외
+    const isUnicornInRealTimeTurn = m.isUnicorn && 
+                                  sightGroups.some(group => 
+                                    group.unicorns.includes(m) && 
+                                    (group.hasPlayer || group.unicorns.length > 1)
+                                  );
+    
+    if (isUnicornInRealTimeTurn) return;
+    
     if (m.hp <= 0) return;
     let dx = player.x - m.x, dy = player.y - m.y;
     let dist = Math.max(Math.abs(dx), Math.abs(dy));
     if (dist === 1) { // adjacent, attack
+      // 유니콘은 플레이어를 공격하지 않음
+      if (m.isUnicorn) return;
+      
       player.hp -= 2;
       addMsg('Monster hits you!');
       if (player.hp <= 0) { gameOver = true; addMsg('You died!'); }
@@ -886,16 +982,91 @@ function monsterTurn() {
       // Move closer
       let mx = dx ? dx / Math.abs(dx) : 0, my = dy ? dy / Math.abs(dy) : 0;
       let nx = m.x + mx, ny = m.y + my;
-      if (inMap(nx, ny) && map[ny][nx] !== WALL && !monsters.find(mm => mm !== m && mm.x === nx && mm.y === ny) && (player.x !== nx || player.y !== ny))
-        { m.x = nx; m.y = ny; }
+      
+      // 유니콘은 플레이어를 향해 이동하지 않고, 다른 몬스터를 향해 이동
+      if (m.isUnicorn) {
+        // 유니콘의 시야 내 가장 가까운 몬스터 찾기
+        const unicornFOV = calcMonsterFOV(m);
+        let nearestMonster = null;
+        let minDistance = Infinity;
+        
+        monsters.forEach(target => {
+          // 자기 자신이거나 유니콘이거나 이미 죽은 몬스터는 제외
+          if (target === m || target.isUnicorn || target.hp <= 0) return;
+          
+          // 시야 내에 있는지 확인
+          if (unicornFOV[`${target.x},${target.y}`]) {
+            // 거리 계산
+            const distance = Math.abs(target.x - m.x) + Math.abs(target.y - m.y);
+            
+            // 더 가까운 몬스터 발견 시 업데이트
+            if (distance < minDistance) {
+              minDistance = distance;
+              nearestMonster = target;
+            }
+          }
+        });
+        
+        // 가까운 몬스터가 있으면 그 방향으로 이동 또는 공격
+        if (nearestMonster) {
+          const mdx = Math.sign(nearestMonster.x - m.x);
+          const mdy = Math.sign(nearestMonster.y - m.y);
+          const mdist = Math.max(Math.abs(nearestMonster.x - m.x), Math.abs(nearestMonster.y - m.y));
+          
+          if (mdist <= 1) {
+            // 몬스터와 인접해 있으면 공격
+            nearestMonster.hp -= 4; // 유니콘은 강한 공격력
+            addMsg('유니콘이 몬스터를 공격했습니다!');
+            
+            if (nearestMonster.hp <= 0) {
+              addMsg('유니콘이 몬스터를 처치했습니다!');
+            }
+          } else {
+            // 몬스터 방향으로 이동 시도
+            const nx = m.x + mdx;
+            const ny = m.y + mdy;
+            
+            if (inMap(nx, ny) && map[ny][nx] !== WALL && 
+                !monsters.some(mm => mm !== m && mm.x === nx && mm.y === ny && mm.hp > 0)) {
+              m.x = nx;
+              m.y = ny;
+            }
+          }
+        } else {
+          // 몬스터가 없으면 랜덤 이동
+          let d = DIRS[Math.floor(Math.random() * 8)];
+          let nx = m.x + d.dx, ny = m.y + d.dy;
+          if (inMap(nx, ny) && map[ny][nx] !== WALL && 
+              !monsters.some(mm => mm !== m && mm.x === nx && mm.y === ny && mm.hp > 0) && 
+              (player.x !== nx || player.y !== ny)) {
+            m.x = nx;
+            m.y = ny;
+          }
+        }
+      } else {
+        // 일반 몬스터는 플레이어를 향해 이동
+        if (inMap(nx, ny) && map[ny][nx] !== WALL && 
+            !monsters.some(mm => mm !== m && mm.x === nx && mm.y === ny && mm.hp > 0) && 
+            (player.x !== nx || player.y !== ny)) {
+          m.x = nx;
+          m.y = ny;
+        }
+      }
     } else {
       // Random move
       let d = DIRS[Math.floor(Math.random() * 8)];
       let nx = m.x + d.dx, ny = m.y + d.dy;
-      if (inMap(nx, ny) && map[ny][nx] !== WALL && !monsters.find(mm => mm !== m && mm.x === nx && mm.y === ny) && (player.x !== nx || player.y !== ny))
-        { m.x = nx; m.y = ny; }
+      if (inMap(nx, ny) && map[ny][nx] !== WALL && 
+          !monsters.some(mm => mm !== m && mm.x === nx && mm.y === ny && mm.hp > 0) && 
+          (player.x !== nx || player.y !== ny)) {
+        m.x = nx;
+        m.y = ny;
+      }
     }
   });
+  
+  // 몬스터 턴 후 시야 공유 상태 업데이트
+  updateSightGroups();
 }
 
 // Reload (now takes a real turn)
@@ -1037,6 +1208,14 @@ function init() {
   // 무기 버튼 초기화
   console.log("무기 버튼 초기화");
   updateWeaponButton();
+  
+  // 시야 공유 상태 초기화
+  console.log("시야 공유 상태 초기화");
+  updateSightGroups();
+  
+  // 게임 루프 시작
+  console.log("게임 루프 시작");
+  startGameLoop();
   
   // Render initial game state
   console.log("초기 게임 상태 렌더링");
@@ -1684,6 +1863,378 @@ window.onload = function() {
   init();
   console.log("게임 초기화 완료");
 };
+
+// 몬스터의 시야 계산 함수
+function calcMonsterFOV(monster) {
+  let vis = {};
+  for (let dy = -VIEW_R; dy <= VIEW_R; ++dy)
+    for (let dx = -VIEW_R; dx <= VIEW_R; ++dx) {
+      let tx = monster.x + dx, ty = monster.y + dy;
+      if (inMap(tx, ty) && Math.sqrt(dx * dx + dy * dy) <= VIEW_R) {
+        los(monster.x, monster.y, tx, ty, (x, y) => {
+          vis[`${x},${y}`] = true;
+          return map[y][x] !== WALL;
+        });
+      }
+    }
+  return vis;
+}
+
+// 시야 공유 그룹 업데이트 함수
+function updateSightGroups() {
+  // 기존 그룹 초기화
+  sightGroups = [];
+  
+  // 모든 유니콘과 플레이어의 시야 계산
+  const playerFOV = calcFOV();
+  const unicorns = monsters.filter(m => m.isUnicorn && m.hp > 0);
+  
+  // 각 유니콘의 시야 계산
+  const unicornFOVs = unicorns.map(unicorn => ({
+    unicorn: unicorn,
+    fov: calcMonsterFOV(unicorn)
+  }));
+  
+  // 시야 공유 관계 확인
+  const entities = [{ type: 'player', fov: playerFOV }, ...unicornFOVs];
+  const connections = [];
+  
+  // 모든 엔티티 쌍에 대해 시야 공유 확인
+  for (let i = 0; i < entities.length; i++) {
+    for (let j = i + 1; j < entities.length; j++) {
+      const entity1 = entities[i];
+      const entity2 = entities[j];
+      
+      // 시야 공유 여부 확인
+      let sharesSight = false;
+      
+      // 엔티티1이 엔티티2를 볼 수 있는지 확인
+      if (entity1.type === 'player') {
+        const unicorn = entity2.unicorn;
+        if (entity1.fov[`${unicorn.x},${unicorn.y}`]) {
+          sharesSight = true;
+        }
+      } else if (entity2.type === 'player') {
+        const unicorn = entity1.unicorn;
+        if (entity2.fov[`${unicorn.x},${unicorn.y}`]) {
+          sharesSight = true;
+        }
+      } else {
+        // 유니콘끼리의 시야 공유 확인
+        const unicorn1 = entity1.unicorn;
+        const unicorn2 = entity2.unicorn;
+        if (entity1.fov[`${unicorn2.x},${unicorn2.y}`]) {
+          sharesSight = true;
+        }
+      }
+      
+      if (sharesSight) {
+        connections.push([i, j]);
+      }
+    }
+  }
+  
+  // 연결 관계를 기반으로 그룹 형성
+  const visited = new Array(entities.length).fill(false);
+  
+  for (let i = 0; i < entities.length; i++) {
+    if (visited[i]) continue;
+    
+    // BFS로 연결된 모든 엔티티 찾기
+    const group = [];
+    const queue = [i];
+    visited[i] = true;
+    
+    while (queue.length > 0) {
+      const current = queue.shift();
+      group.push(current);
+      
+      // 현재 엔티티와 연결된 모든 엔티티 찾기
+      for (const [a, b] of connections) {
+        let next = -1;
+        if (a === current && !visited[b]) next = b;
+        if (b === current && !visited[a]) next = a;
+        
+        if (next !== -1) {
+          visited[next] = true;
+          queue.push(next);
+        }
+      }
+    }
+    
+    // 그룹에 플레이어가 포함되어 있는지 확인
+    const hasPlayer = group.some(idx => entities[idx].type === 'player');
+    
+    // 그룹에 포함된 유니콘들 수집
+    const groupUnicorns = group
+      .filter(idx => entities[idx].type !== 'player')
+      .map(idx => entities[idx].unicorn);
+    
+    // 유효한 그룹만 추가 (플레이어가 있거나 유니콘이 2마리 이상)
+    if (hasPlayer || groupUnicorns.length > 1) {
+      sightGroups.push({
+        hasPlayer: hasPlayer,
+        unicorns: groupUnicorns
+      });
+    }
+  }
+  
+  // 실시간 턴 시스템 활성화 여부 결정
+  const playerGroup = sightGroups.find(group => group.hasPlayer);
+  const unicornGroup = sightGroups.find(group => !group.hasPlayer && group.unicorns.length > 1);
+  const wasActive = realTimeTurnActive;
+  
+  // 플레이어가 포함된 그룹이 있거나, 유니콘끼리 시야가 겹치는 그룹이 있으면 실시간 턴 시스템 활성화
+  realTimeTurnActive = !!(playerGroup || unicornGroup);
+  
+  // 실시간 턴 시스템 상태 변경 시 처리
+  if (!wasActive && realTimeTurnActive) {
+    // 실시간 턴 시스템 활성화
+    startRealTimeTurn();
+    
+    if (playerGroup) {
+      addMsg('유니콘과 시야가 겹쳤습니다! 실시간 턴 시스템이 활성화됩니다.');
+      
+      // 플레이어가 속한 그룹의 유니콘들에게 플레이어 감지 상태 설정
+      playerGroup.unicorns.forEach(unicorn => {
+        unicorn.lastSeenPlayer = true;
+      });
+    } else if (unicornGroup) {
+      addMsg('유니콘들끼리 시야가 겹쳤습니다! 실시간 턴 시스템이 활성화됩니다.');
+    }
+  } else if (wasActive && !realTimeTurnActive) {
+    // 실시간 턴 시스템 비활성화
+    addMsg('실시간 턴 시스템이 비활성화되었습니다. 일반 턴 시스템으로 돌아갑니다.');
+  }
+}
+
+// 실시간 턴 시작 함수
+function startRealTimeTurn() {
+  currentTurnTime = Date.now();
+  playerActedThisTurn = false;
+  
+  // 플레이어가 속한 그룹의 유니콘들에게 랜덤 행동 시간 설정
+  const playerGroup = sightGroups.find(group => group.hasPlayer);
+  if (playerGroup) {
+    playerGroup.unicorns.forEach(unicorn => {
+      // 0~500ms 사이의 랜덤한 시간에 행동
+      unicorn.nextMoveTime = currentTurnTime + Math.floor(Math.random() * turnDuration);
+    });
+  }
+  
+  // 유니콘끼리 시야가 겹치는 그룹의 유니콘들에게 랜덤 행동 시간 설정
+  const unicornGroups = sightGroups.filter(group => !group.hasPlayer && group.unicorns.length > 1);
+  unicornGroups.forEach(group => {
+    group.unicorns.forEach(unicorn => {
+      // 0~500ms 사이의 랜덤한 시간에 행동
+      unicorn.nextMoveTime = currentTurnTime + Math.floor(Math.random() * turnDuration);
+    });
+  });
+}
+
+// 실시간 턴 처리 함수 (게임 루프에서 호출)
+function processRealTimeTurn() {
+  if (!realTimeTurnActive) return;
+  
+  const now = Date.now();
+  const elapsed = now - currentTurnTime;
+  
+  // 턴 시간이 지났는지 확인
+  if (elapsed >= turnDuration) {
+    // 턴 종료, 새 턴 시작
+    endRealTimeTurn();
+    startRealTimeTurn();
+    return;
+  }
+  
+  // 모든 실시간 턴 그룹 처리
+  sightGroups.forEach(group => {
+    // 그룹에 속한 유니콘들의 행동 처리
+    group.unicorns.forEach(unicorn => {
+      // 이 턴에 행동할 시간이 되었고, 아직 행동하지 않았다면
+      if (now >= unicorn.nextMoveTime && unicorn.nextMoveTime >= currentTurnTime) {
+        // 유니콘 행동 처리
+        unicornAction(unicorn);
+        
+        // 행동 완료 표시 (이번 턴에 다시 행동하지 않도록)
+        unicorn.nextMoveTime = currentTurnTime - 1;
+      }
+    });
+  });
+}
+
+// 턴 종료 함수
+function endRealTimeTurn() {
+  // 플레이어가 이번 턴에 행동하지 않았다면 메시지 표시
+  if (!playerActedThisTurn) {
+    addMsg('턴이 지나갔습니다! 빠르게 행동하세요.');
+  }
+  
+  // 시야 공유 그룹 업데이트
+  updateSightGroups();
+  
+  // 실시간 턴이 계속 활성화되어 있다면 UI 업데이트
+  if (realTimeTurnActive) {
+    render();
+  }
+}
+
+// 유니콘 행동 함수
+function unicornAction(unicorn) {
+  // 이미 죽었다면 행동하지 않음
+  if (unicorn.hp <= 0) return;
+  
+  // 시야 내 몬스터 찾기 (유니콘은 다른 몬스터만 공격)
+  const unicornFOV = calcMonsterFOV(unicorn);
+  let nearestMonster = null;
+  let minDistance = Infinity;
+  
+  monsters.forEach(m => {
+    // 자기 자신이거나 유니콘이거나 이미 죽은 몬스터는 제외
+    if (m === unicorn || m.isUnicorn || m.hp <= 0) return;
+    
+    // 시야 내에 있는지 확인
+    if (unicornFOV[`${m.x},${m.y}`]) {
+      // 거리 계산
+      const distance = Math.abs(m.x - unicorn.x) + Math.abs(m.y - unicorn.y);
+      
+      // 더 가까운 몬스터 발견 시 업데이트
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestMonster = m;
+      }
+    }
+  });
+  
+  // 가까운 몬스터가 있으면 그 방향으로 이동 또는 공격
+  if (nearestMonster) {
+    unicorn.targetMonster = nearestMonster;
+    const dx = Math.sign(nearestMonster.x - unicorn.x);
+    const dy = Math.sign(nearestMonster.y - unicorn.y);
+    const dist = Math.max(Math.abs(nearestMonster.x - unicorn.x), Math.abs(nearestMonster.y - unicorn.y));
+    
+    if (dist <= 1) {
+      // 몬스터와 인접해 있으면 공격
+      nearestMonster.hp -= 4; // 유니콘은 강한 공격력
+      addMsg('유니콘이 몬스터를 공격했습니다!');
+      
+      if (nearestMonster.hp <= 0) {
+        addMsg('유니콘이 몬스터를 처치했습니다!');
+        unicorn.targetMonster = null;
+      }
+    } else {
+      // 몬스터 방향으로 이동 시도
+      const nx = unicorn.x + dx;
+      const ny = unicorn.y + dy;
+      
+      if (inMap(nx, ny) && map[ny][nx] !== WALL && 
+          !monsters.some(m => m !== unicorn && m.x === nx && m.y === ny && m.hp > 0)) {
+        unicorn.x = nx;
+        unicorn.y = ny;
+        addMsg('유니콘이 몬스터를 향해 움직입니다.');
+      }
+    }
+  } else if (unicorn.lastSeenPlayer) {
+    // 몬스터가 없고 플레이어를 본 적이 있으면 플레이어 근처로 이동
+    const dx = Math.sign(player.x - unicorn.x);
+    const dy = Math.sign(player.y - unicorn.y);
+    const dist = Math.max(Math.abs(player.x - unicorn.x), Math.abs(player.y - unicorn.y));
+    
+    // 플레이어와 너무 가까우면 거리를 유지
+    if (dist <= 2) {
+      // 플레이어로부터 멀어지는 방향 찾기
+      const nx = unicorn.x - dx;
+      const ny = unicorn.y - dy;
+      
+      if (inMap(nx, ny) && map[ny][nx] !== WALL && 
+          !monsters.some(m => m !== unicorn && m.x === nx && m.y === ny && m.hp > 0)) {
+        unicorn.x = nx;
+        unicorn.y = ny;
+      }
+    } else if (dist > 5) {
+      // 플레이어와 너무 멀면 가까워짐
+      const nx = unicorn.x + dx;
+      const ny = unicorn.y + dy;
+      
+      if (inMap(nx, ny) && map[ny][nx] !== WALL && 
+          !monsters.some(m => m !== unicorn && m.x === nx && m.y === ny && m.hp > 0)) {
+        unicorn.x = nx;
+        unicorn.y = ny;
+      }
+    } else {
+      // 적절한 거리면 랜덤 이동
+      randomUnicornMovement(unicorn);
+    }
+  } else {
+    // 플레이어를 본 적이 없으면 랜덤 이동
+    randomUnicornMovement(unicorn);
+  }
+  
+  // 행동 후 시야 공유 상태 업데이트
+  updateSightGroups();
+}
+
+// 유니콘 랜덤 이동 헬퍼 함수
+function randomUnicornMovement(unicorn) {
+  const directions = [
+    { dx: -1, dy: 0 }, { dx: 1, dy: 0 }, { dx: 0, dy: -1 }, { dx: 0, dy: 1 },
+    { dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 }, { dx: 1, dy: 1 }
+  ];
+  
+  // 랜덤 방향 선택
+  const dir = directions[Math.floor(Math.random() * directions.length)];
+  const nx = unicorn.x + dir.dx;
+  const ny = unicorn.y + dir.dy;
+  
+  // 유효한 위치라면 이동
+  if (inMap(nx, ny) && map[ny][nx] !== WALL && 
+      !monsters.some(m => m !== unicorn && m.x === nx && m.y === ny && m.hp > 0)) {
+    unicorn.x = nx;
+    unicorn.y = ny;
+  }
+}
+
+// 게임 루프 함수
+function startGameLoop() {
+  // 게임 루프 간격 (밀리초)
+  const GAME_LOOP_INTERVAL = 50; // 50ms마다 업데이트 (초당 20회)
+  
+  // 게임 루프 설정
+  window.gameLoopInterval = setInterval(() => {
+    // 게임 오버 상태면 루프 중단
+    if (gameOver) {
+      clearInterval(window.gameLoopInterval);
+      return;
+    }
+    
+    // 실시간 턴 시스템 처리
+    if (realTimeTurnActive) {
+      processRealTimeTurn();
+      
+      // 턴 타이머 UI 업데이트
+      const turnTimer = document.getElementById('turn-timer');
+      const turnTimerBar = document.getElementById('turn-timer-bar');
+      
+      if (turnTimer && turnTimerBar) {
+        const now = Date.now();
+        const elapsed = now - currentTurnTime;
+        const remaining = Math.max(0, turnDuration - elapsed);
+        const percent = (remaining / turnDuration) * 100;
+        
+        turnTimerBar.style.width = `${percent}%`;
+        
+        // 남은 시간에 따라 색상 변경
+        if (percent > 60) {
+          turnTimerBar.style.backgroundColor = '#0f0'; // 녹색
+        } else if (percent > 30) {
+          turnTimerBar.style.backgroundColor = '#ff0'; // 노란색
+        } else {
+          turnTimerBar.style.backgroundColor = '#f00'; // 빨간색
+        }
+      }
+    }
+  }, GAME_LOOP_INTERVAL);
+}
 </script>
 </body>
 </html>
