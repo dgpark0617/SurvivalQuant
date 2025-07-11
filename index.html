@@ -4,7 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SurvivalQuant</title>
-    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            color: #333;
+            margin: 0;
+            padding: 10px;
+        }
+
+        /* 전체 컨테이너 */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* 1. 헤더 섹션 */
+        .header-section {
+            width: 100%;
+            background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+        }
+
+        /* 2. URL 링크 섹션 */
+        .url-links-section {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            justify-content: center;
+        }
+
+        .visitor-count {
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 5px;
+        }
+
+        .visitor-count img {
+            height: 20px;
+        }
+
+        .url-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;  /* 가운데 정렬 추가 */
+            padding: 10px 15px;
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            color: #4e54c8;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+            gap: 8px;
+            min-width: 200px;
+            text-align: center;  /* 텍스트 가운데 정렬 추가 */
+        }
+
+        .url-link:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .url-link img {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* 3. 데이터 디스플레이 영역 */
+        .data-display-section {
+            width: 100%;
+            display: flex;
+            gap: 15px;
+        }
+
+        /* iframe 스타일 */
+        iframe {
+            border: none;
+            background: transparent;
+        }
+
+        #coin-frame {
+            width: 100%;
+            height: 600px;
+        }
+
+        #monte-carlo-frame {
+            width: 100%;
+            height: 800px;
+            margin: 15px 0;
+        }
+
+        #ad-frame {
+            width: 100%;
+            height: 300px;
+            margin: 15px 0;
+        }
+    </style>
 </head>
 <body>
     <div class="main-container">
@@ -32,7 +146,7 @@
                 📺
                 유튜브
             </a>
-            <a href="utilities.html" class="url-link">
+            <a href="utilities/index.html" class="url-link">
                 🛠️
                 유틸리티
             </a>
@@ -42,10 +156,10 @@
             </a>
         </div>
 
-        <iframe id="monte-carlo-frame" src="monte_carlo_simulation.html" frameborder="0"></iframe>
+        <iframe id="monte-carlo-frame" src="main/monte_carlo_simulation.html" frameborder="0"></iframe>
 
         <div class="data-display-section">
-            <iframe id="coin-frame" src="coin_data.html" frameborder="0"></iframe>
+            <iframe id="coin-frame" src="main/coin_data.html" frameborder="0"></iframe>
         </div>
         
         <iframe id="ad-frame" src="ads/ad_display.html" frameborder="0"></iframe>
