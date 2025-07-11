@@ -57,10 +57,18 @@
       background: #c7f0d8;
       animation: pulse 1.5s infinite;
     }
+    .exploding {
+      animation: explode 0.5s forwards;
+    }
     @keyframes pulse {
       0% { background-color: #c7f0d8; }
       50% { background-color: #8ed1ab; }
       100% { background-color: #c7f0d8; }
+    }
+    @keyframes explode {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.8; }
+      100% { transform: scale(0.5); opacity: 0; }
     }
     button {
       background: linear-gradient(45deg, #667eea, #764ba2);
@@ -83,16 +91,34 @@
       font-size: 1.2em;
       color: #666;
     }
+    #message {
+      margin: 10px;
+      font-size: 1.2em;
+      color: #764ba2;
+      height: 1.5em;
+    }
+    .shuffle-effect {
+      animation: shuffle 0.8s;
+    }
+    @keyframes shuffle {
+      0% { transform: rotate(0deg) scale(1); }
+      25% { transform: rotate(-5deg) scale(0.95); }
+      50% { transform: rotate(5deg) scale(1.05); }
+      75% { transform: rotate(-5deg) scale(0.95); }
+      100% { transform: rotate(0deg) scale(1); }
+    }
   </style>
 </head>
 <body>
   <h1>주키퍼 매치3 🦁🐼🐸</h1>
   <div id="score">점수: 0</div>
   <div id="timer">움직임 힌트까지: 10초</div>
+  <div id="message"></div>
   <div id="board"></div>
   <button onclick="restart()">다시 시작</button>
   <script>
     const animals = ["🐶", "🐱", "🐵", "🦁", "🐸", "🐼", "🦊", "🐨"];
+    const explosionEmojis = ["💥", "💫", "✨", "🎇", "🎆", "⚡"];
     const N = 8; // 보드 크기 확장
     let board = [];
     let selected = null;
@@ -103,6 +129,10 @@
 
     function randomAnimal() {
       return animals[Math.floor(Math.random() * animals.length)];
+    }
+
+    function randomExplosion() {
+      return explosionEmojis[Math.floor(Math.random() * explosionEmojis.length)];
     }
 
     function makeBoard() {
@@ -151,7 +181,6 @@
     function selectCell(x, y) {
       if (animating) return; // 애니메이션 중에는 선택 불가
       
-      lastMoveTime = Date.now();
       clearHints();
       
       if (selected) {
@@ -160,6 +189,8 @@
         } else if (adjacent(selected, {x, y})) {
           swap(selected, {x, y});
           if (findMatches().length > 0) {
+            // 매치 성공 시 힌트 시간 초기화
+            lastMoveTime = Date.now();
             resolveMatches();
           } else {
             swap(selected, {x, y}); // 되돌리기
@@ -255,34 +286,94 @@
           }
         }
         
-        // 점수 계산 및 제거
+        // 매치된 타일을 폭발 이모티콘으로 변경하고 애니메이션 효과 적용
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            if (matched[y][x]) {
+              const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+              if (cell) {
+                cell.textContent = randomExplosion();
+                cell.classList.add('exploding');
+              }
+            }
+          }
+        }
+        
+        // 점수 계산
         let removed = 0;
         for (let y = 0; y < N; y++) {
           for (let x = 0; x < N; x++) {
             if (matched[y][x]) {
-              board[y][x] = null;
               removed++;
             }
           }
         }
         
         score += removed * 10;
+        document.getElementById('score').textContent = `점수: ${score}`;
         
-        // 아래로 내리기 (원래 로직처럼 간단하게)
-        for (let x = 0; x < N; x++) {
-          let col = [];
-          for (let y = N-1; y >= 0; y--) {
-            if (board[y][x]) col.push(board[y][x]);
+        // 잠시 대기 후 타일 제거 및 내리기
+        setTimeout(() => {
+          // 매치된 셀 제거
+          for (let y = 0; y < N; y++) {
+            for (let x = 0; x < N; x++) {
+              if (matched[y][x]) {
+                board[y][x] = null;
+              }
+            }
           }
-          while (col.length < N) col.push(randomAnimal());
-          for (let y = N-1; y >= 0; y--) board[y][x] = col[N-1-y];
-        }
+          
+          // 아래로 내리기
+          for (let x = 0; x < N; x++) {
+            let col = [];
+            for (let y = N-1; y >= 0; y--) {
+              if (board[y][x]) col.push(board[y][x]);
+            }
+            while (col.length < N) col.push(randomAnimal());
+            for (let y = N-1; y >= 0; y--) board[y][x] = col[N-1-y];
+          }
+          
+          drawBoard();
+          
+          // 연쇄 매치 확인
+          if (findMatches().length > 0) {
+            resolveMatches();
+          } else {
+            // 가능한 움직임이 없는지 확인
+            if (findPossibleMoves().length === 0) {
+              shuffleBoard();
+            } else {
+              animating = false;
+            }
+          }
+        }, 600);
         
-      } while (findMatches().length > 0);
+        return; // setTimeout 내에서 처리하므로 여기서 종료
+        
+      } while (false); // setTimeout으로 대체했으므로 루프는 한 번만 실행
+    }
+
+    function shuffleBoard() {
+      showMessage("가능한 움직임이 없습니다. 타일을 섞습니다!");
       
-      document.getElementById('score').textContent = `점수: ${score}`;
-      drawBoard();
-      animating = false;
+      // 보드에 섞는 효과 적용
+      const boardDiv = document.getElementById('board');
+      boardDiv.classList.add('shuffle-effect');
+      
+      setTimeout(() => {
+        // 타일 랜덤 재배치
+        makeBoard();
+        drawBoard();
+        boardDiv.classList.remove('shuffle-effect');
+        
+        // 가능한 움직임이 있는지 확인
+        if (findPossibleMoves().length === 0) {
+          // 다시 섞기
+          shuffleBoard();
+        } else {
+          animating = false;
+        }
+      }, 800);
     }
 
     function findPossibleMoves() {
@@ -330,12 +421,25 @@
         
         if (cell1) cell1.classList.add('hint');
         if (cell2) cell2.classList.add('hint');
+      } else {
+        // 가능한 움직임이 없으면 타일 섞기
+        shuffleBoard();
       }
     }
 
     function clearHints() {
       const hints = document.querySelectorAll('.hint');
       hints.forEach(hint => hint.classList.remove('hint'));
+    }
+
+    function showMessage(msg) {
+      const messageEl = document.getElementById('message');
+      messageEl.textContent = msg;
+      
+      // 3초 후 메시지 제거
+      setTimeout(() => {
+        messageEl.textContent = '';
+      }, 3000);
     }
 
     function updateTimer() {
