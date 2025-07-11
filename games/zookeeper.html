@@ -57,33 +57,10 @@
       background: #c7f0d8;
       animation: pulse 1.5s infinite;
     }
-    .removing {
-      animation: pop 0.5s;
-      opacity: 0;
-    }
-    .falling {
-      animation: fall 0.5s;
-    }
-    .new-tile {
-      animation: drop-in 0.5s;
-    }
     @keyframes pulse {
       0% { background-color: #c7f0d8; }
       50% { background-color: #8ed1ab; }
       100% { background-color: #c7f0d8; }
-    }
-    @keyframes pop {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.2); opacity: 0.5; }
-      100% { transform: scale(0); opacity: 0; }
-    }
-    @keyframes fall {
-      0% { transform: translateY(-50px); }
-      100% { transform: translateY(0); }
-    }
-    @keyframes drop-in {
-      0% { transform: translateY(-50px); opacity: 0; }
-      100% { transform: translateY(0); opacity: 1; }
     }
     button {
       background: linear-gradient(45deg, #667eea, #764ba2);
@@ -252,98 +229,60 @@
     function resolveMatches() {
       animating = true;
       
-      let matched = Array.from(Array(N), () => Array(N).fill(false));
-      const matches = findMatches();
-      let anyMatch = matches.length > 0;
-      
-      if (!anyMatch) {
-        animating = false;
-        return;
-      }
-      
-      // 매치된 셀 표시
-      for (const m of matches) {
-        if (m.vertical) {
-          for (let y = m.y1; y <= m.y2; y++) matched[y][m.x] = true;
-        } else if (m.square) {
-          matched[m.y][m.x] = true;
-          matched[m.y][m.x+1] = true;
-          matched[m.y+1][m.x] = true;
-          matched[m.y+1][m.x+1] = true;
-        } else {
-          for (let x = m.x1; x <= m.x2; x++) matched[m.y][x] = true;
+      // 원래 로직과 유사하게 do-while 루프 사용
+      let matched, anyMatch = false;
+      do {
+        matched = Array.from(Array(N), () => Array(N).fill(false));
+        const matches = findMatches();
+        anyMatch = matches.length > 0;
+        
+        if (!anyMatch) {
+          animating = false;
+          break;
         }
-      }
-      
-      // 애니메이션 효과와 점수 계산
-      let removed = 0;
-      for (let y = 0; y < N; y++) {
-        for (let x = 0; x < N; x++) {
-          if (matched[y][x]) {
-            const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-            if (cell) {
-              cell.classList.add('removing');
+        
+        // 매치된 셀 표시
+        for (const m of matches) {
+          if (m.vertical) {
+            for (let y = m.y1; y <= m.y2; y++) matched[y][m.x] = true;
+          } else if (m.square) {
+            matched[m.y][m.x] = true;
+            matched[m.y][m.x+1] = true;
+            matched[m.y+1][m.x] = true;
+            matched[m.y+1][m.x+1] = true;
+          } else {
+            for (let x = m.x1; x <= m.x2; x++) matched[m.y][x] = true;
+          }
+        }
+        
+        // 점수 계산 및 제거
+        let removed = 0;
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            if (matched[y][x]) {
+              board[y][x] = null;
               removed++;
             }
           }
         }
-      }
-      
-      score += removed * 10;
-      document.getElementById('score').textContent = `점수: ${score}`;
-      
-      // 애니메이션 후 처리
-      setTimeout(() => {
-        // 매치된 셀 제거 및 새 보드 상태 계산
-        let newBoard = Array.from(Array(N), () => Array(N).fill(null));
-        let newTiles = Array.from(Array(N), () => Array(N).fill(false));
         
-        // 각 열에 대해 처리
+        score += removed * 10;
+        
+        // 아래로 내리기 (원래 로직처럼 간단하게)
         for (let x = 0; x < N; x++) {
-          let destRow = N - 1; // 아래부터 채우기
-          
-          // 기존 타일 중 매치되지 않은 것들을 아래부터 채움
-          for (let y = N - 1; y >= 0; y--) {
-            if (!matched[y][x]) {
-              newBoard[destRow][x] = board[y][x];
-              destRow--;
-            }
+          let col = [];
+          for (let y = N-1; y >= 0; y--) {
+            if (board[y][x]) col.push(board[y][x]);
           }
-          
-          // 빈 공간을 새 타일로 채움
-          for (let y = destRow; y >= 0; y--) {
-            newBoard[y][x] = randomAnimal();
-            newTiles[y][x] = true; // 새로 생성된 타일 표시
-          }
+          while (col.length < N) col.push(randomAnimal());
+          for (let y = N-1; y >= 0; y--) board[y][x] = col[N-1-y];
         }
         
-        // 보드 상태 업데이트
-        board = newBoard;
-        drawBoard();
-        
-        // 애니메이션 적용
-        for (let y = 0; y < N; y++) {
-          for (let x = 0; x < N; x++) {
-            const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-            if (cell) {
-              if (newTiles[y][x]) {
-                cell.classList.add('new-tile'); // 새 타일은 위에서 떨어지는 애니메이션
-              } else {
-                cell.classList.add('falling'); // 기존 타일은 아래로 이동하는 애니메이션
-              }
-            }
-          }
-        }
-        
-        // 연쇄 매치 확인
-        setTimeout(() => {
-          if (findMatches().length > 0) {
-            resolveMatches();
-          } else {
-            animating = false;
-          }
-        }, 500);
-      }, 500);
+      } while (findMatches().length > 0);
+      
+      document.getElementById('score').textContent = `점수: ${score}`;
+      drawBoard();
+      animating = false;
     }
 
     function findPossibleMoves() {
