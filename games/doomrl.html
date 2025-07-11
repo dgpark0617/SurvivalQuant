@@ -200,7 +200,7 @@ const VIEW_R = 8;             // Sight radius
 const SCREEN_W = 30;          // Displayed area width
 const SCREEN_H = 20;          // Displayed area height
 const MONSTER_COUNT = 100;     // Number of monsters
-const UNICORN_COUNT = 10;     // Number of unicorns
+const UNICORN_COUNT = 3;     // Number of unicorns
 const PLAYER_START_HP = 10;   // Player HP
 const PLAYER_AMMO_MAX = 6;    // Gun max ammo
 const MONSTER_HP = 5;         // Monster HP (raise for harder game)
@@ -957,12 +957,8 @@ function tryMove(dx, dy) {
 function monsterTurn() {
   let vis = calcFOV();
   monsters.forEach(m => {
-    // 유니콘은 실시간 턴 시스템에 속해 있을 때만 일반 턴에서 제외
-    const isUnicornInRealTimeTurn = m.isUnicorn && 
-                                  sightGroups.some(group => 
-                                    group.unicorns.includes(m) && 
-                                    (group.hasPlayer || group.unicorns.length > 1)
-                                  );
+    // 유니콘은 플레이어 시야에 있을 때만 일반 턴에서 제외
+    const isUnicornInRealTimeTurn = m.isUnicorn && vis[`${m.x},${m.y}`] && realTimeTurnActive;
     
     if (isUnicornInRealTimeTurn) return;
     
@@ -1899,6 +1895,12 @@ function updateSightGroups() {
   const entities = [{ type: 'player', fov: playerFOV }, ...unicornFOVs];
   const connections = [];
   
+  // 플레이어의 시야에 유니콘이 있는지 직접 확인
+  let playerCanSeeUnicorn = false;
+  if (unicorns.length > 0) {
+    playerCanSeeUnicorn = unicorns.some(unicorn => playerFOV[`${unicorn.x},${unicorn.y}`]);
+  }
+  
   // 모든 엔티티 쌍에 대해 시야 공유 확인
   for (let i = 0; i < entities.length; i++) {
     for (let j = i + 1; j < entities.length; j++) {
@@ -1984,23 +1986,23 @@ function updateSightGroups() {
   const unicornGroup = sightGroups.find(group => !group.hasPlayer && group.unicorns.length > 1);
   const wasActive = realTimeTurnActive;
   
-  // 플레이어가 포함된 그룹이 있거나, 유니콘끼리 시야가 겹치는 그룹이 있으면 실시간 턴 시스템 활성화
-  realTimeTurnActive = !!(playerGroup || unicornGroup);
+  // 플레이어가 직접 유니콘을 볼 수 있을 때만 실시간 턴 시스템 활성화
+  realTimeTurnActive = playerCanSeeUnicorn;
   
   // 실시간 턴 시스템 상태 변경 시 처리
   if (!wasActive && realTimeTurnActive) {
     // 실시간 턴 시스템 활성화
     startRealTimeTurn();
     
-    if (playerGroup) {
+    if (playerCanSeeUnicorn) {
       addMsg('유니콘과 시야가 겹쳤습니다! 실시간 턴 시스템이 활성화됩니다.');
       
-      // 플레이어가 속한 그룹의 유니콘들에게 플레이어 감지 상태 설정
-      playerGroup.unicorns.forEach(unicorn => {
-        unicorn.lastSeenPlayer = true;
+      // 플레이어 시야에 있는 유니콘들에게 플레이어 감지 상태 설정
+      unicorns.forEach(unicorn => {
+        if (playerFOV[`${unicorn.x},${unicorn.y}`]) {
+          unicorn.lastSeenPlayer = true;
+        }
       });
-    } else if (unicornGroup) {
-      addMsg('유니콘들끼리 시야가 겹쳤습니다! 실시간 턴 시스템이 활성화됩니다.');
     }
   } else if (wasActive && !realTimeTurnActive) {
     // 실시간 턴 시스템 비활성화
@@ -2065,8 +2067,11 @@ function processRealTimeTurn() {
 
 // 턴 종료 함수
 function endRealTimeTurn() {
-  // 플레이어가 이번 턴에 행동하지 않았다면 메시지 표시
-  if (!playerActedThisTurn) {
+  // 플레이어가 포함된 그룹이 있는 경우에만 메시지 표시
+  const playerInvolved = sightGroups.some(group => group.hasPlayer);
+  
+  // 플레이어가 이번 턴에 행동하지 않았다면 메시지 표시 (플레이어가 포함된 경우만)
+  if (playerInvolved && !playerActedThisTurn) {
     addMsg('턴이 지나갔습니다! 빠르게 행동하세요.');
   }
   
@@ -2170,8 +2175,10 @@ function unicornAction(unicorn) {
     randomUnicornMovement(unicorn);
   }
   
-  // 행동 후 시야 공유 상태 업데이트
-  updateSightGroups();
+  // 행동 후 시야 공유 상태 업데이트는 플레이어가 시야에 있을 가능성이 있을 때만 수행
+  if (unicorn.lastSeenPlayer) {
+    updateSightGroups();
+  }
 }
 
 // 유니콘 랜덤 이동 헬퍼 함수
@@ -2216,6 +2223,8 @@ function startGameLoop() {
       const turnTimerBar = document.getElementById('turn-timer-bar');
       
       if (turnTimer && turnTimerBar) {
+        // 실시간 턴 시스템이 활성화된 경우에만 타이머 표시 (이미 플레이어가 유니콘을 볼 수 있는지 확인됨)
+        turnTimer.style.display = 'block';
         const now = Date.now();
         const elapsed = now - currentTurnTime;
         const remaining = Math.max(0, turnDuration - elapsed);
@@ -2231,6 +2240,12 @@ function startGameLoop() {
         } else {
           turnTimerBar.style.backgroundColor = '#f00'; // 빨간색
         }
+      }
+    } else {
+      // 실시간 턴 시스템이 비활성화된 경우 타이머 숨김
+      const turnTimer = document.getElementById('turn-timer');
+      if (turnTimer) {
+        turnTimer.style.display = 'none';
       }
     }
   }, GAME_LOOP_INTERVAL);
