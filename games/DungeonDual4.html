@@ -156,7 +156,6 @@
     <div id="board"></div>
   </div>
   <div id="actions" style="display:none;">
-    <button id="actionBtn" onclick="applySelection()" disabled>실행</button>
     <button onclick="initGame()">다시 시작</button>
   </div>
   <div id="message"></div>
@@ -365,7 +364,7 @@
         goldMultiplier: 1,
         expMultiplier: 1
       };
-      message = "자신의 영웅(🤺)에서 시작해 3개 이상 경로를 만들고 '실행'을 누르세요!";
+      message = "자신의 영웅(🤺)에서 시작해 경로를 만들고 마지막 타일을 한번 더 클릭하세요!";
       board = [];
       let px1 = Math.floor(Math.random() * SIZE);
       let py1 = Math.floor(Math.random() * SIZE);
@@ -394,7 +393,6 @@
       updateStats();
       render();
       showMessage(message);
-      updateActionBtn();
       updateBoardGrid();
       updateTurnIndicator();
     }
@@ -546,16 +544,26 @@
         if((turn === 1 && !isPlayer1(i, j)) || (turn === 2 && !isPlayer2(i, j))) return;
         selectedPath.push(pos);
         render();
-        updateActionBtn();
         return;
       }
 
-      // 이미 선택된 위치는 선택 취소
+      // 이미 선택된 위치는 선택 취소 또는 경로 실행
       const existingIndex = selectedPath.findIndex(([x,y]) => x===i && y===j);
       if(existingIndex !== -1) {
-        selectedPath = selectedPath.slice(0, existingIndex);
+        // 마지막 타일을 다시 클릭한 경우 경로 실행
+        if(existingIndex === selectedPath.length - 1 && selectedPath.length >= 2) {
+          // 경로가 유효한지 확인 (기존 updateActionBtn 로직 일부 사용)
+          const validStart = (turn === 1 && isPlayer1(selectedPath[0][0], selectedPath[0][1])) ||
+                            (turn === 2 && isPlayer2(selectedPath[0][0], selectedPath[0][1]));
+          
+          if(validStart) {
+            applySelection();
+            return;
+          }
+        }
+        // 마지막이 아닌 타일 클릭 시 해당 타일까지만 경로 유지
+        selectedPath = selectedPath.slice(0, existingIndex + 1);
         render();
-        updateActionBtn();
         return;
       }
 
@@ -569,7 +577,6 @@
         if(isAllyMonster(i, j) || isEnemyMonster(i, j)) {
           selectedPath.push(pos);
           render();
-          updateActionBtn();
           return;
         }
       } else if(selectedPath.length > 1) {
@@ -612,33 +619,8 @@
 
       selectedPath.push(pos);
       render();
-      updateActionBtn();
     }
 
-    function updateActionBtn() {
-      // 시작 위치가 올바른지 확인
-      const validStart = (turn === 1 && isPlayer1(selectedPath[0][0], selectedPath[0][1])) ||
-                        (turn === 2 && isPlayer2(selectedPath[0][0], selectedPath[0][1]));
-      
-      if(!validStart || selectedPath.length < 2) {
-        document.getElementById('actionBtn').disabled = true;
-        return;
-      }
-
-      // 아군 몬스터로의 이동인 경우
-      if(selectedPath.length === 2) {
-        const [targetX, targetY] = selectedPath[1];
-        const isAllyMonsterMove = (turn === 1 && board[targetX][targetY].type === "troll") ||
-                                 (turn === 2 && board[targetX][targetY].type === "vampire");
-        if(isAllyMonsterMove) {
-          document.getElementById('actionBtn').disabled = false;
-          return;
-        }
-      }
-
-      // 1칸 이동이나 링크 연결 이동 모두 가능
-      document.getElementById('actionBtn').disabled = false;
-    }
     function applyGravity() {
       let moved;
       do {
@@ -891,8 +873,6 @@
         if(currentStats.hp <= 0) {
           const winner = turn === 1 ? "플레이어2" : "플레이어1";
           showMessage(`게임 종료! ${winner}의 승리!`);
-          // 게임 재시작 버튼만 활성화
-          document.getElementById('actionBtn').disabled = true;
           return;
         }
       }
@@ -907,7 +887,6 @@
       } else {
         showMessage("이동 완료!");
       }
-      updateActionBtn();
       updateTurnIndicator();
     }
     function monsterAttackPhase() {
@@ -944,7 +923,6 @@
       turn = 3 - turn;
       updateTurnIndicator();
       render();
-      updateActionBtn();
     }
     window.addEventListener('resize', function() {
       render();
