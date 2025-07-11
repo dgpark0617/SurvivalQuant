@@ -2,15 +2,160 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Simple DoomRL (ASCII, JS, One File, Customizable, True Turn-based Reload)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Doom Emoji RL (Emoji-based, JS, One File, Customizable, True Turn-based Reload)</title>
   <style>
-    body { background: #f5f5f5; color: #181818; font-family: monospace; }
-    pre { line-height: 1.0; font-size: 12px; }
-    #main { user-select: none; }
+    body { 
+      background: #222; 
+      color: #eee; 
+      font-family: 'Courier New', monospace; 
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    #game-container {
+      display: inline-block;
+      margin: 0 auto;
+      max-width: 100%;
+    }
+    #game-grid {
+      display: grid;
+      grid-template-columns: repeat(30, 1fr);
+      gap: 0px;
+      margin-bottom: 10px;
+      background-color: #111;
+      border: 2px solid #444;
+      padding: 5px;
+    }
+    .cell {
+      width: 20px;
+      height: 20px;
+      font-size: 18px;
+      line-height: 20px;
+      text-align: center;
+      user-select: none;
+    }
+    #status-bar {
+      font-size: 16px;
+      margin-bottom: 5px;
+      padding: 5px;
+      background-color: #333;
+      border: 1px solid #555;
+      text-align: left;
+    }
+    #message-log {
+      height: 80px;
+      overflow-y: auto;
+      font-size: 14px;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      padding: 5px;
+      background-color: #333;
+      border: 1px solid #555;
+      text-align: left;
+    }
+    #mobile-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 15px;
+      user-select: none;
+    }
+    .controls-row {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 5px;
+    }
+    .dir-btn, .action-btn {
+      width: 50px;
+      height: 50px;
+      margin: 0 5px;
+      font-size: 24px;
+      background-color: #444;
+      border: 2px solid #666;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .dir-btn:active, .action-btn:active {
+      background-color: #666;
+      transform: scale(0.95);
+    }
+    .action-row {
+      margin-top: 10px;
+    }
+    .action-btn {
+      background-color: #553355;
+    }
+    /* 모바일 최적화 */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px 5px;
+      }
+      .cell {
+        width: 18px;
+        height: 18px;
+        font-size: 16px;
+      }
+      .dir-btn, .action-btn {
+        width: 45px;
+        height: 45px;
+        margin: 0 3px;
+      }
+    }
+    /* 작은 화면 최적화 */
+    @media (max-width: 480px) {
+      .cell {
+        width: 16px;
+        height: 16px;
+        font-size: 14px;
+      }
+      .dir-btn, .action-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+      }
+    }
+    .hidden {
+      visibility: hidden;
+    }
+    .wall { background-color: #555; }
+    .floor { background-color: #111; }
   </style>
 </head>
 <body>
-<pre id="main"></pre>
+<div id="game-container">
+  <div id="status-bar"></div>
+  <div id="game-grid"></div>
+  <div id="message-log"></div>
+  <div id="mobile-controls">
+    <div class="controls-row">
+      <button class="dir-btn" data-dir="6">↖️</button>
+      <button class="dir-btn" data-dir="7">⬆️</button>
+      <button class="dir-btn" data-dir="8">↗️</button>
+    </div>
+    <div class="controls-row">
+      <button class="dir-btn" data-dir="3">⬅️</button>
+      <button class="action-btn" id="aim-btn">🔫</button>
+      <button class="dir-btn" data-dir="5">➡️</button>
+    </div>
+    <div class="controls-row">
+      <button class="dir-btn" data-dir="0">↙️</button>
+      <button class="dir-btn" data-dir="1">⬇️</button>
+      <button class="dir-btn" data-dir="2">↘️</button>
+    </div>
+    <div class="controls-row action-row">
+      <button class="action-btn" id="reload-btn">🔄</button>
+      <button class="action-btn" id="run-btn">👟</button>
+      <button class="action-btn" id="weapon-btn">🔫⚡</button>
+    </div>
+  </div>
+</div>
 <script>
 // ======= Game configuration (difficulty & settings) =======
 const MAP_W = 100;            // Map width
@@ -27,7 +172,20 @@ const GUN_DAMAGE_MIN = 2;     // Gun minimum damage
 const GUN_DAMAGE_MAX = 3;     // Gun maximum damage (inclusive)
 // ==========================================================
 
-// Map symbols
+// Map symbols with emoji
+const TILES = {
+  FLOOR: { symbol: '.', emoji: '⬛' },
+  WALL: { symbol: '#', emoji: '🧱' },
+  PLAYER: { symbol: '@', emoji: '🤺' },
+  MONSTER: { symbol: 'M', emoji: '👹' },
+  MONSTER_WEAK: { symbol: 'M', emoji: '👺' },
+  MONSTER_STRONG: { symbol: 'M', emoji: '👿' },
+  MONSTER_DEAD: { symbol: 'M', emoji: '💀' },
+  BULLET: { symbol: '*', emoji: '💥' },
+  HIDDEN: { symbol: ' ', emoji: '⬜' }
+};
+
+// For compatibility with existing code
 const FLOOR = '.', WALL = '#', PLAYER = '@', MONSTER = 'M', BULLET = '*';
 
 // Game state
@@ -38,11 +196,15 @@ let player = {
   hp: PLAYER_START_HP,
   ammo: PLAYER_AMMO_MAX,
   aiming: false,
-  aimDir: { dx: 0, dy: 0 }
+  aimDir: { dx: 0, dy: 0 },
+  aimTarget: null,      // 조준 중인 타겟 위치 {x, y}
+  aimPath: [],          // 조준 경로 [{x, y}, ...]
+  currentWeapon: 'gun'  // 현재 무기 (gun, rocket, laser)
 };
 let monsters = [];
 let msg = [];
 let gameOver = false;
+let highlightedCells = []; // 하이라이트된 셀 추적
 
 // Directions for keypad (1-9, skip 5)
 const DIRS = [
@@ -59,7 +221,10 @@ const NUM_DIR_KEYS = {
   "52": 3, "53": 4, "54": 5, // 4,5,6
   "55": 6, "56": 7, "57": 8  // 7,8,9
 };
-function addMsg(s) { msg.unshift(s); if (msg.length > 5) msg.length = 5; }
+function addMsg(s) { 
+  msg.unshift(s); 
+  if (msg.length > 5) msg.length = 5; 
+}
 
 // Map generation: simple empty with border and some random walls
 function genMap() {
@@ -97,7 +262,15 @@ function placeEntities() {
   monsters = [];
   for (let i = 0; i < MONSTER_COUNT; ++i) {
     let m = randPos();
-    monsters.push({ x: m.x, y: m.y, hp: MONSTER_HP });
+    // Create different monster types
+    let monsterType = Math.random();
+    if (monsterType < 0.7) { // Regular monster
+      monsters.push({ x: m.x, y: m.y, hp: MONSTER_HP, type: 'MONSTER' });
+    } else if (monsterType < 0.9) { // Weak monster
+      monsters.push({ x: m.x, y: m.y, hp: MONSTER_HP - 2, type: 'MONSTER_WEAK' });
+    } else { // Strong monster
+      monsters.push({ x: m.x, y: m.y, hp: MONSTER_HP + 2, type: 'MONSTER_STRONG' });
+    }
   }
 }
 
@@ -135,29 +308,301 @@ function calcFOV() {
   return vis;
 }
 
+// 경로 시각화 함수
+function calculatePath(startX, startY, endX, endY) {
+  let path = [];
+  
+  // Bresenham 알고리즘으로 경로 계산
+  let dx = Math.abs(endX - startX), sx = startX < endX ? 1 : -1;
+  let dy = -Math.abs(endY - startY), sy = startY < endY ? 1 : -1;
+  let err = dx + dy, e2;
+  
+  let x = startX, y = startY;
+  
+  while (true) {
+    // 시작점은 경로에 포함하지 않음
+    if (!(x === startX && y === startY)) {
+      path.push({x, y});
+    }
+    
+    if (x === endX && y === endY) break;
+    
+    e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x += sx; }
+    if (e2 <= dx) { err += dx; y += sy; }
+    
+    // 벽을 만나면 경로 중단
+    if (inMap(x, y) && map[y][x] === WALL) break;
+  }
+  
+  return path;
+}
+
+// 조준 경로 표시 함수
+function showAimPath(startX, startY, endX, endY) {
+  // 이전 하이라이트 제거
+  clearHighlights();
+  
+  // 경로 계산
+  const path = calculatePath(startX, startY, endX, endY);
+  player.aimPath = path;
+  
+  // 경로 표시
+  path.forEach(pos => {
+    const cellIndex = (pos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
+                      (pos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
+    const cells = document.getElementById('game-grid').children;
+    
+    if (cellIndex >= 0 && cellIndex < cells.length) {
+      const cell = cells[cellIndex];
+      cell.style.border = '1px solid yellow';
+      cell.style.boxShadow = 'inset 0 0 5px yellow';
+      highlightedCells.push(cell);
+    }
+  });
+}
+
+// 하이라이트 제거 함수
+function clearHighlights() {
+  highlightedCells.forEach(cell => {
+    cell.style.border = '';
+    cell.style.boxShadow = '';
+  });
+  highlightedCells = [];
+  player.aimPath = [];
+}
+
+// 가장 가까운 몬스터 찾기
+function findNearestVisibleMonster() {
+  let vis = calcFOV();
+  let nearestMonster = null;
+  let minDistance = Infinity;
+  
+  monsters.forEach(m => {
+    if (m.hp <= 0) return; // 죽은 몬스터는 제외
+    
+    // 시야 내에 있는지 확인
+    if (vis[`${m.x},${m.y}`]) {
+      // 맨해튼 거리 계산
+      let distance = Math.abs(m.x - player.x) + Math.abs(m.y - player.y);
+      
+      // 더 가까운 몬스터 발견 시 업데이트
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestMonster = m;
+      }
+    }
+  });
+  
+  return nearestMonster;
+}
+
+// 자동 조준 함수
+function autoAim() {
+  const nearestMonster = findNearestVisibleMonster();
+  
+  if (nearestMonster) {
+    // 몬스터 방향으로 조준 설정
+    const dx = Math.sign(nearestMonster.x - player.x);
+    const dy = Math.sign(nearestMonster.y - player.y);
+    
+    player.aimDir = { dx, dy };
+    player.aimTarget = { x: nearestMonster.x, y: nearestMonster.y };
+    
+    // 궤적 표시
+    showAimPath(player.x, player.y, nearestMonster.x, nearestMonster.y);
+    
+    addMsg(`조준: ${nearestMonster.x},${nearestMonster.y}의 몬스터`);
+    return true;
+  }
+  
+  addMsg('시야 내에 몬스터가 없습니다.');
+  return false; // 시야 내에 몬스터가 없음
+}
+
 // Render the game
 function render() {
+  // 레이저 효과가 진행 중이면 렌더링 건너뛰기
+  if (window.laserEffectActive && Date.now() < window.laserEffectActive) {
+    console.log("레이저 효과 중 - 렌더링 건너뜀");
+    return;
+  }
+  
   let vis = calcFOV();
-  let out = "";
-  let sx = Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - MAP_W / 2 < 0 ? 0 : player.x - SCREEN_W / 2));
-  let sy = Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - MAP_H / 2 < 0 ? 0 : player.y - SCREEN_H / 2));
+  let gameGrid = document.getElementById('game-grid');
+  let statusBar = document.getElementById('status-bar');
+  let messageLog = document.getElementById('message-log');
+  
+  // Clear previous content
+  gameGrid.innerHTML = '';
+  
+  // Set grid template
+  gameGrid.style.gridTemplateColumns = `repeat(${SCREEN_W}, 1fr)`;
+  
+  // Calculate view area
+  let sx = Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2)));
+  let sy = Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)));
+  
+  // Create grid cells
   for (let y = sy; y < sy + SCREEN_H; ++y) {
     for (let x = sx; x < sx + SCREEN_W; ++x) {
-      let ch = map[y][x];
-      let m = monsters.find(m => m.x === x && m.y === y && m.hp > 0);
-      if (player.x === x && player.y === y) ch = PLAYER;
-      else if (m && vis[`${x},${y}`]) ch = MONSTER;
-      else if (!vis[`${x},${y}`]) ch = ' ';
-      out += ch;
+      let cell = document.createElement('div');
+      cell.className = 'cell';
+      
+      // 타일 좌표 저장 (클릭 이벤트용)
+      cell.dataset.x = x;
+      cell.dataset.y = y;
+      
+      // Determine cell content
+      let cellType = 'HIDDEN';
+      if (vis[`${x},${y}`]) {
+        if (player.x === x && player.y === y) {
+          cellType = 'PLAYER';
+        } else {
+          let m = monsters.find(m => m.x === x && m.y === y);
+          if (m) {
+            if (m.hp <= 0) {
+              cellType = 'MONSTER_DEAD';
+            } else {
+              cellType = m.type || 'MONSTER';
+              // Add monster HP display
+              cell.style.position = 'relative';
+              let hpDisplay = document.createElement('div');
+              hpDisplay.style.position = 'absolute';
+              hpDisplay.style.bottom = '0';
+              hpDisplay.style.right = '0';
+              hpDisplay.style.fontSize = '8px';
+              hpDisplay.style.backgroundColor = 'rgba(0,0,0,0.5)';
+              hpDisplay.style.color = '#fff';
+              hpDisplay.style.padding = '1px';
+              hpDisplay.textContent = m.hp;
+              cell.appendChild(hpDisplay);
+            }
+          } else {
+            cellType = map[y][x] === WALL ? 'WALL' : 'FLOOR';
+          }
+        }
+      }
+      
+      // Add appropriate CSS class
+      if (cellType === 'WALL') cell.classList.add('wall');
+      if (cellType === 'FLOOR') cell.classList.add('floor');
+      
+      // Set emoji content
+      cell.textContent = TILES[cellType].emoji;
+      
+      // 조준 모드일 때 클릭 이벤트 추가
+      if (player.aiming && vis[`${x},${y}`]) {
+        cell.style.cursor = 'crosshair';
+        
+        // 클릭 이벤트 리스너 추가
+        cell.addEventListener('click', function() {
+          const targetX = parseInt(this.dataset.x);
+          const targetY = parseInt(this.dataset.y);
+          
+          // 벽이나 플레이어 위치는 조준 불가
+          if (map[targetY][targetX] === WALL || (targetX === player.x && targetY === player.y)) {
+            addMsg('유효하지 않은 조준 위치입니다.');
+            return;
+          }
+          
+          // 조준 방향 설정
+          const dx = Math.sign(targetX - player.x);
+          const dy = Math.sign(targetY - player.y);
+          
+          player.aimDir = { dx, dy };
+          player.aimTarget = { x: targetX, y: targetY };
+          
+          // 궤적 표시
+          showAimPath(player.x, player.y, targetX, targetY);
+          
+          addMsg(`조준: ${targetX},${targetY} 위치`);
+        });
+      }
+      
+      // Add to grid
+      gameGrid.appendChild(cell);
     }
-    out += '\n';
   }
-  out += `HP:${player.hp} Ammo:${player.ammo}  Monsters:${monsters.filter(m => m.hp > 0).length}\n`;
-  if (player.aiming) out += 'Aiming: Use keypad to choose direction, F to fire, ESC to cancel.\n';
-  else out += 'Move: Keypad 1-9 | f: aim/fire | r: reload\n';
-  msg.forEach(m => out += m + '\n');
-  if (gameOver) out += 'GAME OVER! Refresh to restart.\n';
-  document.getElementById('main').textContent = out;
+  
+  // Update status bar
+  statusBar.innerHTML = `HP: ${player.hp} | Ammo: ${player.ammo} | 무기: ${getWeaponEmoji(player.currentWeapon)} ${getWeaponName(player.currentWeapon)} | 몬스터: ${monsters.filter(m => m.hp > 0).length}`;
+  
+  // Update message log
+  messageLog.innerHTML = '';
+  if (player.aiming) {
+    let aimingMsg = document.createElement('div');
+    aimingMsg.textContent = '조준 중: 방향키로 방향 선택 또는 타일 클릭, 다시 🔫 버튼을 눌러 발사';
+    aimingMsg.style.color = '#ffcc00';
+    messageLog.appendChild(aimingMsg);
+    
+    // 무기별 힌트 표시
+    let weaponHint = document.createElement('div');
+    switch(player.currentWeapon) {
+      case 'gun':
+        weaponHint.textContent = '권총: 단일 대상에게 중간 데미지';
+        break;
+      case 'rocket':
+        weaponHint.textContent = '로켓: 폭발로 주변 몬스터에게도 데미지';
+        break;
+      case 'laser':
+        weaponHint.textContent = '레이저: 여러 몬스터를 관통하는 빔';
+        break;
+    }
+    weaponHint.style.color = '#aaffaa';
+    messageLog.appendChild(weaponHint);
+    
+    // 무기 전환 힌트
+    let switchHint = document.createElement('div');
+    switchHint.textContent = '무기 전환: 키보드 1-3 또는 🎒 버튼';
+    switchHint.style.color = '#aaaaff';
+    messageLog.appendChild(switchHint);
+  } else {
+    let controlMsg = document.createElement('div');
+    controlMsg.textContent = '이동: 방향키 | 🔫: 조준/발사 | 🔄: 재장전 | 🎒: 무기 전환';
+    messageLog.appendChild(controlMsg);
+  }
+  
+  // Add game messages
+  msg.forEach(m => {
+    let msgElement = document.createElement('div');
+    msgElement.textContent = m;
+    messageLog.appendChild(msgElement);
+  });
+  
+  // Game over message
+  if (gameOver) {
+    let gameOverMsg = document.createElement('div');
+    gameOverMsg.textContent = '게임 오버! 새로고침하여 다시 시작';
+    gameOverMsg.style.color = 'red';
+    gameOverMsg.style.fontWeight = 'bold';
+    messageLog.appendChild(gameOverMsg);
+  }
+  
+  // 조준 경로 다시 표시 (렌더링 후)
+  if (player.aiming && player.aimTarget) {
+    showAimPath(player.x, player.y, player.aimTarget.x, player.aimTarget.y);
+  }
+}
+
+// 무기 이름 반환 함수
+function getWeaponName(weaponType) {
+  switch(weaponType) {
+    case 'gun': return '권총';
+    case 'rocket': return '로켓';
+    case 'laser': return '레이저';
+    default: return '권총';
+  }
+}
+
+// 무기 이모지 반환 함수
+function getWeaponEmoji(weaponType) {
+  switch(weaponType) {
+    case 'gun': return '🔫';
+    case 'rocket': return '🚀';
+    case 'laser': return '⚡';
+    default: return '🔫';
+  }
 }
 
 // Move player
@@ -205,33 +650,11 @@ function monsterTurn() {
   });
 }
 
-// Fire gun in direction
-function fire(dx, dy) {
-  if (player.ammo <= 0) { addMsg('No ammo! Reload with R.'); return; }
-  let x = player.x, y = player.y;
-  let hit = false;
-  for (let i = 0; i < MAP_W; ++i) {
-    x += dx; y += dy;
-    if (!inMap(x, y) || map[y][x] === WALL) break;
-    let m = monsters.find(m => m.x === x && m.y === y && m.hp > 0);
-    if (m) {
-      let dmg = GUN_DAMAGE_MIN + Math.floor(Math.random() * (GUN_DAMAGE_MAX - GUN_DAMAGE_MIN + 1));
-      m.hp -= dmg;
-      addMsg(`You shoot the monster! (${dmg} dmg)`);
-      if (m.hp <= 0) addMsg('Monster dies!');
-      hit = true;
-      break;
-    }
-  }
-  if (!hit) addMsg('You fire into the darkness.');
-  player.ammo--;
-}
-
 // Reload (now takes a real turn)
 function doReload() {
-  if (player.ammo === PLAYER_AMMO_MAX) { addMsg('Already full.'); render(); return; }
+  if (player.ammo === PLAYER_AMMO_MAX) { addMsg('이미 장전되어 있습니다.'); render(); return; }
   player.ammo = PLAYER_AMMO_MAX;
-  addMsg('Reloaded!');
+  addMsg('재장전 완료!');
   monsterTurn(); // Monsters act immediately (reload is a turn)
   render();
 }
@@ -239,30 +662,101 @@ function doReload() {
 // Keyboard input
 document.addEventListener('keydown', function (e) {
   if (gameOver) return;
+  
+  // 조준 모드일 때
   if (player.aiming) {
-    if (e.key === 'Escape') { player.aiming = false; render(); return; }
+    // ESC: 조준 취소
+    if (e.key === 'Escape') { 
+      player.aiming = false; 
+      player.aimTarget = null;
+      clearHighlights();
+      render(); 
+      return; 
+    }
+    
+    // 방향키로 조준 방향 설정
     let d = NUM_DIR_KEYS[e.keyCode];
     if (d !== undefined && d !== 4) {
       player.aimDir = DIRS[d];
+      
+      // 해당 방향으로 조준 경로 표시
+      const targetX = player.x + player.aimDir.dx * 10; // 충분히 먼 거리
+      const targetY = player.y + player.aimDir.dy * 10;
+      player.aimTarget = { x: targetX, y: targetY };
+      
+      showAimPath(player.x, player.y, targetX, targetY);
       render();
       return;
     }
+    
+    // F: 발사
     if (e.key === 'f' || e.key === 'F') {
-      if (player.aimDir.dx || player.aimDir.dy) {
-        fire(player.aimDir.dx, player.aimDir.dy);
+      if (player.aimTarget) {
+        // 조준된 타겟으로 발사
+        console.log("키보드: 조준 타겟으로 발사", player.aimTarget);
+        
+        fireWeapon(player.aimDir.dx, player.aimDir.dy);
         player.aiming = false;
+        player.aimTarget = null;
+        clearHighlights();
         monsterTurn();
         render();
-      } else addMsg('Choose direction with keypad!');
+      } else {
+        addMsg('방향키로 방향을 선택하거나 타일을 클릭하세요!');
+      }
       return;
+    }
+    
+    // 숫자키 1-3: 무기 전환
+    if (e.key === '1' || e.key === '2' || e.key === '3') {
+      const weaponIndex = parseInt(e.key) - 1;
+      const weapons = ['gun', 'rocket', 'laser'];
+      if (weaponIndex >= 0 && weaponIndex < weapons.length) {
+        player.currentWeapon = weapons[weaponIndex];
+        addMsg(`무기 전환: ${getWeaponName(player.currentWeapon)}`);
+        updateWeaponButton();
+        render();
+      }
+      return;
+    }
+    
+    return;
+  }
+  
+  // 조준 모드가 아닐 때
+  
+  // F: 조준 모드 시작
+  if (e.key === 'f' || e.key === 'F') {
+    player.aiming = true; 
+    player.aimDir = { dx: 0, dy: 0 };
+    
+    // 자동 조준 시도
+    autoAim();
+    
+    render(); 
+    return;
+  }
+  
+  // R: 재장전
+  if (e.key === 'r' || e.key === 'R') { 
+    doReload(); 
+    return; 
+  }
+  
+  // 숫자키 1-3: 무기 전환
+  if (e.key === '1' || e.key === '2' || e.key === '3') {
+    const weaponIndex = parseInt(e.key) - 1;
+    const weapons = ['gun', 'rocket', 'laser'];
+    if (weaponIndex >= 0 && weaponIndex < weapons.length) {
+      player.currentWeapon = weapons[weaponIndex];
+      addMsg(`무기 전환: ${getWeaponName(player.currentWeapon)}`);
+      updateWeaponButton();
+      render();
     }
     return;
   }
-  // Not aiming
-  if (e.key === 'f' || e.key === 'F') {
-    player.aiming = true; player.aimDir = { dx: 0, dy: 0 }; render(); return;
-  }
-  if (e.key === 'r' || e.key === 'R') { doReload(); return; }
+  
+  // 방향키: 이동
   let d = NUM_DIR_KEYS[e.keyCode];
   if (d !== undefined && d !== 4) {
     tryMove(DIRS[d].dx, DIRS[d].dy);
@@ -272,12 +766,676 @@ document.addEventListener('keydown', function (e) {
   }
 });
 function init() {
+  console.log("게임 초기화 함수 시작");
+  
+  // Generate map and place entities
+  console.log("맵 생성 시작");
   genMap();
+  console.log("맵 생성 완료");
+  
+  console.log("엔티티 배치 시작");
   placeEntities();
-  msg = ['Welcome to Mini DoomRL!'];
+  console.log("엔티티 배치 완료");
+  
+  // Initialize messages
+  msg = ['Welcome to Doom Emoji RL!', 'Hunt down all monsters to win!'];
+  console.log("메시지 초기화 완료");
+  
+  // 모바일 컨트롤 이벤트 설정
+  console.log("모바일 컨트롤 설정 시작");
+  setupMobileControls();
+  console.log("모바일 컨트롤 설정 완료");
+  
+  // 무기 버튼 초기화
+  console.log("무기 버튼 초기화");
+  updateWeaponButton();
+  
+  // Render initial game state
+  console.log("초기 게임 상태 렌더링");
   render();
+  console.log("게임 초기화 완료");
 }
-init();
+
+// 모바일 컨트롤 설정
+function setupMobileControls() {
+  // 모바일 터치 이벤트 최적화
+  document.addEventListener('touchstart', function(e) {
+    if (e.target.tagName === 'BUTTON') {
+      e.preventDefault(); // 기본 터치 동작 방지
+    }
+  }, { passive: false });
+  
+  // 더블 탭 줌 방지
+  document.addEventListener('dblclick', function(e) {
+    e.preventDefault();
+  });
+
+  // 방향 버튼 이벤트
+  const dirButtons = document.querySelectorAll('.dir-btn');
+  dirButtons.forEach(btn => {
+    // 클릭 이벤트와 터치 이벤트 모두 처리
+    ['click', 'touchstart'].forEach(eventType => {
+      btn.addEventListener(eventType, function(e) {
+        if (eventType === 'touchstart') e.preventDefault();
+        if (gameOver) return;
+        
+        const dirIndex = parseInt(this.getAttribute('data-dir'));
+        if (player.aiming) {
+          // 조준 중일 때는 조준 방향 설정
+          player.aimDir = DIRS[dirIndex];
+          
+          // 해당 방향으로 조준 경로 표시
+          const targetX = player.x + player.aimDir.dx * 10; // 충분히 먼 거리
+          const targetY = player.y + player.aimDir.dy * 10;
+          player.aimTarget = { x: targetX, y: targetY };
+          
+          showAimPath(player.x, player.y, targetX, targetY);
+          render();
+        } else {
+          // 일반 이동
+          tryMove(DIRS[dirIndex].dx, DIRS[dirIndex].dy);
+          monsterTurn();
+          render();
+        }
+      });
+    });
+  });
+  
+  // 조준/발사 버튼
+  const aimBtn = document.getElementById('aim-btn');
+  ['click', 'touchstart'].forEach(eventType => {
+    aimBtn.addEventListener(eventType, function(e) {
+      if (eventType === 'touchstart') e.preventDefault();
+      if (gameOver) return;
+      
+      if (player.aiming) {
+        // 이미 조준 중이면 발사
+        if (player.aimTarget) {
+          // 조준된 타겟으로 발사
+          console.log("조준 타겟으로 발사:", player.aimTarget);
+          
+          // 현재 무기에 따라 다른 발사 효과 사용
+          fireWeapon(player.aimDir.dx, player.aimDir.dy);
+          player.aiming = false;
+          player.aimTarget = null;
+          clearHighlights();
+          monsterTurn();
+          render();
+        } else {
+          addMsg('방향키로 방향을 선택하거나 타일을 클릭하세요!');
+        }
+      } else {
+        // 조준 모드 시작 및 자동 조준 시도
+        player.aiming = true;
+        player.aimDir = { dx: 0, dy: 0 };
+        
+        // 자동 조준 시도
+        autoAim();
+        
+        render();
+      }
+    });
+  });
+  
+  // 재장전 버튼
+  const reloadBtn = document.getElementById('reload-btn');
+  ['click', 'touchstart'].forEach(eventType => {
+    reloadBtn.addEventListener(eventType, function(e) {
+      if (eventType === 'touchstart') e.preventDefault();
+      if (gameOver) return;
+      doReload();
+    });
+  });
+  
+  // 달리기 버튼 (2칸 이동)
+  const runBtn = document.getElementById('run-btn');
+  ['click', 'touchstart'].forEach(eventType => {
+    runBtn.addEventListener(eventType, function(e) {
+      if (eventType === 'touchstart') e.preventDefault();
+      if (gameOver || player.aiming) return;
+      
+      addMsg('Run mode: Choose direction');
+      // 다음 방향키 입력을 기다렸다가 2칸 이동
+      const runHandler = function(e) {
+        if (e.target.classList.contains('dir-btn')) {
+          const dirIndex = parseInt(e.target.getAttribute('data-dir'));
+          const dir = DIRS[dirIndex];
+          
+          // 첫 번째 칸 이동
+          if (tryMove(dir.dx, dir.dy)) {
+            // 두 번째 칸 이동 시도
+            tryMove(dir.dx, dir.dy);
+          }
+          
+          monsterTurn();
+          render();
+          
+          // 이벤트 리스너 제거
+          document.getElementById('mobile-controls').removeEventListener('click', runHandler);
+          document.getElementById('mobile-controls').removeEventListener('touchstart', runHandler);
+        }
+      };
+      
+      document.getElementById('mobile-controls').addEventListener('click', runHandler);
+      document.getElementById('mobile-controls').addEventListener('touchstart', runHandler);
+    });
+  });
+  
+  // 인벤토리 버튼 (무기 전환으로 변경)
+  const inventoryBtn = document.getElementById('weapon-btn');
+  ['click', 'touchstart'].forEach(eventType => {
+    inventoryBtn.addEventListener(eventType, function(e) {
+      if (eventType === 'touchstart') e.preventDefault();
+      if (gameOver) return;
+      
+      // 무기 전환
+      switchWeapon();
+      render();
+    });
+  });
+  
+  // 모든 환경에서 컨트롤 패널 표시
+  document.getElementById('mobile-controls').style.display = 'flex';
+}
+
+// 무기 전환 버튼 업데이트 함수
+function updateWeaponButton() {
+  const weaponBtn = document.getElementById('weapon-btn');
+  if (weaponBtn) {
+    // 현재 무기에 따라 다음 무기 아이콘 표시
+    switch(player.currentWeapon) {
+      case 'gun':
+        weaponBtn.innerHTML = '🚀'; // 다음 무기는 로켓
+        break;
+      case 'rocket':
+        weaponBtn.innerHTML = '⚡'; // 다음 무기는 레이저
+        break;
+      case 'laser':
+        weaponBtn.innerHTML = '🔫'; // 다음 무기는 권총
+        break;
+    }
+  }
+}
+
+// 무기 전환 함수
+function switchWeapon() {
+  const weapons = ['gun', 'rocket', 'laser'];
+  const currentIndex = weapons.indexOf(player.currentWeapon);
+  const nextIndex = (currentIndex + 1) % weapons.length;
+  player.currentWeapon = weapons[nextIndex];
+  addMsg(`무기 전환: ${getWeaponName(player.currentWeapon)}`);
+  
+  // 무기 전환 버튼 업데이트
+  updateWeaponButton();
+}
+
+// 무기별 발사 함수
+function fireWeapon(dx, dy) {
+  if (player.ammo <= 0) { 
+    addMsg('탄약이 없습니다! R키나 🔄 버튼으로 재장전하세요.'); 
+    return; 
+  }
+  
+  // 조준 타겟이 있는 경우, 정확한 타겟 좌표를 사용
+  if (player.aimTarget) {
+    // 타겟까지의 경로 계산
+    const path = calculatePath(player.x, player.y, player.aimTarget.x, player.aimTarget.y);
+    
+    console.log("발사 경로:", path);
+    addMsg(`발사: ${player.aimTarget.x},${player.aimTarget.y} 방향`);
+    
+    switch(player.currentWeapon) {
+      case 'gun':
+        fireGunWithPath(path);
+        break;
+      case 'rocket':
+        fireRocketWithPath(path);
+        break;
+      case 'laser':
+        fireLaserWithPath(path);
+        break;
+      default:
+        fireGunWithPath(path);
+    }
+  } else {
+    // 기존 방식 - 방향만 사용
+    switch(player.currentWeapon) {
+      case 'gun':
+        fireGun(dx, dy);
+        break;
+      case 'rocket':
+        fireRocket(dx, dy);
+        break;
+      case 'laser':
+        fireLaser(dx, dy);
+        break;
+      default:
+        fireGun(dx, dy);
+    }
+  }
+  
+  player.ammo--;
+}
+
+// 일반 총 발사 (궤적 표시)
+function fireGun(dx, dy) {
+  let x = player.x, y = player.y;
+  let hit = false;
+  
+  // 경로 계산
+  const path = [];
+  for (let i = 0; i < MAP_W; ++i) {
+    x += dx; y += dy;
+    if (!inMap(x, y) || map[y][x] === WALL) break;
+    path.push({x, y});
+    
+    let m = monsters.find(m => m.x === x && m.y === y && m.hp > 0);
+    if (m) {
+      let dmg = GUN_DAMAGE_MIN + Math.floor(Math.random() * (GUN_DAMAGE_MAX - GUN_DAMAGE_MIN + 1));
+      m.hp -= dmg;
+      addMsg(`몬스터를 총으로 쏩니다! (${dmg} 데미지)`);
+      if (m.hp <= 0) addMsg('몬스터가 쓰러집니다!');
+      hit = true;
+      break;
+    }
+  }
+  
+  if (!hit) addMsg('총알이 어둠 속으로 사라집니다.');
+  
+  // 총알 궤적 표시
+  showBulletTrail(path);
+}
+
+// 경로 기반 권총 발사 함수
+function fireGunWithPath(path) {
+  let hit = false;
+  
+  // 경로를 따라 몬스터 확인
+  for (let i = 0; i < path.length; i++) {
+    const pos = path[i];
+    
+    // 벽을 만나면 중단
+    if (map[pos.y][pos.x] === WALL) {
+      // 벽에 부딪힌 지점까지의 경로만 사용
+      path = path.slice(0, i);
+      break;
+    }
+    
+    // 몬스터를 만나면 데미지 적용
+    let m = monsters.find(m => m.x === pos.x && m.y === pos.y && m.hp > 0);
+    if (m) {
+      let dmg = GUN_DAMAGE_MIN + Math.floor(Math.random() * (GUN_DAMAGE_MAX - GUN_DAMAGE_MIN + 1));
+      m.hp -= dmg;
+      addMsg(`몬스터를 총으로 쏩니다! (${dmg} 데미지)`);
+      if (m.hp <= 0) addMsg('몬스터가 쓰러집니다!');
+      hit = true;
+      
+      // 몬스터에 맞은 지점까지의 경로만 사용
+      path = path.slice(0, i + 1);
+      break;
+    }
+  }
+  
+  if (!hit) addMsg('총알이 어둠 속으로 사라집니다.');
+  
+  // 총알 궤적 표시
+  showBulletTrail(path);
+}
+
+// 로켓 발사 (애니메이션 효과)
+function fireRocket(dx, dy) {
+  let x = player.x, y = player.y;
+  let hit = false;
+  
+  // 경로 계산
+  const path = [];
+  for (let i = 0; i < MAP_W; ++i) {
+    x += dx; y += dy;
+    if (!inMap(x, y) || map[y][x] === WALL) break;
+    path.push({x, y});
+    
+    let m = monsters.find(m => m.x === x && m.y === y && m.hp > 0);
+    if (m) {
+      let dmg = 5 + Math.floor(Math.random() * 3); // 로켓은 더 강력함
+      m.hp -= dmg;
+      addMsg(`로켓이 몬스터에게 명중! (${dmg} 데미지)`);
+      if (m.hp <= 0) addMsg('몬스터가 폭발과 함께 쓰러집니다!');
+      hit = true;
+      
+      // 주변 몬스터에게 피해 (폭발 효과)
+      monsters.forEach(nearby => {
+        if (nearby !== m && nearby.hp > 0) {
+          const distance = Math.abs(nearby.x - m.x) + Math.abs(nearby.y - m.y);
+          if (distance <= 2) {
+            nearby.hp -= Math.max(1, 3 - distance);
+            if (nearby.hp <= 0) addMsg('주변 몬스터도 폭발에 휘말려 쓰러집니다!');
+          }
+        }
+      });
+      
+      break;
+    }
+  }
+  
+  if (!hit) addMsg('로켓이 날아가 폭발합니다.');
+  
+  // 로켓 애니메이션 표시
+  animateRocket(path);
+}
+
+// 경로 기반 로켓 발사 함수
+function fireRocketWithPath(path) {
+  let hit = false;
+  let hitPos = null;
+  
+  // 경로를 따라 몬스터 확인
+  for (let i = 0; i < path.length; i++) {
+    const pos = path[i];
+    
+    // 벽을 만나면 중단
+    if (map[pos.y][pos.x] === WALL) {
+      // 벽에 부딪힌 지점까지의 경로만 사용
+      path = path.slice(0, i);
+      break;
+    }
+    
+    // 몬스터를 만나면 데미지 적용
+    let m = monsters.find(m => m.x === pos.x && m.y === pos.y && m.hp > 0);
+    if (m) {
+      let dmg = 5 + Math.floor(Math.random() * 3); // 로켓은 더 강력함
+      m.hp -= dmg;
+      addMsg(`로켓이 몬스터에게 명중! (${dmg} 데미지)`);
+      if (m.hp <= 0) addMsg('몬스터가 폭발과 함께 쓰러집니다!');
+      hit = true;
+      hitPos = pos;
+      
+      // 주변 몬스터에게 피해 (폭발 효과)
+      monsters.forEach(nearby => {
+        if (nearby !== m && nearby.hp > 0) {
+          const distance = Math.abs(nearby.x - pos.x) + Math.abs(nearby.y - pos.y);
+          if (distance <= 2) {
+            nearby.hp -= Math.max(1, 3 - distance);
+            if (nearby.hp <= 0) addMsg('주변 몬스터도 폭발에 휘말려 쓰러집니다!');
+          }
+        }
+      });
+      
+      // 몬스터에 맞은 지점까지의 경로만 사용
+      path = path.slice(0, i + 1);
+      break;
+    }
+  }
+  
+  if (!hit) {
+    addMsg('로켓이 날아가 폭발합니다.');
+    // 경로 끝에서 폭발 효과 (마지막 위치 주변 몬스터에게 피해)
+    if (path.length > 0) {
+      const lastPos = path[path.length - 1];
+      monsters.forEach(nearby => {
+        if (nearby.hp > 0) {
+          const distance = Math.abs(nearby.x - lastPos.x) + Math.abs(nearby.y - lastPos.y);
+          if (distance <= 1) { // 폭발 범위 축소
+            nearby.hp -= 2;
+            addMsg('폭발이 몬스터에게 피해를 입힙니다!');
+            if (nearby.hp <= 0) addMsg('몬스터가 쓰러집니다!');
+          }
+        }
+      });
+    }
+  }
+  
+  // 로켓 애니메이션 표시
+  animateRocket(path);
+}
+
+// 레이저 발사 (광선 효과)
+function fireLaser(dx, dy) {
+  let x = player.x, y = player.y;
+  let hit = false;
+  
+  // 경로 계산
+  const path = [];
+  for (let i = 0; i < MAP_W; ++i) {
+    x += dx; y += dy;
+    if (!inMap(x, y) || map[y][x] === WALL) break;
+    path.push({x, y});
+    
+    let m = monsters.find(m => m.x === x && m.y === y && m.hp > 0);
+    if (m) {
+      let dmg = 3; // 레이저는 고정 데미지
+      m.hp -= dmg;
+      addMsg(`레이저가 몬스터를 관통합니다! (${dmg} 데미지)`);
+      if (m.hp <= 0) addMsg('몬스터가 쓰러집니다!');
+      hit = true;
+      // 레이저는 관통함 (break 하지 않음)
+    }
+  }
+  
+  if (!hit) addMsg('레이저가 허공을 가립니다.');
+  
+  // 레이저 광선 효과 표시
+  showLaserBeam(path);
+}
+
+// 경로 기반 레이저 발사 함수
+function fireLaserWithPath(path) {
+  let hit = false;
+  
+  // 벽을 만나는 지점 찾기
+  let wallIndex = -1;
+  for (let i = 0; i < path.length; i++) {
+    const pos = path[i];
+    if (map[pos.y][pos.x] === WALL) {
+      wallIndex = i;
+      break;
+    }
+  }
+  
+  // 벽이 있으면 해당 지점까지만 경로 사용
+  if (wallIndex !== -1) {
+    path = path.slice(0, wallIndex);
+  }
+  
+  // 경로를 따라 모든 몬스터에게 데미지 적용 (관통)
+  path.forEach(pos => {
+    let m = monsters.find(m => m.x === pos.x && m.y === pos.y && m.hp > 0);
+    if (m) {
+      let dmg = 3; // 레이저는 고정 데미지
+      m.hp -= dmg;
+      addMsg(`레이저가 몬스터를 관통합니다! (${dmg} 데미지)`);
+      if (m.hp <= 0) addMsg('몬스터가 쓰러집니다!');
+      hit = true;
+    }
+  });
+  
+  if (!hit) addMsg('레이저가 허공을 가립니다.');
+  
+  // 레이저 광선 효과 표시
+  showLaserBeam(path);
+}
+
+// 총알 궤적 표시 함수
+function showBulletTrail(path) {
+  // 경로에 점 표시
+  path.forEach((pos, index) => {
+    setTimeout(() => {
+      const cellIndex = (pos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
+                        (pos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
+      const cells = document.getElementById('game-grid').children;
+      
+      if (cellIndex >= 0 && cellIndex < cells.length) {
+        const cell = cells[cellIndex];
+        const originalContent = cell.innerHTML;
+        
+        // 총알 효과 표시
+        cell.innerHTML = '·';
+        cell.style.color = 'yellow';
+        
+        // 잠시 후 원래대로 복원
+        setTimeout(() => {
+          cell.innerHTML = originalContent;
+          cell.style.color = '';
+        }, 100);
+      }
+    }, index * 30); // 30ms 간격으로 순차 표시
+  });
+}
+
+// 로켓 애니메이션 함수
+function animateRocket(path) {
+  let currentIndex = 0;
+  
+  const interval = setInterval(() => {
+    // 이전 로켓 지우기
+    if (currentIndex > 0) {
+      const prevPos = path[currentIndex - 1];
+      const prevCellIndex = (prevPos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
+                           (prevPos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
+      const cells = document.getElementById('game-grid').children;
+      
+      if (prevCellIndex >= 0 && prevCellIndex < cells.length) {
+        const cell = cells[prevCellIndex];
+        // 원래 내용 복원 (간단히 처리)
+        cell.innerHTML = TILES.FLOOR.emoji;
+        cell.style.color = '';
+      }
+    }
+    
+    // 현재 위치에 로켓 표시
+    if (currentIndex < path.length) {
+      const pos = path[currentIndex];
+      const cellIndex = (pos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
+                        (pos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
+      const cells = document.getElementById('game-grid').children;
+      
+      if (cellIndex >= 0 && cellIndex < cells.length) {
+        const cell = cells[cellIndex];
+        
+        // 로켓 효과 표시
+        cell.innerHTML = '🚀';
+        cell.style.color = 'orange';
+      }
+      
+      currentIndex++;
+    } else {
+      // 애니메이션 종료 및 폭발 효과
+      clearInterval(interval);
+      
+      if (path.length > 0) {
+        const lastPos = path[path.length - 1];
+        const lastCellIndex = (lastPos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
+                             (lastPos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
+        const cells = document.getElementById('game-grid').children;
+        
+        if (lastCellIndex >= 0 && lastCellIndex < cells.length) {
+          const cell = cells[lastCellIndex];
+          
+          // 폭발 효과
+          cell.innerHTML = '💥';
+          
+          // 잠시 후 원래대로 복원
+          setTimeout(() => {
+            cell.innerHTML = TILES.FLOOR.emoji;
+            cell.style.color = '';
+          }, 300);
+        }
+      }
+    }
+  }, 100); // 100ms 간격으로 애니메이션
+}
+
+// 레이저 광선 효과 함수
+function showLaserBeam(path) {
+  console.log("레이저 경로 표시 시작", path);
+  
+  if (!path || path.length === 0) {
+    console.log("경로가 비어있습니다!");
+    return;
+  }
+  
+  // 렌더링 방지 플래그 설정 (이 시간 동안 추가 렌더링 방지)
+  const preventRenderUntil = Date.now() + 1000;
+  window.laserEffectActive = preventRenderUntil;
+  
+  // 각 셀의 원래 내용 저장
+  const originalContents = [];
+  const cellsToUpdate = [];
+  
+  // 모든 셀 정보 수집
+  path.forEach((pos, index) => {
+    const cellIndex = (pos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
+                      (pos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
+    const cells = document.getElementById('game-grid').children;
+    
+    if (cellIndex >= 0 && cellIndex < cells.length) {
+      const cell = cells[cellIndex];
+      originalContents.push({
+        cell: cell,
+        content: cell.innerHTML,
+        backgroundColor: cell.style.backgroundColor,
+        color: cell.style.color
+      });
+      cellsToUpdate.push(cell);
+    }
+  });
+  
+  console.log(`레이저 경로에 있는 셀 수: ${cellsToUpdate.length}`);
+  
+  // 1단계: 강렬한 노란색 레이저 빔 (0ms)
+  cellsToUpdate.forEach(cell => {
+    cell.innerHTML = '⚡'; // 레이저 이모티콘
+    cell.style.setProperty('color', '#FFFF00', 'important'); // 노란색
+    cell.style.setProperty('background-color', '#880000', 'important'); // 어두운 빨간색 배경
+  });
+  
+  // 2단계: 중간 강도 (300ms)
+  setTimeout(() => {
+    cellsToUpdate.forEach(cell => {
+      cell.innerHTML = '✨'; // 다른 이모티콘
+      cell.style.setProperty('color', '#FFDD00', 'important');
+      cell.style.setProperty('background-color', '#660000', 'important');
+    });
+  }, 300);
+  
+  // 3단계: 옅은 효과 (600ms)
+  setTimeout(() => {
+    cellsToUpdate.forEach(cell => {
+      cell.innerHTML = '·'; // 더 작은 이모티콘
+      cell.style.setProperty('color', '#FFEE88', 'important');
+      cell.style.setProperty('background-color', '#440000', 'important');
+    });
+  }, 600);
+  
+  // 원래 상태로 복원 (900ms)
+  setTimeout(() => {
+    originalContents.forEach(item => {
+      const cell = item.cell;
+      if (cell) {
+        cell.innerHTML = item.content;
+        cell.style.removeProperty('color');
+        cell.style.removeProperty('background-color');
+        
+        // 원래 스타일이 있었다면 복원
+        if (item.backgroundColor) cell.style.backgroundColor = item.backgroundColor;
+        if (item.color) cell.style.color = item.color;
+      }
+    });
+    
+    // 렌더링 방지 플래그 해제
+    window.laserEffectActive = false;
+    console.log("레이저 경로 표시 종료");
+    
+    // 강제 렌더링으로 화면 업데이트
+    setTimeout(render, 50);
+  }, 900);
+}
+
+// 게임 초기화 호출
+window.onload = function() {
+  console.log("게임 초기화 시작");
+  init();
+  console.log("게임 초기화 완료");
+};
 </script>
 </body>
 </html>
