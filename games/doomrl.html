@@ -125,7 +125,7 @@
       visibility: hidden;
     }
     .wall { background-color: #555; }
-    .floor { background-color: #111; }
+    .floor { background-color: #222; }  /* 바닥 배경색 어둡게 설정 */
   </style>
 </head>
 <body>
@@ -174,15 +174,15 @@ const GUN_DAMAGE_MAX = 3;     // Gun maximum damage (inclusive)
 
 // Map symbols with emoji
 const TILES = {
-  FLOOR: { symbol: '.', emoji: '⬛' },
-  WALL: { symbol: '#', emoji: '🧱' },
+  FLOOR: { symbol: '.', emoji: '⬜' },  // 바닥은 흰색 사각형으로 변경
+  WALL: { symbol: '#', emoji: '🧱' },   // 벽은 벽돌 이모지
   PLAYER: { symbol: '@', emoji: '🤺' },
   MONSTER: { symbol: 'M', emoji: '👹' },
   MONSTER_WEAK: { symbol: 'M', emoji: '👺' },
   MONSTER_STRONG: { symbol: 'M', emoji: '👿' },
   MONSTER_DEAD: { symbol: 'M', emoji: '💀' },
   BULLET: { symbol: '*', emoji: '💥' },
-  HIDDEN: { symbol: ' ', emoji: '⬜' }
+  HIDDEN: { symbol: ' ', emoji: '⬛' }  // 시야 밖은 검은색 사각형
 };
 
 // For compatibility with existing code
@@ -205,6 +205,7 @@ let monsters = [];
 let msg = [];
 let gameOver = false;
 let highlightedCells = []; // 하이라이트된 셀 추적
+let exploredMap = {}; // 탐사한 지역을 기억하는 객체
 
 // Directions for keypad (1-9, skip 5)
 const DIRS = [
@@ -301,6 +302,8 @@ function calcFOV() {
       if (inMap(tx, ty) && Math.sqrt(dx * dx + dy * dy) <= VIEW_R) {
         los(player.x, player.y, tx, ty, (x, y) => {
           vis[`${x},${y}`] = true;
+          // 탐사한 지역 기록
+          exploredMap[`${x},${y}`] = map[y][x];
           return map[y][x] !== WALL;
         });
       }
@@ -455,7 +458,10 @@ function render() {
       
       // Determine cell content
       let cellType = 'HIDDEN';
+      let isExplored = exploredMap[`${x},${y}`] !== undefined;
+      
       if (vis[`${x},${y}`]) {
+        // 현재 시야 내에 있는 경우
         if (player.x === x && player.y === y) {
           cellType = 'PLAYER';
         } else {
@@ -482,6 +488,12 @@ function render() {
             cellType = map[y][x] === WALL ? 'WALL' : 'FLOOR';
           }
         }
+      } else if (isExplored) {
+        // 시야 밖이지만 이전에 탐사한 지역인 경우
+        cellType = exploredMap[`${x},${y}`] === WALL ? 'WALL' : 'FLOOR';
+        // 어두운 반투명 효과 적용
+        cell.style.filter = 'brightness(0.5)';
+        cell.style.opacity = '0.7';
       }
       
       // Add appropriate CSS class
