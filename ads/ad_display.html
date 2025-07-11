@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ad Display Module</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+        }
+
+        .ad-container {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            padding: 15px;
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+        }
+
+        .ad-placeholder {
+            min-height: 250px;
+            border: 1px dashed #e9ecef;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            text-align: center;
+            color: #adb5bd;
+        }
+
+        .ad-size {
+            font-size: 0.8rem;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="ad-container">
+        <div class="ad-placeholder">
+            <div>Advertisement</div>
+            <div class="ad-size">300x250</div>
+        </div>
+        <div class="ad-placeholder">
+            <div>Advertisement</div>
+            <div class="ad-size">300x250</div>
+        </div>
+    </div>
+</body>
+</html> 

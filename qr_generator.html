@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+        }
+
+        .qr-container {
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            width: 300px;
+            margin: 0 auto;
+        }
+
+        .qr-title {
+            font-size: 1.2rem;
+            color: #4e54c8;
+            font-weight: 500;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .input-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 10px;
+            background: #4e54c8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .generate-btn:hover {
+            background: #3d42a0;
+        }
+
+        .qr-result {
+            text-align: center;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            background: #f8f9fa;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-placeholder {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        #qrcode {
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="qr-container">
+        <div class="qr-title">QR 코드 생성기</div>
+        
+        <div class="input-group">
+            <label for="qrText">텍스트 또는 URL:</label>
+            <textarea id="qrText" placeholder="QR 코드로 변환할 텍스트나 URL을 입력하세요..."></textarea>
+        </div>
+        
+        <button class="generate-btn" onclick="generateQR()">QR 코드 생성</button>
+        
+        <div class="qr-result" id="qrResult">
+            <div class="qr-placeholder">QR 코드가 여기에 표시됩니다</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script>
+        function generateQR() {
+            const text = document.getElementById('qrText').value.trim();
+            const resultDiv = document.getElementById('qrResult');
+            
+            if (!text) {
+                resultDiv.innerHTML = '<div class="qr-placeholder">텍스트를 입력해주세요</div>';
+                return;
+            }
+            
+            // 기존 QR 코드 제거
+            resultDiv.innerHTML = '';
+            
+            // QR 코드 생성
+            QRCode.toCanvas(text, {
+                width: 150,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, function (error, canvas) {
+                if (error) {
+                    resultDiv.innerHTML = '<div class="qr-placeholder">QR 코드 생성 중 오류가 발생했습니다</div>';
+                    console.error(error);
+                } else {
+                    resultDiv.appendChild(canvas);
+                    
+                    // 다운로드 버튼 추가
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.textContent = '다운로드';
+                    downloadBtn.style.cssText = 'margin-top: 10px; padding: 5px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;';
+                    downloadBtn.onclick = function() {
+                        const link = document.createElement('a');
+                        link.download = 'qrcode.png';
+                        link.href = canvas.toDataURL();
+                        link.click();
+                    };
+                    resultDiv.appendChild(downloadBtn);
+                }
+            });
+        }
+        
+        // Enter 키로 생성
+        document.getElementById('qrText').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                generateQR();
+            }
+        });
+    </script>
+</body>
+</html> 

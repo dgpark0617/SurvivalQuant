@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analog Clock Module</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+        }
+
+        .clock-container {
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            width: 300px;
+            margin: 0 auto;
+        }
+
+        .clock-title {
+            font-size: 1.2rem;
+            color: #4e54c8;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+
+        .analog-clock {
+            width: 200px;
+            height: 200px;
+            border: 3px solid #333;
+            border-radius: 50%;
+            position: relative;
+            margin: 0 auto 15px auto;
+            background: #fff;
+        }
+
+        .clock-center {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #333;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .clock-number {
+            position: absolute;
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .clock-hand {
+            position: absolute;
+            background: #333;
+            transform-origin: bottom center;
+            border-radius: 2px;
+        }
+
+        .hour-hand {
+            width: 4px;
+            height: 60px;
+            background: #333;
+            left: 50%;
+            top: 50%;
+            margin-left: -2px;
+            margin-top: -60px;
+        }
+
+        .minute-hand {
+            width: 3px;
+            height: 80px;
+            background: #666;
+            left: 50%;
+            top: 50%;
+            margin-left: -1.5px;
+            margin-top: -80px;
+        }
+
+        .second-hand {
+            width: 1px;
+            height: 90px;
+            background: #ff0000;
+            left: 50%;
+            top: 50%;
+            margin-left: -0.5px;
+            margin-top: -90px;
+        }
+
+        .digital-clock {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            color: #333;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="clock-container">
+        <div class="clock-title">아날로그 시계</div>
+        <div class="analog-clock" id="analogClock">
+            <div class="clock-center"></div>
+            <div class="clock-hand hour-hand" id="hourHand"></div>
+            <div class="clock-hand minute-hand" id="minuteHand"></div>
+            <div class="clock-hand second-hand" id="secondHand"></div>
+        </div>
+        <div class="digital-clock" id="digitalClock">00:00:00</div>
+    </div>
+
+    <script>
+        function initClock() {
+            const analogClock = document.getElementById('analogClock');
+            
+            // 시계 숫자 표시 (1-12)
+            for (let i = 1; i <= 12; i++) {
+                const number = document.createElement('div');
+                number.className = 'clock-number';
+                number.textContent = i;
+                
+                const angle = (i * 30 - 90) * Math.PI / 180;
+                const radius = 85;
+                const x = Math.cos(angle) * radius + 100;
+                const y = Math.sin(angle) * radius + 100;
+                
+                number.style.left = (x - 7) + 'px';
+                number.style.top = (y - 7) + 'px';
+                
+                analogClock.appendChild(number);
+            }
+            
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const hours = now.getHours() % 12;
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            
+            // 각도 계산
+            const hourAngle = (hours * 30) + (minutes * 0.5);
+            const minuteAngle = minutes * 6;
+            const secondAngle = seconds * 6;
+            
+            // 시계 바늘 회전
+            document.getElementById('hourHand').style.transform = `rotate(${hourAngle}deg)`;
+            document.getElementById('minuteHand').style.transform = `rotate(${minuteAngle}deg)`;
+            document.getElementById('secondHand').style.transform = `rotate(${secondAngle}deg)`;
+            
+            // 디지털 시계 업데이트
+            const digitalTime = now.toLocaleTimeString('ko-KR', { hour12: false });
+            document.getElementById('digitalClock').textContent = digitalTime;
+        }
+
+        // 페이지 로드 시 시계 초기화
+        window.onload = initClock;
+    </script>
+</body>
+</html> 

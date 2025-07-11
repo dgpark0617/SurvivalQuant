@@ -10,13 +10,39 @@
     h1 { margin: 0 0 0.5rem 0; font-size:2.2rem;}
     h2 { margin-top:2.5rem;}
     main { max-width: 900px; margin: 2rem auto 3rem auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 14px #0001; padding:2rem;}
-    label { font-weight:500;}
-    .form-row { display:flex; align-items:center; gap:1.5em; margin-bottom:1em;}
-    .form-row label {min-width: 180px;}
-    .form-row input[type="number"] { width: 100px; padding:0.3em;}
-    .form-row input[type="checkbox"] { width:1.1em; height:1.1em; }
-    .form-row input[type="range"] { width: 150px;}
-    .desc { color: #555; font-size:0.97em; margin-top: -0.7em; margin-bottom:1em; }
+    label { font-weight:500; display: inline-block; line-height: 1.5;}
+    .form-row { 
+      display: flex; 
+      align-items: center; 
+      gap: 1.5em; 
+      margin-bottom: 1em;
+      min-height: 36px;
+    }
+    .form-row label {
+      min-width: 180px;
+      margin: 0;
+      flex-shrink: 0;
+    }
+    .form-row input[type="number"] { 
+      width: 100px; 
+      padding: 0.5em;
+      height: 36px;
+      box-sizing: border-box;
+    }
+    .form-row input[type="range"] { 
+      width: 150px;
+      margin: 0;
+    }
+    .form-row input[type="checkbox"] { 
+      width: 1.1em; 
+      height: 1.1em;
+      margin: 0;
+    }
+    .desc { 
+      color: #555; 
+      font-size: 0.97em; 
+      margin: 0 0 0 0.5em;
+    }
     button { background: #222; color: #fff; font-size:1.1em; border:none; border-radius:5px; padding:0.5em 2em; cursor:pointer; margin-top:1em;}
     button:disabled { opacity:0.6;}
     .progress-bar { background: #e8e8e8; border-radius:10px; overflow:hidden; height:22px; margin:1em 0;}
@@ -47,25 +73,28 @@
       <div class="form-row">
         <label for="capital">초기 자본(₩)</label>
         <input type="number" id="capital" min="5000" step="1000" value="100000">
+        <span class="desc">시뮬레이션 시작 시 보유한 초기 자본금</span>
       </div>
       <div class="form-row">
         <label for="bet_size">베팅 금액(₩/회)</label>
         <input type="number" id="bet_size" min="100" step="100" value="3000">
+        <span class="desc">매 거래당 투자하는 금액</span>
       </div>
       <div class="form-row">
         <label for="win_prob">승률(%)</label>
         <input type="range" id="win_prob" min="5" max="95" step="1" value="35" oninput="winProbOut.value=value">
         <output id="winProbOut">35</output> %
+        <span class="desc">전체 거래 중 수익이 발생하는 비율</span>
       </div>
       <div class="form-row">
         <label for="avg_win_rate">평균 익절률(%)</label>
         <input type="number" id="avg_win_rate" min="0.1" max="100" step="0.01" value="1.4">
-        <span class="desc">예: 1.4 → +1.4%</span>
+        <span class="desc">예: 1.4 → +1.4% (수익 발생 시 평균 수익률)</span>
       </div>
       <div class="form-row">
         <label for="avg_loss_rate">평균 손절률(%)</label>
         <input type="number" id="avg_loss_rate" max="-0.01" min="-100" step="0.01" value="-0.5">
-        <span class="desc">예: -0.5 → -0.5%</span>
+        <span class="desc">예: -0.5 → -0.5% (손실 발생 시 평균 손실률)</span>
       </div>
       <div class="form-row">
         <label for="commission_rate">수수료(%)</label>
@@ -75,16 +104,18 @@
       <div class="form-row">
         <label for="num_trades">총 거래 횟수</label>
         <input type="number" id="num_trades" min="10" max="5000" step="10" value="1000">
+        <span class="desc">시뮬레이션에서 실행할 총 거래 횟수</span>
       </div>
       <div class="form-row">
         <label for="max_streak_simulations">시뮬레이션 반복(회)</label>
         <input type="number" id="max_streak_simulations" min="10" max="3000" step="10" value="500">
+        <span class="desc">몬테카를로 시뮬레이션 반복 횟수 (많을수록 정확)</span>
       </div>
       <div class="form-row">
         <label for="cluster_coeff">연속성(스티키)</label>
         <input type="range" id="cluster_coeff" min="0" max="1" step="0.01" value="0.5" oninput="clusterCoeffOut.value=value">
         <output id="clusterCoeffOut">0.5</output>
-        <span class="desc">0=완전랜덤, 1=연속승/연속패 클러스터</span>
+        <span class="desc">0=완전랜덤, 1=연속승/연속패 클러스터 (시장의 추세 반영)</span>
       </div>
       <div class="form-row">
         <label for="enable_black_swan">블랙스완 이벤트</label>
@@ -296,23 +327,28 @@
       if(!isFinite(n)) return '∞';
       return (n>=0?'+':'') + n.toFixed(2) + ' %';
     }
-    function formatMetricTable(summary, config){
+    function formatMetricTable(summary, config) {
       const col_order = ["Median", "Mean", "Min", "Max", "Std", "90%tile", "95%tile", "99%tile"];
+      const col_names = ["중앙값", "평균", "최소", "최대", "표준편차", "90%", "95%", "99%"];
       let rows = [];
       const metrics = Object.keys(summary);
+      
       // config rows
       rows.push(['<b>초기 자본</b>', ...col_order.map(()=>formatNum(config.initial_capital,0))]);
       rows.push(['<b>베팅 금액</b>', ...col_order.map(()=>formatNum(config.bet_size,0))]);
+      
       // stat rows
-      for(const metric of metrics){
+      for(const metric of metrics) {
         const isPct = metric.match(/%/);
+        const koreanMetric = metricsMap[metric] || metric;
         rows.push([
-          metric,
+          koreanMetric,
           ...col_order.map(c=>isPct ? formatPct(summary[metric][c]) : formatNum(summary[metric][c]))
         ]);
       }
+      
       // header
-      let thead = '<tr><th>지표</th>' + col_order.map(c=>`<th>${c}</th>`).join('') + '</tr>';
+      let thead = '<tr><th>지표</th>' + col_names.map(c=>`<th>${c}</th>`).join('') + '</tr>';
       let tbody = rows.map(r=>'<tr>' + r.map((v,i)=>i===0?`<td class="metric">${v}</td>`:`<td>${v}</td>`).join('') + '</tr>').join('');
       return `<table class="stats-table">${thead}${tbody}</table>`;
     }
@@ -427,11 +463,108 @@
       }
       document.getElementById('run-btn').disabled=true;
       showProgress(0);
+      
+      const metricsMap = {
+        "Final Capital": "최종 자본금",
+        "Seed Change (%)": "자본금 변화율(%)",
+        "Profit Factor": "수익 팩터",
+        "Recovery Factor": "회복 팩터",
+        "Max Drawdown (%)": "최대 낙폭(%)",
+        "Max Losing Streak": "최대 연패",
+        "Total Trades": "총 거래수",
+        "Expectancy (%)": "기대 수익률(%)",
+        "Kelly Ratio (%)": "켈리 비율(%)"
+      };
+
+      // 영문-한글 역매핑 생성
+      const reverseMetricsMap = Object.fromEntries(
+        Object.entries(metricsMap).map(([k, v]) => [v, k])
+      );
+
       const METRICS = [
         "Final Capital", "Seed Change (%)", "Profit Factor", "Recovery Factor",
         "Max Drawdown (%)", "Max Losing Streak", "Total Trades",
         "Expectancy (%)", "Kelly Ratio (%)"
       ];
+
+      function formatMetricTable(summary, config) {
+        const col_order = ["Median", "Mean", "Min", "Max", "Std", "90%tile", "95%tile", "99%tile"];
+        const col_names = ["중앙값", "평균", "최소", "최대", "표준편차", "90%", "95%", "99%"];
+        let rows = [];
+        const metrics = Object.keys(summary);
+        
+        // config rows
+        rows.push(['<b>초기 자본</b>', ...col_order.map(()=>formatNum(config.initial_capital,0))]);
+        rows.push(['<b>베팅 금액</b>', ...col_order.map(()=>formatNum(config.bet_size,0))]);
+        
+        // stat rows
+        for(const metric of metrics) {
+          const isPct = metric.includes('%');
+          rows.push([
+            metricsMap[metric],
+            ...col_order.map(c=>isPct ? formatPct(summary[metric][c]) : formatNum(summary[metric][c]))
+          ]);
+        }
+        
+        // header
+        let thead = '<tr><th>지표</th>' + col_names.map(c=>`<th>${c}</th>`).join('') + '</tr>';
+        let tbody = rows.map(r=>'<tr>' + r.map((v,i)=>i===0?`<td class="metric">${v}</td>`:`<td>${v}</td>`).join('') + '</tr>').join('');
+        return `<table class="stats-table">${thead}${tbody}</table>`;
+      }
+
+      function analyzeStrategy(summary, config){
+        const seed_change = summary["Seed Change (%)"]["Mean"];
+        const expectancy = summary["Expectancy (%)"]["Mean"];
+        const mdd = summary["Max Drawdown (%)"]["Mean"];
+        const profit_factor = summary["Profit Factor"]["Mean"];
+        const max_streak = summary["Max Losing Streak"]["Mean"];
+        const kelly_pct = summary["Kelly Ratio (%)"]["Mean"];
+        const min_win_profit = minRequiredWinProfit(
+          config.win_prob,
+          config.avg_loss_rate,
+          config.commission_rate
+        );
+        const avg_win_rate = config.avg_win_rate;
+        let html = `<div class="summary-box"><b>전략 성과 요약</b><br/><br/>`;
+        html += `<b>켈리 이론 베팅비율:</b> ${formatPct(kelly_pct)}<br/>`;
+        html += `<b>기대값 (Expectancy):</b> ${formatPct(expectancy)}<br/>`;
+        html += `<b>평균 자본금 변화율:</b> ${formatPct(seed_change)}<br/>`;
+        html += `<b>평균 최대 낙폭:</b> ${formatPct(mdd)}<br/>`;
+        html += `<b>수익 팩터:</b> ${formatNum(profit_factor)}<br/>`;
+        html += `<b>최대 연속 손실:</b> ${formatNum(max_streak,1)}<br/>`;
+        html += `<b>최소 요구 익절률:</b> ${formatPct(min_win_profit*100)}<br/>`;
+        html += `<b>현재 평균 익절률:</b> ${formatPct(avg_win_rate*100)}<br/>`;
+        html += `<hr style="margin:0.7em 0;"/>`;
+        if(avg_win_rate < min_win_profit){
+          html += `<span style="color:#c00"><b>- 현재 평균 익절률이 최소 요구치보다 낮아 구조적으로 적자 전략입니다.</b></span><br/>`;
+        }else if(seed_change < 0 || expectancy < 0){
+          html += `<span style="color:#c00"><b>- 기대값 또는 평균 seed 변화가 0 이하입니다. 장기적으로 자본이 감소할 수 있습니다.</b></span><br/>`;
+        }else{
+          html += `<span style="color:#295"><b>- 장기적으로 자본이 증가하는 구조입니다.</b></span><br/>`;
+        }
+        html += `<br/><b>추천사항</b><ul style="margin-top:0.3em;">`;
+        if(avg_win_rate < min_win_profit){
+          html += `<li>익절률을 높이거나 손실률/수수료를 낮추는 구조 개선 필요</li>`;
+        }
+        if(profit_factor < 1.5){
+          html += `<li>Profit Factor(손익비)가 1.5 미만 → 수익/위험 구조 개선 필요</li>`;
+        }
+        if(mdd > 50){
+          html += `<li>평균 Max Drawdown이 50% 초과 → 리스크 관리 강화 필요</li>`;
+        }
+        if(max_streak > 20){
+          html += `<li>최대 연속 손실이 20회 초과 → 포지션 사이즈/손절 전략 점검 필요</li>`;
+        }
+        if(expectancy > 0 && expectancy < 0.5){
+          html += `<li>기대값이 0.5% 미만 → 전략 개선 필요</li>`;
+        }
+        if(avg_win_rate >= min_win_profit && seed_change >= 0 && expectancy >= 0 &&
+           profit_factor >= 1.5 && mdd <= 50 && max_streak <= 20 && expectancy >= 0.5){
+          html += `<li>모든 주요 리스크/수익 지표가 양호합니다.</li>`;
+        }
+        html += `</ul></div>`;
+        return html;
+      }
       const results = await montecarloSimulation(cfg, showProgress);
       hideProgress();
       const summary = summarizeMontecarloResults(results, METRICS);

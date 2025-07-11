@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Clock</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+        }
+
+        .world-clock-container {
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            width: 400px;
+            margin: 0 auto;
+        }
+
+        .world-clock-title {
+            font-size: 1.2rem;
+            color: #4e54c8;
+            font-weight: 500;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .timezone-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .timezone-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            background: #f8f9fa;
+            transition: background-color 0.2s;
+        }
+
+        .timezone-item:hover {
+            background: #e9ecef;
+        }
+
+        .timezone-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .timezone-flag {
+            font-size: 1.2em;
+        }
+
+        .timezone-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .timezone-city {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .timezone-time {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #4e54c8;
+        }
+
+        .timezone-date {
+            font-size: 0.8em;
+            color: #6c757d;
+            text-align: right;
+        }
+
+        .update-info {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+
+        .current-timezone {
+            background: #e3f2fd !important;
+            border-color: #4e54c8 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="world-clock-container">
+        <div class="world-clock-title">세계 시간</div>
+        <div class="timezone-list" id="timezoneList">
+            <!-- 시간대 정보가 여기에 동적으로 추가됩니다 -->
+        </div>
+        <div class="update-info" id="updateInfo">
+            마지막 업데이트: <span id="lastUpdate"></span>
+        </div>
+    </div>
+
+    <script>
+        const timezones = [
+            { name: '서울', city: 'Seoul', timezone: 'Asia/Seoul', flag: '🇰🇷' },
+            { name: '도쿄', city: 'Tokyo', timezone: 'Asia/Tokyo', flag: '🇯🇵' },
+            { name: '베이징', city: 'Beijing', timezone: 'Asia/Shanghai', flag: '🇨🇳' },
+            { name: '방콕', city: 'Bangkok', timezone: 'Asia/Bangkok', flag: '🇹🇭' },
+            { name: '싱가포르', city: 'Singapore', timezone: 'Asia/Singapore', flag: '🇸🇬' },
+            { name: '시드니', city: 'Sydney', timezone: 'Australia/Sydney', flag: '🇦🇺' },
+            { name: '뭄바이', city: 'Mumbai', timezone: 'Asia/Kolkata', flag: '🇮🇳' },
+            { name: '두바이', city: 'Dubai', timezone: 'Asia/Dubai', flag: '🇦🇪' },
+            { name: '모스크바', city: 'Moscow', timezone: 'Europe/Moscow', flag: '🇷🇺' },
+            { name: '런던', city: 'London', timezone: 'Europe/London', flag: '🇬🇧' },
+            { name: '파리', city: 'Paris', timezone: 'Europe/Paris', flag: '🇫🇷' },
+            { name: '베를린', city: 'Berlin', timezone: 'Europe/Berlin', flag: '🇩🇪' },
+            { name: '뉴욕', city: 'New York', timezone: 'America/New_York', flag: '🇺🇸' },
+            { name: '로스앤젤레스', city: 'Los Angeles', timezone: 'America/Los_Angeles', flag: '🇺🇸' },
+            { name: '시카고', city: 'Chicago', timezone: 'America/Chicago', flag: '🇺🇸' },
+            { name: '상파울루', city: 'São Paulo', timezone: 'America/Sao_Paulo', flag: '🇧🇷' }
+        ];
+
+        function updateWorldClock() {
+            const timezoneList = document.getElementById('timezoneList');
+            const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            
+            timezoneList.innerHTML = '';
+            
+            timezones.forEach(tz => {
+                const now = new Date();
+                const timeOptions = {
+                    timeZone: tz.timezone,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                };
+                
+                const dateOptions = {
+                    timeZone: tz.timezone,
+                    month: 'short',
+                    day: 'numeric',
+                    weekday: 'short'
+                };
+                
+                const time = now.toLocaleTimeString('ko-KR', timeOptions);
+                const date = now.toLocaleDateString('ko-KR', dateOptions);
+                
+                const timezoneItem = document.createElement('div');
+                timezoneItem.className = 'timezone-item';
+                
+                // 현재 사용자의 시간대와 같은 경우 하이라이트
+                if (tz.timezone === userTimezone) {
+                    timezoneItem.classList.add('current-timezone');
+                }
+                
+                timezoneItem.innerHTML = `
+                    <div class="timezone-info">
+                        <span class="timezone-flag">${tz.flag}</span>
+                        <div>
+                            <div class="timezone-name">${tz.name}</div>
+                            <div class="timezone-city">${tz.city}</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="timezone-time">${time}</div>
+                        <div class="timezone-date">${date}</div>
+                    </div>
+                `;
+                
+                timezoneList.appendChild(timezoneItem);
+            });
+            
+            // 마지막 업데이트 시간 표시
+            const lastUpdate = new Date().toLocaleTimeString('ko-KR');
+            document.getElementById('lastUpdate').textContent = lastUpdate;
+        }
+
+        // 페이지 로드 시 초기화
+        window.onload = function() {
+            updateWorldClock();
+            // 1초마다 업데이트
+            setInterval(updateWorldClock, 1000);
+        };
+    </script>
+</body>
+</html> 
