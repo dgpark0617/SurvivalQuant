@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simple DoomRL (ASCII, JS, One File, Customizable, True Turn-based Reload)</title>
+  <style>
+    body { background: #f5f5f5; color: #181818; font-family: monospace; }
+    pre { line-height: 1.0; font-size: 12px; }
+    #main { user-select: none; }
+  </style>
+</head>
+<body>
+<pre id="main"></pre>
+<script>
+// ======= Game configuration (difficulty & settings) =======
+const MAP_W = 100;            // Map width
+const MAP_H = 100;            // Map height
+const VIEW_R = 8;             // Sight radius
+const SCREEN_W = 30;          // Displayed area width
+const SCREEN_H = 20;          // Displayed area height
+const MONSTER_COUNT = 100;     // Number of monsters
+const PLAYER_START_HP = 10;   // Player HP
+const PLAYER_AMMO_MAX = 6;    // Gun max ammo
+const MONSTER_HP = 5;         // Monster HP (raise for harder game)
+const WALL_RATIO = 0.08;      // Wall generation ratio (0~1)
+const GUN_DAMAGE_MIN = 2;     // Gun minimum damage
+const GUN_DAMAGE_MAX = 3;     // Gun maximum damage (inclusive)
+// ==========================================================
+
+// Map symbols
+const FLOOR = '.', WALL = '#', PLAYER = '@', MONSTER = 'M', BULLET = '*';
+
+// Game state
+let map = [];
+let player = {
+  x: Math.floor(MAP_W / 2),
+  y: Math.floor(MAP_H / 2),
+  hp: PLAYER_START_HP,
+  ammo: PLAYER_AMMO_MAX,
+  aiming: false,
+  aimDir: { dx: 0, dy: 0 }
+};
+let monsters = [];
+let msg = [];
+let gameOver = false;
+
+// Directions for keypad (1-9, skip 5)
+const DIRS = [
+  { dx: -1, dy: 1 }, { dx: 0, dy: 1 }, { dx: 1, dy: 1 },
+  { dx: -1, dy: 0 }, { dx: 0, dy: 0 }, { dx: 1, dy: 0 },
+  { dx: -1, dy: -1 }, { dx: 0, dy: -1 }, { dx: 1, dy: -1 }
+];
+// Keypad keycode mapping (numpad and numbers)
+const NUM_DIR_KEYS = {
+  "97": 0, "98": 1, "99": 2, // Numpad 1,2,3
+  "100": 3, "101": 4, "102": 5, // Numpad 4,5,6
+  "103": 6, "104": 7, "105": 8, // Numpad 7,8,9
+  "49": 0, "50": 1, "51": 2, // 1,2,3
+  "52": 3, "53": 4, "54": 5, // 4,5,6
+  "55": 6, "56": 7, "57": 8  // 7,8,9
+};
+function addMsg(s) { msg.unshift(s); if (msg.length > 5) msg.length = 5; }
+
+// Map generation: simple empty with border and some random walls
+function genMap() {
+  for (let y = 0; y < MAP_H; ++y) {
+    map[y] = [];
+    for (let x = 0; x < MAP_W; ++x) {
+      if (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1)
+        map[y][x] = WALL;
+      else
+        map[y][x] = (Math.random() < WALL_RATIO) ? WALL : FLOOR;
+    }
+  }
+}
+
+// Place player and monsters
+function placeEntities() {
+  function randPos() {
+    let x, y;
+    do {
+      x = Math.floor(Math.random() * (MAP_W - 2)) + 1;
+      y = Math.floor(Math.random() * (MAP_H - 2)) + 1;
+    } while (map[y][x] !== FLOOR ||
+      (x === player.x && y === player.y) ||
+      monsters.some(m => m.x === x && m.y === y));
+    return { x, y };
+  }
+  // Place player
+  let p = randPos();
+  player.x = p.x; player.y = p.y;
+  player.hp = PLAYER_START_HP;
+  player.ammo = PLAYER_AMMO_MAX;
+  player.aiming = false;
+  player.reloading = false;
+  // Place monsters
+  monsters = [];
+  for (let i = 0; i < MONSTER_COUNT; ++i) {
+    let m = randPos();
+    monsters.push({ x: m.x, y: m.y, hp: MONSTER_HP });
+  }
+}
+
+// Check if in map
+function inMap(x, y) { return x >= 0 && y >= 0 && x < MAP_W && y < MAP_H; }
+
+// Bresenham line for FOV and shooting
+function los(x0, y0, x1, y1, fn) {
+  let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+  let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+  let err = dx + dy, e2;
+  for (; ;) {
+    if (fn(x0, y0) === false) return false;
+    if (x0 === x1 && y0 === y1) break;
+    e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+  return true;
+}
+
+// Field of view (returns set of visible positions)
+function calcFOV() {
+  let vis = {};
+  for (let dy = -VIEW_R; dy <= VIEW_R; ++dy)
+    for (let dx = -VIEW_R; dx <= VIEW_R; ++dx) {
+      let tx = player.x + dx, ty = player.y + dy;
+      if (inMap(tx, ty) && Math.sqrt(dx * dx + dy * dy) <= VIEW_R) {
+        los(player.x, player.y, tx, ty, (x, y) => {
+          vis[`${x},${y}`] = true;
+          return map[y][x] !== WALL;
+        });
+      }
+    }
+  return vis;
+}
+
+// Render the game
+function render() {
+  let vis = calcFOV();
+  let out = "";
+  let sx = Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - MAP_W / 2 < 0 ? 0 : player.x - SCREEN_W / 2));
+  let sy = Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - MAP_H / 2 < 0 ? 0 : player.y - SCREEN_H / 2));
+  for (let y = sy; y < sy + SCREEN_H; ++y) {
+    for (let x = sx; x < sx + SCREEN_W; ++x) {
+      let ch = map[y][x];
+      let m = monsters.find(m => m.x === x && m.y === y && m.hp > 0);
+      if (player.x === x && player.y === y) ch = PLAYER;
+      else if (m && vis[`${x},${y}`]) ch = MONSTER;
+      else if (!vis[`${x},${y}`]) ch = ' ';
+      out += ch;
+    }
+    out += '\n';
+  }
+  out += `HP:${player.hp} Ammo:${player.ammo}  Monsters:${monsters.filter(m => m.hp > 0).length}\n`;
+  if (player.aiming) out += 'Aiming: Use keypad to choose direction, F to fire, ESC to cancel.\n';
+  else out += 'Move: Keypad 1-9 | f: aim/fire | r: reload\n';
+  msg.forEach(m => out += m + '\n');
+  if (gameOver) out += 'GAME OVER! Refresh to restart.\n';
+  document.getElementById('main').textContent = out;
+}
+
+// Move player
+function tryMove(dx, dy) {
+  let nx = player.x + dx, ny = player.y + dy;
+  if (!inMap(nx, ny)) return false;
+  if (map[ny][nx] === WALL) return false;
+  let m = monsters.find(m => m.x === nx && m.y === ny && m.hp > 0);
+  if (m) {
+    m.hp -= 2 + Math.floor(Math.random() * 2); // melee attack
+    addMsg('You punch the monster!');
+    if (m.hp <= 0) addMsg('Monster dies!');
+  } else {
+    player.x = nx; player.y = ny;
+  }
+  return true;
+}
+
+// Monster AI: very simple, move toward player if in FOV, else random walk
+function monsterTurn() {
+  let vis = calcFOV();
+  monsters.forEach(m => {
+    if (m.hp <= 0) return;
+    let dx = player.x - m.x, dy = player.y - m.y;
+    let dist = Math.max(Math.abs(dx), Math.abs(dy));
+    if (dist === 1) { // adjacent, attack
+      player.hp -= 2;
+      addMsg('Monster hits you!');
+      if (player.hp <= 0) { gameOver = true; addMsg('You died!'); }
+      return;
+    }
+    if (vis[`${m.x},${m.y}`]) {
+      // Move closer
+      let mx = dx ? dx / Math.abs(dx) : 0, my = dy ? dy / Math.abs(dy) : 0;
+      let nx = m.x + mx, ny = m.y + my;
+      if (inMap(nx, ny) && map[ny][nx] !== WALL && !monsters.find(mm => mm !== m && mm.x === nx && mm.y === ny) && (player.x !== nx || player.y !== ny))
+        { m.x = nx; m.y = ny; }
+    } else {
+      // Random move
+      let d = DIRS[Math.floor(Math.random() * 8)];
+      let nx = m.x + d.dx, ny = m.y + d.dy;
+      if (inMap(nx, ny) && map[ny][nx] !== WALL && !monsters.find(mm => mm !== m && mm.x === nx && mm.y === ny) && (player.x !== nx || player.y !== ny))
+        { m.x = nx; m.y = ny; }
+    }
+  });
+}
+
+// Fire gun in direction
+function fire(dx, dy) {
+  if (player.ammo <= 0) { addMsg('No ammo! Reload with R.'); return; }
+  let x = player.x, y = player.y;
+  let hit = false;
+  for (let i = 0; i < MAP_W; ++i) {
+    x += dx; y += dy;
+    if (!inMap(x, y) || map[y][x] === WALL) break;
+    let m = monsters.find(m => m.x === x && m.y === y && m.hp > 0);
+    if (m) {
+      let dmg = GUN_DAMAGE_MIN + Math.floor(Math.random() * (GUN_DAMAGE_MAX - GUN_DAMAGE_MIN + 1));
+      m.hp -= dmg;
+      addMsg(`You shoot the monster! (${dmg} dmg)`);
+      if (m.hp <= 0) addMsg('Monster dies!');
+      hit = true;
+      break;
+    }
+  }
+  if (!hit) addMsg('You fire into the darkness.');
+  player.ammo--;
+}
+
+// Reload (now takes a real turn)
+function doReload() {
+  if (player.ammo === PLAYER_AMMO_MAX) { addMsg('Already full.'); render(); return; }
+  player.ammo = PLAYER_AMMO_MAX;
+  addMsg('Reloaded!');
+  monsterTurn(); // Monsters act immediately (reload is a turn)
+  render();
+}
+
+// Keyboard input
+document.addEventListener('keydown', function (e) {
+  if (gameOver) return;
+  if (player.aiming) {
+    if (e.key === 'Escape') { player.aiming = false; render(); return; }
+    let d = NUM_DIR_KEYS[e.keyCode];
+    if (d !== undefined && d !== 4) {
+      player.aimDir = DIRS[d];
+      render();
+      return;
+    }
+    if (e.key === 'f' || e.key === 'F') {
+      if (player.aimDir.dx || player.aimDir.dy) {
+        fire(player.aimDir.dx, player.aimDir.dy);
+        player.aiming = false;
+        monsterTurn();
+        render();
+      } else addMsg('Choose direction with keypad!');
+      return;
+    }
+    return;
+  }
+  // Not aiming
+  if (e.key === 'f' || e.key === 'F') {
+    player.aiming = true; player.aimDir = { dx: 0, dy: 0 }; render(); return;
+  }
+  if (e.key === 'r' || e.key === 'R') { doReload(); return; }
+  let d = NUM_DIR_KEYS[e.keyCode];
+  if (d !== undefined && d !== 4) {
+    tryMove(DIRS[d].dx, DIRS[d].dy);
+    monsterTurn();
+    render();
+    return;
+  }
+});
+function init() {
+  genMap();
+  placeEntities();
+  msg = ['Welcome to Mini DoomRL!'];
+  render();
+}
+init();
+</script>
+</body>
+</html>
