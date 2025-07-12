@@ -111,7 +111,7 @@
 </head>
 <body>
   <!-- 자동매매 제작의뢰 링크 -->
-  <div style="position: fixed; top: 10px; right: 10px; z-index: 100;">
+  <div style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 100;">
       <a href="https://open.kakao.com/o/sy2UErbd" 
          style="display: inline-block; 
                 background: #ff6b6b; 
@@ -126,12 +126,15 @@
           🤖 자동매매 제작의뢰
       </a>
   </div>
-  <h1>주키퍼 매치3 🦁🐼🐸</h1>
-  <div id="score">점수: 0</div>
-  <div id="timer">움직임 힌트까지: 10초</div>
-  <div id="message"></div>
-  <div id="board"></div>
-  <button onclick="restart()">다시 시작</button>
+  <div style="height: 60px;"></div>
+  <h1 style="margin-top: 0; margin-bottom: 18px; color: #764ba2; text-align: center;">스위칭매치 🦁🐼🐸</h1>
+  <div id="score" style="font-size: 1.5em; margin: 10px; color: #4e54c8; font-weight: bold; text-align: center;">점수: 0</div>
+  <div id="timer" style="margin: 10px; font-size: 1.2em; color: #666; text-align: center;">움직임 힌트까지: 10초</div>
+  <div id="message" style="margin: 10px; font-size: 1.2em; color: #764ba2; height: 1.5em; text-align: center;"></div>
+  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <div id="board"></div>
+    <button onclick="restart()" style="margin-top: 24px;">다시 시작</button>
+  </div>
   <script>
     const animals = ["🐶", "🐱", "🐵", "🦁", "🐸", "🐼", "🦊"]; // 🐨 제거
     const explosionEmojis = ["💥", "💫", "✨", "🎇", "🎆", "⚡"];

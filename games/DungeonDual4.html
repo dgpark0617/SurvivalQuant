@@ -116,7 +116,7 @@
 </head>
 <body>
   <!-- 자동매매 제작의뢰 링크 -->
-  <div style="position: fixed; top: 10px; right: 10px; z-index: 100;">
+  <div style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 100;">
       <a href="https://open.kakao.com/o/sy2UErbd" 
          style="display: inline-block; 
                 background: #ff6b6b; 
@@ -131,7 +131,10 @@
           🤖 자동매매 제작의뢰
       </a>
   </div>
-  <div id="setup-modal">
+  <div style="height: 60px;"></div> <!-- 링크와 제목 사이 여백 -->
+  <h2 style="margin-top: 0; margin-bottom: 24px; text-align: center;">배틀링크</h2>
+  <!-- 모달들은 제목 바로 아래에 위치하도록 구조 이동 -->
+  <div id="setup-modal" style="display: flex; flex-direction:column; align-items:center; justify-content:center; position: relative; width:100vw; min-height: 300px; margin-bottom: 0;">
     <div class="modal-box">
       <h3>게임 모드를 선택하세요</h3>
       <div style="margin: 20px 0;">
@@ -143,16 +146,15 @@
         </button>
       </div>
       <div id="mode-description" style="margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; font-size: 0.9em;">
-        모드를 선택해주세요
+        게임 모드를 선택해주세요
       </div>
     </div>
   </div>
-  
-  <div id="size-modal" style="display: none;">
-    <div class="modal-box">
+  <div id="size-modal" style="display: none; flex-direction:column; align-items:center; justify-content:center; position: relative; width:100vw; min-height: 300px; margin-bottom: 0;">
+    <div class="modal-box" style="text-align: center;">
       <h3>보드 크기를 선택하세요</h3>
-      <label>
-        <select id="sizeSelect">
+      <label style="display: block; margin: 15px 0;">
+        <select id="sizeSelect" style="font-size: 1.1em; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
           <option value="6">6 × 6 (아주 작음)</option>
           <option value="8">8 × 8 (작음)</option>
           <option value="10">10 × 10 (중간)</option>
@@ -161,12 +163,12 @@
           <option value="19">19 × 19 (초대형)</option>
         </select>
       </label>
-      <br>
-      <button onclick="startGame()">게임 시작</button>
-      <button onclick="backToModeSelect()" style="margin-left: 10px; background: #666;">뒤로가기</button>
+      <div style="margin: 15px 0;">
+        <button onclick="startGame()">게임 시작</button>
+        <button onclick="backToModeSelect()" style="margin-left: 10px; background: #666;">뒤로가기</button>
+      </div>
     </div>
   </div>
-  <h2>배틀링크</h2>
   <div id="turn-indicator" style="display:none;"></div>
   <div id="stats" style="display:none;">
     <b>플레이어1</b>
@@ -375,9 +377,9 @@
       const description = document.getElementById("mode-description");
       
       if (mode === 'single') {
-        description.innerHTML = "1인용 모드: 플레이어1만 조작하여 뱀파이어와 싸우세요!";
+        description.innerHTML = "🎮 1인용 모드: 플레이어1만 조작하여 뱀파이어(🧛‍♀️)와 싸우세요!<br>턴 전환 없이 연속으로 플레이할 수 있습니다.";
       } else {
-        description.innerHTML = "2인용 모드: 플레이어1과 플레이어2가 번갈아가며 플레이합니다!";
+        description.innerHTML = "👥 2인용 모드: 플레이어1과 플레이어2가 번갈아가며 플레이합니다!<br>드래곤(🐲)과 뱀파이어(🧛‍♀️)가 모두 등장합니다.";
       }
       
       // 잠시 후 크기 선택 화면으로 이동
@@ -439,7 +441,7 @@
         };
       }
       
-      message = "자신의 영웅(🤺)에서 시작해 경로를 만들고 마지막 타일을 한번 더 클릭하세요!";
+      message = "자신의 영웅(🤺)에서 시작해 경로를 만들고 마지막 타일을 한번 더 클릭하세요!<br>🛡️방어막 🧪포션 💰코인 🗡️검을 수집하여 몬스터와 싸우세요!";
       board = [];
       let px1 = Math.floor(Math.random() * SIZE);
       let py1 = Math.floor(Math.random() * SIZE);
@@ -497,7 +499,7 @@
       }
     }
     function showMessage(msg) {
-      document.getElementById("message").textContent = msg;
+      document.getElementById("message").innerHTML = msg;
     }
     function updateTurnIndicator() {
       document.getElementById("turn-indicator").style.display = "";
@@ -784,12 +786,18 @@
       }
     }
     function showLevelUpModal(playerStats) {
+      // 이미 레벨업 모달이 열려있으면 중복 방지
+      if (document.querySelector('.levelup-modal')) {
+        return;
+      }
+      
       // 랜덤하게 3개 옵션 선택
       let options = [...LEVEL_UP_OPTIONS]
         .sort(() => Math.random() - 0.5)
         .slice(0, 3);
       
       const modal = document.createElement('div');
+      modal.className = 'levelup-modal';
       modal.style.cssText = `
         position: fixed;
         top: 0;
@@ -825,11 +833,39 @@
       modal.appendChild(content);
       document.body.appendChild(modal);
       
+      // ESC 키로 모달 닫기
+      const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+          document.body.removeChild(modal);
+          delete window.applyLevelUpOption;
+          document.removeEventListener('keydown', handleEscape);
+        }
+      };
+      document.addEventListener('keydown', handleEscape);
+      
+      // 모달 외부 클릭으로 닫기
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+          delete window.applyLevelUpOption;
+          document.removeEventListener('keydown', handleEscape);
+        }
+      });
+      
       // 전역 함수로 선택 핸들러 추가
       window.applyLevelUpOption = (index) => {
         const selectedOption = options[index];
         selectedOption.apply(playerStats);
+        
+        // 모달 제거
         document.body.removeChild(modal);
+        
+        // 전역 함수 정리
+        delete window.applyLevelUpOption;
+        
+        // 이벤트 리스너 정리
+        document.removeEventListener('keydown', handleEscape);
+        
         updateStats();
         showMessage(`레벨 ${playerStats.level}: ${selectedOption.name} 효과가 적용되었습니다!`);
       };
@@ -908,9 +944,13 @@
                 messages.push(`흡혈 효과로 체력을 회복했습니다! (+${healAmount})`);
               }
 
-              // 레벨업 체크
-              if(checkLevelUp(currentStats)) {
-                messages.push(`레벨 ${currentStats.level}로 레벨업!`);
+              // 레벨업 체크 (한 번에 여러 레벨업 가능하도록)
+              let levelUpCount = 0;
+              while(checkLevelUp(currentStats)) {
+                levelUpCount++;
+              }
+              if(levelUpCount > 0) {
+                messages.push(`레벨 ${currentStats.level - levelUpCount + 1}에서 ${currentStats.level}로 레벨업!`);
               }
               
               board[x][y] = {type: "empty"};
@@ -949,8 +989,9 @@
         for(let j = 0; j < SIZE; j++) {
           if(gameMode === 'single') {
             // 1인용 모드: 뱀파이어만 공격
-            if(board[i][j].type === "vampire") {
-              totalEnemyAttack += Math.max(0, board[i][j].mon.atk - currentStats.shield);
+            if(board[i][j].type === "vampire" && board[i][j].mon && board[i][j].mon.hp > 0) {
+              const damage = Math.max(0, board[i][j].mon.atk - stats1.shield);
+              totalEnemyAttack += damage;
             }
           } else {
             // 2인용 모드: 기존 로직
@@ -964,18 +1005,25 @@
       }
       
       if(totalEnemyAttack > 0) {
-        currentStats.hp = Math.max(0, currentStats.hp - totalEnemyAttack);
-        messages.push(`남아있는 적 몬스터들의 공격으로 ${totalEnemyAttack}의 피해를 입었습니다!`);
-        
-        // 체력이 0이 되면 게임 종료
-        if(currentStats.hp <= 0) {
-          if(gameMode === 'single') {
+        if(gameMode === 'single') {
+          stats1.hp = Math.max(0, stats1.hp - totalEnemyAttack);
+          messages.push(`남아있는 뱀파이어들의 공격으로 ${totalEnemyAttack}의 피해를 입었습니다!`);
+          
+          // 체력이 0이 되면 게임 종료
+          if(stats1.hp <= 0) {
             showMessage("게임 오버! 다시 시작해주세요.");
-          } else {
+            return;
+          }
+        } else {
+          currentStats.hp = Math.max(0, currentStats.hp - totalEnemyAttack);
+          messages.push(`남아있는 적 몬스터들의 공격으로 ${totalEnemyAttack}의 피해를 입었습니다!`);
+          
+          // 체력이 0이 되면 게임 종료
+          if(currentStats.hp <= 0) {
             const winner = turn === 1 ? "플레이어2" : "플레이어1";
             showMessage(`게임 종료! ${winner}의 승리!`);
+            return;
           }
-          return;
         }
       }
 
@@ -996,41 +1044,7 @@
       }
       updateTurnIndicator();
     }
-    function monsterAttackPhase() {
-      if(stats1.hp <= 0 || stats2.hp <= 0) return;
-      let atk1 = 0, atk2 = 0;
-      for(let i=0; i<SIZE; i++) {
-        for(let j=0; j<SIZE; j++) {
-          if(board[i][j].type === "troll" && board[i][j].mon.hp > 0) {
-            atk1 += board[i][j].mon.atk;
-          }
-          if(board[i][j].type === "vampire" && board[i][j].mon.hp > 0) {
-            atk2 += board[i][j].mon.atk;
-          }
-        }
-      }
-      let msg = "";
-      if(turn === 1 && atk2 > 0) {
-        let shieldHit2 = Math.max(0, atk2 - stats2.shield);
-        stats2.shield = Math.max(0, stats2.shield - atk2);
-        stats2.hp -= shieldHit2;
-        msg = `뱀파이어의 공격! 플레이어2 피해 ${shieldHit2} (총 공격력 ${atk2})`;
-      }
-      if(turn === 2 && atk1 > 0) {
-        let shieldHit1 = Math.max(0, atk1 - stats1.shield);
-        stats1.shield = Math.max(0, stats1.shield - atk1);
-        stats1.hp -= shieldHit1;
-        msg = `트롤의 공격! 플레이어1 피해 ${shieldHit1} (총 공격력 ${atk1})`;
-      }
-      if(msg) showMessage(msg);
-      updateStats();
-      if(stats1.hp <= 0 || stats2.hp <= 0) {
-        showMessage("Game Over! 다시 시작을 누르세요.");
-      }
-      turn = 3 - turn;
-      updateTurnIndicator();
-      render();
-    }
+
     window.addEventListener('resize', function() {
       render();
       updateBoardGrid();

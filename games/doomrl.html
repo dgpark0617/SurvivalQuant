@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>Doom Emoji RL (Emoji-based, JS, One File, Customizable, True Turn-based Reload)</title>
+  <title>이모지 둠</title>
   <style>
     body { 
-      background: #222; 
-      color: #eee; 
+      background: #fff; 
+      color: #222; 
       font-family: 'Courier New', monospace; 
       text-align: center;
       margin: 0;
@@ -25,7 +25,7 @@
       grid-template-columns: repeat(30, 1fr);
       gap: 0px;
       margin-bottom: 10px;
-      background-color: #111;
+      background-color: #fff;
       border: 2px solid #444;
       padding: 5px;
     }
@@ -54,25 +54,27 @@
       font-size: 16px;
       margin-bottom: 5px;
       padding: 5px;
-      background-color: #333;
+      background-color: #f5f5f5;
       border: 1px solid #555;
       text-align: left;
     }
     #message-log {
-      height: 80px;
+      height: 90px;
       overflow-y: auto;
-      font-size: 14px;
-      margin-top: 5px;
-      margin-bottom: 10px;
-      padding: 5px;
-      background-color: #333;
-      border: 1px solid #555;
+      font-size: 1.08em;
+      margin-top: 8px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      background-color: #222;
+      color: #ffe066;
+      border: 1.5px solid #bbb;
+      border-radius: 8px;
       text-align: left;
     }
     #turn-timer {
       margin-bottom: 10px;
       padding: 5px;
-      background-color: #333;
+      background-color: #f5f5f5;
       border: 1px solid #555;
     }
     #turn-timer-bar {
@@ -113,7 +115,7 @@
       margin-top: 10px;
     }
     .action-btn {
-      background-color: #553355;
+      background-color: #ffe066;
     }
     /* 데스크탑 최적화 */
     @media (min-width: 769px) {
@@ -185,7 +187,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.8);
+      background-color: rgba(255, 255, 255, 0.95);
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -194,9 +196,13 @@
     }
     
     #map-select-title {
-      font-size: 24px;
+      font-size: 2em;
       margin-bottom: 20px;
-      color: #fff;
+      color: #111;
+      font-family: 'Segoe UI', 'Segoe UI Emoji', 'sans-serif';
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 8px #fff,0 1px 0 #bbb;
     }
     
     #map-select-options {
@@ -208,13 +214,14 @@
     }
     
     .map-option {
-      background-color: #333;
-      border: 2px solid #555;
+      background-color: #fff;
+      border: 2px solid #bbb;
       border-radius: 8px;
       padding: 15px;
       text-align: center;
       cursor: pointer;
       transition: all 0.3s ease;
+      color: #222;
     }
     
     .map-option:hover {
@@ -224,12 +231,13 @@
     
     .map-option h3 {
       margin-top: 0;
-      color: #fff;
+      color: #222;
     }
     
     .map-option p {
-      color: #ccc;
-      font-size: 14px;
+      color: #444;
+      font-size: 1.08em;
+      font-weight: 500;
     }
     
     .map-option-emoji {
@@ -240,7 +248,7 @@
 </head>
 <body>
 <!-- 자동매매 제작의뢰 링크 -->
-<div style="position: fixed; top: 10px; right: 10px; z-index: 1001;">
+<div style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1001;">
     <a href="https://open.kakao.com/o/sy2UErbd" 
        style="display: inline-block; 
               background: #ff6b6b; 
@@ -256,6 +264,8 @@
         🤖 자동매매 제작의뢰
     </a>
 </div>
+<div style="height: 60px;"></div>
+<h1 id="game-title" style="margin-top: 0; margin-bottom: 18px; color: #222; text-align: center; font-family: 'Segoe UI', 'Segoe UI Emoji', 'sans-serif'; font-size: 2em; font-weight: bold; letter-spacing: 1px;">이모지 둠</h1>
 <div id="game-container">
   <div id="status-bar"></div>
   <div id="game-grid"></div>
