@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>플레이어 & 한 자루 칼 퍼즐 (2인용)</title>
+  <title>배틀링크</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     html, body { height:100%; margin:0; padding:0; }
@@ -133,6 +133,23 @@
   </div>
   <div id="setup-modal">
     <div class="modal-box">
+      <h3>게임 모드를 선택하세요</h3>
+      <div style="margin: 20px 0;">
+        <button onclick="selectMode('single')" style="margin: 10px; padding: 15px 25px; font-size: 1.1em; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer;">
+          1인용 모드
+        </button>
+        <button onclick="selectMode('multi')" style="margin: 10px; padding: 15px 25px; font-size: 1.1em; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer;">
+          2인용 모드
+        </button>
+      </div>
+      <div id="mode-description" style="margin: 15px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; font-size: 0.9em;">
+        모드를 선택해주세요
+      </div>
+    </div>
+  </div>
+  
+  <div id="size-modal" style="display: none;">
+    <div class="modal-box">
       <h3>보드 크기를 선택하세요</h3>
       <label>
         <select id="sizeSelect">
@@ -146,9 +163,10 @@
       </label>
       <br>
       <button onclick="startGame()">게임 시작</button>
+      <button onclick="backToModeSelect()" style="margin-left: 10px; background: #666;">뒤로가기</button>
     </div>
   </div>
-  <h2>플레이어 & 한 자루 칼 퍼즐 (2인용)</h2>
+  <h2>배틀링크</h2>
   <div id="turn-indicator" style="display:none;"></div>
   <div id="stats" style="display:none;">
     <b>플레이어1</b>
@@ -195,6 +213,7 @@
     let turn = 1;
     let turnTimer = null;
     let timeLeft = 10;
+    let gameMode = 'multi'; // 'single' 또는 'multi'
 
     // 레벨업 옵션 정의
     const LEVEL_UP_OPTIONS = [
@@ -288,8 +307,14 @@
       if(r < 0.54) return {...TILES[2]}; // 코인
       if(r < 0.72) return {...TILES[3]}; // 칼
       if(r < 0.86) {
-        let mon = randomMonster("troll");
-        return {type:"troll", emoji:"🐲", mon};
+        // 1인용 모드일 때는 트롤 생성하지 않음
+        if(gameMode === 'single') {
+          let mon = randomMonster("vampire");
+          return {type:"vampire", emoji:"🧛‍♀️", mon};
+        } else {
+          let mon = randomMonster("troll");
+          return {type:"troll", emoji:"🐲", mon};
+        }
       }
       else {
         let mon = randomMonster("vampire");
@@ -345,11 +370,40 @@
       timerDiv.style.display = "";
     }
 
+    function selectMode(mode) {
+      gameMode = mode;
+      const description = document.getElementById("mode-description");
+      
+      if (mode === 'single') {
+        description.innerHTML = "1인용 모드: 플레이어1만 조작하여 뱀파이어와 싸우세요!";
+      } else {
+        description.innerHTML = "2인용 모드: 플레이어1과 플레이어2가 번갈아가며 플레이합니다!";
+      }
+      
+      // 잠시 후 크기 선택 화면으로 이동
+      setTimeout(() => {
+        document.getElementById("setup-modal").style.display = "none";
+        document.getElementById("size-modal").style.display = "flex";
+      }, 1000);
+    }
+    
+    function backToModeSelect() {
+      document.getElementById("size-modal").style.display = "none";
+      document.getElementById("setup-modal").style.display = "flex";
+    }
+    
     function startGame() {
       SIZE = parseInt(document.getElementById("sizeSelect").value, 10);
-      document.getElementById("setup-modal").style.display = "none";
+      document.getElementById("size-modal").style.display = "none";
       document.getElementById("stats").style.display = "";
-      document.getElementById("stats2").style.display = "";
+      
+      // 1인용 모드일 때는 플레이어2 정보 숨김
+      if (gameMode === 'single') {
+        document.getElementById("stats2").style.display = "none";
+      } else {
+        document.getElementById("stats2").style.display = "";
+      }
+      
       document.getElementById("board-wrap").style.display = "";
       document.getElementById("actions").style.display = "";
       document.getElementById("turn-indicator").style.display = "";
@@ -368,33 +422,43 @@
         goldMultiplier: 1,
         expMultiplier: 1
       };
-      stats2 = {
-        hp: 1000,
-        maxHp: 1000,
-        shield: 0,
-        atk: 1,
-        gold: 0,
-        exp: 0,
-        level: 1,
-        expNext: 10,
-        goldMultiplier: 1,
-        expMultiplier: 1
-      };
+      
+      // 2인용 모드일 때만 플레이어2 스탯 초기화
+      if (gameMode === 'multi') {
+        stats2 = {
+          hp: 1000,
+          maxHp: 1000,
+          shield: 0,
+          atk: 1,
+          gold: 0,
+          exp: 0,
+          level: 1,
+          expNext: 10,
+          goldMultiplier: 1,
+          expMultiplier: 1
+        };
+      }
+      
       message = "자신의 영웅(🤺)에서 시작해 경로를 만들고 마지막 타일을 한번 더 클릭하세요!";
       board = [];
       let px1 = Math.floor(Math.random() * SIZE);
       let py1 = Math.floor(Math.random() * SIZE);
+      
+      // 1인용 모드일 때는 플레이어2 위치 설정하지 않음
       let px2, py2;
-      do {
-        px2 = Math.floor(Math.random() * SIZE);
-        py2 = Math.floor(Math.random() * SIZE);
-      } while (px1 === px2 && py1 === py2);
+      if (gameMode === 'multi') {
+        do {
+          px2 = Math.floor(Math.random() * SIZE);
+          py2 = Math.floor(Math.random() * SIZE);
+        } while (px1 === px2 && py1 === py2);
+      }
+      
       for(let i=0; i<SIZE; i++) {
         board[i] = [];
         for(let j=0; j<SIZE; j++) {
           if(i === px1 && j === py1) {
             board[i][j] = {...PLAYER1};
-          } else if(i === px2 && j === py2) {
+          } else if(gameMode === 'multi' && i === px2 && j === py2) {
             board[i][j] = {...PLAYER2};
           } else {
             let tile = randomTile();
@@ -403,7 +467,9 @@
         }
       }
       player1Pos = [px1, py1];
-      player2Pos = [px2, py2];
+      if (gameMode === 'multi') {
+        player2Pos = [px2, py2];
+      }
       selectedPath = [];
       turn = 1;
       updateStats();
@@ -419,20 +485,28 @@
       document.getElementById("gold1").textContent = stats1.gold;
       document.getElementById("exp1").textContent = stats1.exp;
       document.getElementById("level1").textContent = stats1.level;
-      document.getElementById("hp2").textContent = stats2.hp;
-      document.getElementById("shield2").textContent = stats2.shield;
-      document.getElementById("atk2").textContent = stats2.atk;
-      document.getElementById("gold2").textContent = stats2.gold;
-      document.getElementById("exp2").textContent = stats2.exp;
-      document.getElementById("level2").textContent = stats2.level;
+      
+      // 2인용 모드일 때만 플레이어2 스탯 업데이트
+      if (gameMode === 'multi') {
+        document.getElementById("hp2").textContent = stats2.hp;
+        document.getElementById("shield2").textContent = stats2.shield;
+        document.getElementById("atk2").textContent = stats2.atk;
+        document.getElementById("gold2").textContent = stats2.gold;
+        document.getElementById("exp2").textContent = stats2.exp;
+        document.getElementById("level2").textContent = stats2.level;
+      }
     }
     function showMessage(msg) {
       document.getElementById("message").textContent = msg;
     }
     function updateTurnIndicator() {
       document.getElementById("turn-indicator").style.display = "";
-      document.getElementById("turn-indicator").textContent =
-        turn === 1 ? "플레이어1(연두) 턴 - 중력 ↓" : "플레이어2(핑크) 턴 - 중력 ↑";
+      if (gameMode === 'single') {
+        document.getElementById("turn-indicator").textContent = "플레이어1 턴 - 중력 ↓";
+      } else {
+        document.getElementById("turn-indicator").textContent =
+          turn === 1 ? "플레이어1(연두) 턴 - 중력 ↓" : "플레이어2(핑크) 턴 - 중력 ↑";
+      }
     }
     function drawPath() {
       // 이전 경로 제거
@@ -504,7 +578,7 @@
             cell.innerHTML = `${board[i][j].emoji}<div class="info" style="font-size:${Math.max(10,cellSize*0.23)}px">${board[i][j].mon.hp}/${board[i][j].mon.atk}</div>`;
           } else if(board[i][j].type === "player1") {
             cell.innerHTML = `🤺<div class="info" style="font-size:${Math.max(10,cellSize*0.23)}px">${stats1.hp}</div>`;
-          } else if(board[i][j].type === "player2") {
+          } else if(gameMode === 'multi' && board[i][j].type === "player2") {
             cell.innerHTML = `🤺<div class="info" style="font-size:${Math.max(10,cellSize*0.23)}px">${stats2.hp}</div>`;
           } else if(board[i][j].type === "empty") {
             cell.innerHTML = "";
@@ -790,7 +864,7 @@
       // 경로 실행 - 시작 위치를 비움
       if(turn === 1) {
         board[player1Pos[0]][player1Pos[1]] = {type: "empty"};
-      } else {
+      } else if(gameMode === 'multi') {
         board[player2Pos[0]][player2Pos[1]] = {type: "empty"};
       }
 
@@ -860,7 +934,7 @@
         if(turn === 1) {
           board[lastX][lastY] = {...PLAYER1};
           player1Pos = [lastX, lastY];
-        } else {
+        } else if(gameMode === 'multi') {
           board[lastX][lastY] = {...PLAYER2};
           player2Pos = [lastX, lastY];
         }
@@ -873,10 +947,18 @@
       let totalEnemyAttack = 0;
       for(let i = 0; i < SIZE; i++) {
         for(let j = 0; j < SIZE; j++) {
-          if(turn === 1 && board[i][j].type === "vampire") {
-            totalEnemyAttack += Math.max(0, board[i][j].mon.atk - currentStats.shield);
-          } else if(turn === 2 && board[i][j].type === "troll") {
-            totalEnemyAttack += Math.max(0, board[i][j].mon.atk - currentStats.shield);
+          if(gameMode === 'single') {
+            // 1인용 모드: 뱀파이어만 공격
+            if(board[i][j].type === "vampire") {
+              totalEnemyAttack += Math.max(0, board[i][j].mon.atk - currentStats.shield);
+            }
+          } else {
+            // 2인용 모드: 기존 로직
+            if(turn === 1 && board[i][j].type === "vampire") {
+              totalEnemyAttack += Math.max(0, board[i][j].mon.atk - currentStats.shield);
+            } else if(turn === 2 && board[i][j].type === "troll") {
+              totalEnemyAttack += Math.max(0, board[i][j].mon.atk - currentStats.shield);
+            }
           }
         }
       }
@@ -887,15 +969,24 @@
         
         // 체력이 0이 되면 게임 종료
         if(currentStats.hp <= 0) {
-          const winner = turn === 1 ? "플레이어2" : "플레이어1";
-          showMessage(`게임 종료! ${winner}의 승리!`);
+          if(gameMode === 'single') {
+            showMessage("게임 오버! 다시 시작해주세요.");
+          } else {
+            const winner = turn === 1 ? "플레이어2" : "플레이어1";
+            showMessage(`게임 종료! ${winner}의 승리!`);
+          }
           return;
         }
       }
 
       // 상태 업데이트
       selectedPath = [];
-      turn = turn === 1 ? 2 : 1;
+      
+      // 1인용 모드일 때는 턴 전환하지 않음
+      if (gameMode === 'multi') {
+        turn = turn === 1 ? 2 : 1;
+      }
+      
       updateStats();
       render();
       if(messages.length > 0) {
