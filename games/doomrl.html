@@ -943,24 +943,7 @@ function showAimPath(startX, startY, endX, endY) {
   const path = calculatePath(startX, startY, endX, endY);
   player.aimPath = path;
   
-  // 방향 결정
-  const dx = Math.sign(endX - startX);
-  const dy = Math.sign(endY - startY);
-  
-  let direction;
-  if (dx === 1 && dy === 0) direction = 'right';
-  else if (dx === -1 && dy === 0) direction = 'left';
-  else if (dx === 0 && dy === -1) direction = 'up';
-  else if (dx === 0 && dy === 1) direction = 'down';
-  else if (dx === 1 && dy === -1) direction = 'up-right';
-  else if (dx === 1 && dy === 1) direction = 'down-right';
-  else if (dx === -1 && dy === 1) direction = 'down-left';
-  else if (dx === -1 && dy === -1) direction = 'up-left';
-  else direction = 'right'; // 기본값
-  
-  const aimEmoji = AIM_EMOJIS[direction];
-  
-  // 경로 표시
+  // 경로 표시 (각 구간별로 적절한 이모티콘 사용)
   path.forEach((pos, index) => {
     const cellIndex = (pos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
                       (pos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
@@ -972,10 +955,48 @@ function showAimPath(startX, startY, endX, endY) {
       // CSS 클래스 추가로 하이라이트
       cell.classList.add('aim-path');
       
+      // 이전 위치와 현재 위치를 비교하여 방향 결정
+      let aimEmoji;
+      let cellColor = '#ffcc00'; // 기본 노란색
+      
+      if (index === 0) {
+        // 시작점
+        aimEmoji = AIM_START_EMOJI;
+        cellColor = '#ff0000'; // 빨간색
+      } else if (index === path.length - 1) {
+        // 끝점
+        aimEmoji = AIM_END_EMOJI;
+        cellColor = '#00ff00'; // 녹색
+      } else {
+        // 중간 경로 - 이전 위치와 현재 위치의 방향 계산
+        const prevPos = path[index - 1];
+        const currentPos = pos;
+        const nextPos = path[index + 1];
+        
+        // 이전에서 현재로의 방향
+        const dx1 = Math.sign(currentPos.x - prevPos.x);
+        const dy1 = Math.sign(currentPos.y - prevPos.y);
+        
+        // 현재에서 다음으로의 방향
+        const dx2 = Math.sign(nextPos.x - currentPos.x);
+        const dy2 = Math.sign(nextPos.y - currentPos.y);
+        
+        // 현재 위치의 방향 결정 (이전에서 현재로의 방향 기준)
+        if (dx1 === 1 && dy1 === 0) aimEmoji = AIM_EMOJIS['right'];
+        else if (dx1 === -1 && dy1 === 0) aimEmoji = AIM_EMOJIS['left'];
+        else if (dx1 === 0 && dy1 === -1) aimEmoji = AIM_EMOJIS['up'];
+        else if (dx1 === 0 && dy1 === 1) aimEmoji = AIM_EMOJIS['down'];
+        else if (dx1 === 1 && dy1 === -1) aimEmoji = AIM_EMOJIS['up-right'];
+        else if (dx1 === 1 && dy1 === 1) aimEmoji = AIM_EMOJIS['down-right'];
+        else if (dx1 === -1 && dy1 === 1) aimEmoji = AIM_EMOJIS['down-left'];
+        else if (dx1 === -1 && dy1 === -1) aimEmoji = AIM_EMOJIS['up-left'];
+        else aimEmoji = '•'; // 기본 점
+      }
+      
       // 조준선 이모티콘 표시
       const originalContent = cell.textContent;
       cell.textContent = aimEmoji;
-      cell.style.color = '#ffcc00'; // 노란색으로 표시
+      cell.style.color = cellColor;
       
       // 원래 내용 저장 (나중에 복원하기 위해)
       cell.dataset.originalContent = originalContent;
@@ -983,32 +1004,6 @@ function showAimPath(startX, startY, endX, endY) {
       highlightedCells.push(cell);
     }
   });
-  
-  // 시작점과 끝점 특별 표시
-  if (path.length > 0) {
-    // 시작점 표시 (첫 번째 경로 지점)
-    const startPos = path[0];
-    const startCellIndex = (startPos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
-                          (startPos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
-    const cells = document.getElementById('game-grid').children;
-    
-    if (startCellIndex >= 0 && startCellIndex < cells.length) {
-      const startCell = cells[startCellIndex];
-      startCell.textContent = AIM_START_EMOJI;
-      startCell.style.color = '#ff0000'; // 빨간색으로 표시
-    }
-    
-    // 끝점 표시 (마지막 경로 지점)
-    const endPos = path[path.length - 1];
-    const endCellIndex = (endPos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
-                        (endPos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
-    
-    if (endCellIndex >= 0 && endCellIndex < cells.length) {
-      const endCell = cells[endCellIndex];
-      endCell.textContent = AIM_END_EMOJI;
-      endCell.style.color = '#00ff00'; // 녹색으로 표시
-    }
-  }
 }
 
 // 하이라이트 제거 함수
