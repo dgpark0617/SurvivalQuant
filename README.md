@@ -64,6 +64,7 @@ SurvivalQuant/
   - 바이빗 카피트레이딩: `https://www.bybit.com/copyMt5/trade-center/detail?providerMark=xkc2wsLqVomphpP%2FtV6RRQ%3D%3D`
   - 개발블로그: `https://blog.naver.com/economic_eden`
   - 유튜브: `https://www.youtube.com/@economiceden`
+  - 자동매매 제작의뢰(가장 중요) : https://open.kakao.com/o/sy2UErbd 
 - **내부 링크**:
   - 유틸리티: `utilities/index.html`
   - 게임: `games/index.html`
