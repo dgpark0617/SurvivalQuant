@@ -46,7 +46,9 @@
     /* 조준 경로 하이라이트를 위한 클래스 */
     .aim-path {
       position: relative;
-      background-color: rgba(255, 255, 0, 0.3) !important; /* 반투명 노란색 배경 */
+      background-color: rgba(255, 255, 0, 0.2) !important; /* 연한 노란색 배경 */
+      font-weight: bold;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
     }
     #status-bar {
       font-size: 16px;
@@ -316,6 +318,25 @@ const WALL_RATIO = 0.08;      // Wall generation ratio (0~1)
 const GUN_DAMAGE_MIN = 2;     // Gun minimum damage
 const GUN_DAMAGE_MAX = 3;     // Gun maximum damage (inclusive)
 // ==========================================================
+
+// 조준선 이모티콘 상수
+const AIM_EMOJIS = {
+  // 수평/수직 방향
+  'right': '─',
+  'left': '─', 
+  'up': '│',
+  'down': '│',
+  
+  // 대각선 방향
+  'up-right': '╱',
+  'down-right': '╲',
+  'down-left': '╱',
+  'up-left': '╲'
+};
+
+// 조준선 시작/끝 이모티콘
+const AIM_START_EMOJI = '🔫';  // 시작점 (총구)
+const AIM_END_EMOJI = '⊕';     // 끝점 (십자선)
 
 // 지형 타입 상수
 const TERRAIN_TYPES = {
@@ -922,8 +943,25 @@ function showAimPath(startX, startY, endX, endY) {
   const path = calculatePath(startX, startY, endX, endY);
   player.aimPath = path;
   
+  // 방향 결정
+  const dx = Math.sign(endX - startX);
+  const dy = Math.sign(endY - startY);
+  
+  let direction;
+  if (dx === 1 && dy === 0) direction = 'right';
+  else if (dx === -1 && dy === 0) direction = 'left';
+  else if (dx === 0 && dy === -1) direction = 'up';
+  else if (dx === 0 && dy === 1) direction = 'down';
+  else if (dx === 1 && dy === -1) direction = 'up-right';
+  else if (dx === 1 && dy === 1) direction = 'down-right';
+  else if (dx === -1 && dy === 1) direction = 'down-left';
+  else if (dx === -1 && dy === -1) direction = 'up-left';
+  else direction = 'right'; // 기본값
+  
+  const aimEmoji = AIM_EMOJIS[direction];
+  
   // 경로 표시
-  path.forEach(pos => {
+  path.forEach((pos, index) => {
     const cellIndex = (pos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
                       (pos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
     const cells = document.getElementById('game-grid').children;
@@ -934,9 +972,43 @@ function showAimPath(startX, startY, endX, endY) {
       // CSS 클래스 추가로 하이라이트
       cell.classList.add('aim-path');
       
+      // 조준선 이모티콘 표시
+      const originalContent = cell.textContent;
+      cell.textContent = aimEmoji;
+      cell.style.color = '#ffcc00'; // 노란색으로 표시
+      
+      // 원래 내용 저장 (나중에 복원하기 위해)
+      cell.dataset.originalContent = originalContent;
+      
       highlightedCells.push(cell);
     }
   });
+  
+  // 시작점과 끝점 특별 표시
+  if (path.length > 0) {
+    // 시작점 표시 (첫 번째 경로 지점)
+    const startPos = path[0];
+    const startCellIndex = (startPos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
+                          (startPos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
+    const cells = document.getElementById('game-grid').children;
+    
+    if (startCellIndex >= 0 && startCellIndex < cells.length) {
+      const startCell = cells[startCellIndex];
+      startCell.textContent = AIM_START_EMOJI;
+      startCell.style.color = '#ff0000'; // 빨간색으로 표시
+    }
+    
+    // 끝점 표시 (마지막 경로 지점)
+    const endPos = path[path.length - 1];
+    const endCellIndex = (endPos.y - Math.max(0, Math.min(MAP_H - SCREEN_H, player.y - Math.floor(SCREEN_H / 2)))) * SCREEN_W + 
+                        (endPos.x - Math.max(0, Math.min(MAP_W - SCREEN_W, player.x - Math.floor(SCREEN_W / 2))));
+    
+    if (endCellIndex >= 0 && endCellIndex < cells.length) {
+      const endCell = cells[endCellIndex];
+      endCell.textContent = AIM_END_EMOJI;
+      endCell.style.color = '#00ff00'; // 녹색으로 표시
+    }
+  }
 }
 
 // 하이라이트 제거 함수
@@ -944,6 +1016,15 @@ function clearHighlights() {
   highlightedCells.forEach(cell => {
     // CSS 클래스 제거
     cell.classList.remove('aim-path');
+    
+    // 원래 내용 복원
+    if (cell.dataset.originalContent) {
+      cell.textContent = cell.dataset.originalContent;
+      delete cell.dataset.originalContent;
+    }
+    
+    // 색상 초기화
+    cell.style.color = '';
   });
   
   highlightedCells = [];
