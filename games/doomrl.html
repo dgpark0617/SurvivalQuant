@@ -165,6 +165,75 @@
     .water { background-color: #fff; } /* 물 배경색도 흰색으로 변경 */
     .mountain { background-color: #fff; } /* 산 배경색도 흰색으로 변경 */
     .lava { background-color: #fff; } /* 화산/용암 배경색도 흰색으로 변경 */
+    
+    /* 새로운 바이옴 스타일 */
+    .forest { background-color: #fff; } /* 숲 배경색 */
+    .swamp { background-color: #fff; } /* 늪지대 배경색 */
+    .snow { background-color: #fff; } /* 눈 배경색 */
+    .ruins { background-color: #fff; } /* 폐허 배경색 */
+    .cave { background-color: #fff; } /* 동굴 배경색 */
+    .village { background-color: #fff; } /* 마을 배경색 */
+    .wasteland { background-color: #fff; } /* 황무지 배경색 */
+    .dungeon { background-color: #fff; } /* 던전 배경색 */
+    
+    /* 맵 선택 UI */
+    #map-select-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    #map-select-title {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #fff;
+    }
+    
+    #map-select-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      width: 80%;
+      max-width: 600px;
+    }
+    
+    .map-option {
+      background-color: #333;
+      border: 2px solid #555;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .map-option:hover {
+      background-color: #444;
+      transform: scale(1.05);
+    }
+    
+    .map-option h3 {
+      margin-top: 0;
+      color: #fff;
+    }
+    
+    .map-option p {
+      color: #ccc;
+      font-size: 14px;
+    }
+    
+    .map-option-emoji {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -195,6 +264,38 @@
       <button class="action-btn" id="reload-btn">🔄</button>
       <button class="action-btn" id="run-btn">👟</button>
       <button class="action-btn" id="weapon-btn">🔫⚡</button>
+    </div>
+  </div>
+</div>
+
+<!-- 맵 선택 UI -->
+<div id="map-select-container">
+  <h2 id="map-select-title">맵 타입 선택</h2>
+  <div id="map-select-options">
+    <div class="map-option" data-map-type="mixed">
+      <div class="map-option-emoji">🌍</div>
+      <h3>혼합형</h3>
+      <p>다양한 지형과 구조물이 혼합된 균형 잡힌 맵</p>
+    </div>
+    <div class="map-option" data-map-type="wilderness">
+      <div class="map-option-emoji">🌲</div>
+      <h3>자연 환경</h3>
+      <p>숲, 강, 산 등 자연 지형이 풍부한 맵</p>
+    </div>
+    <div class="map-option" data-map-type="dungeon">
+      <div class="map-option-emoji">🏰</div>
+      <h3>던전</h3>
+      <p>미로와 통로가 많은 던전 스타일 맵</p>
+    </div>
+    <div class="map-option" data-map-type="village">
+      <div class="map-option-emoji">🏘️</div>
+      <h3>마을</h3>
+      <p>마을과 건물이 많은 정착지 중심 맵</p>
+    </div>
+    <div class="map-option" data-map-type="wasteland">
+      <div class="map-option-emoji">☢️</div>
+      <h3>황무지</h3>
+      <p>위험 지역이 많은 황폐한 환경의 맵</p>
     </div>
   </div>
 </div>
@@ -229,7 +330,16 @@ const TERRAIN_TYPES = {
   DESERT: 'DESERT',
   WATER: 'WATER',
   MOUNTAIN: 'MOUNTAIN',
-  LAVA: 'LAVA'
+  LAVA: 'LAVA',
+  // 새로운 바이옴 타입 추가
+  FOREST: 'FOREST',
+  SWAMP: 'SWAMP',
+  SNOW: 'SNOW',
+  RUINS: 'RUINS',
+  CAVE: 'CAVE',
+  VILLAGE: 'VILLAGE',
+  WASTELAND: 'WASTELAND',
+  DUNGEON: 'DUNGEON'
 };
 
 // 몬스터 타입 상수
@@ -258,6 +368,16 @@ const TILES = {
   WATER: { symbol: 'W', emoji: '⬜' },   // 물도 흰색 사각형으로 변경
   MOUNTAIN: { symbol: 'M', emoji: '⬜' }, // 산도 흰색 사각형으로 변경
   LAVA: { symbol: 'L', emoji: '⬜' },    // 화산/용암도 흰색 사각형으로 변경
+  
+  // 새로운 바이옴 타일
+  FOREST: { symbol: 'F', emoji: '🌳' },  // 숲
+  SWAMP: { symbol: 'S', emoji: '🌿' },   // 늪지대
+  SNOW: { symbol: 'N', emoji: '❄️' },    // 눈
+  RUINS: { symbol: 'U', emoji: '🏚️' },   // 폐허
+  CAVE: { symbol: 'V', emoji: '🕳️' },    // 동굴
+  VILLAGE: { symbol: 'I', emoji: '🏘️' }, // 마을
+  WASTELAND: { symbol: 'A', emoji: '🏜️' }, // 황무지
+  DUNGEON: { symbol: 'G', emoji: '🧱' },  // 던전
   
   // 플레이어
   PLAYER: { symbol: '@', emoji: '🤺' },  // 펜싱 선수
@@ -327,8 +447,8 @@ function addMsg(s) {
   if (msg.length > 5) msg.length = 5; 
 }
 
-// Map generation: fantasy world with various terrain types
-function genMap() {
+// 통합 맵 생성 함수
+function generateIntegratedMap(mapType = 'mixed') {
   // 기본 맵 초기화
   for (let y = 0; y < MAP_H; ++y) {
     map[y] = [];
@@ -345,19 +465,217 @@ function genMap() {
     }
   }
   
-  // 숲 지역 생성 (나무 클러스터)
-  createForestClusters(5, 10, 15);
+  // 맵 타입에 따라 다른 생성 방식 적용
+  switch (mapType) {
+    case 'wilderness': // 자연 환경 중심
+      generateTerrainWithNoise();
+      generateBiomes();
+      createForestClusters(5, 10, 15);
+      createRockClusters(4, 8, 12);
+      placeBuildingRandomly(TERRAIN_TYPES.HOUSE, 3);
+      createVillages(1);
+      createRandomDangerZones(1);
+      break;
+      
+    case 'dungeon': // 던전 중심
+      generateMaze(10, 10, 30, 30);
+      generateMaze(60, 60, 30, 30);
+      createTunnelSystem(8);
+      createRuins(5);
+      placeBuildingRandomly(TERRAIN_TYPES.CASTLE, 2);
+      createRandomDangerZones(3);
+      break;
+      
+    case 'village': // 마을 중심
+      generateTerrainWithNoise();
+      createVillages(4);
+      placeBuildingRandomly(TERRAIN_TYPES.HOUSE, 10);
+      placeBuildingRandomly(TERRAIN_TYPES.CHURCH, 2);
+      placeBuildingRandomly(TERRAIN_TYPES.CASTLE, 1);
+      createForestClusters(2, 5, 8);
+      break;
+      
+    case 'wasteland': // 황무지 중심
+      for (let y = 1; y < MAP_H - 1; y++) {
+        for (let x = 1; x < MAP_W - 1; x++) {
+          terrainMap[y][x] = TERRAIN_TYPES.WASTELAND;
+        }
+      }
+      createRuins(8);
+      createRandomDangerZones(5);
+      break;
+      
+    case 'mixed': // 혼합형 (기본값)
+    default:
+      // 프랙탈 노이즈로 자연스러운 지형 생성
+      generateTerrainWithNoise();
+      
+      // 바이옴 생성
+      generateBiomes();
+      
+      // 미로 생성 (맵의 특정 영역에 미로 생성)
+      generateMaze(10, 10, 20, 20); // 좌상단에 미로 생성
+      generateMaze(70, 70, 20, 20); // 우하단에 미로 생성
+      
+      // 통로 시스템 생성
+      createTunnelSystem(5);
+      
+      // 숲 지역 생성 (나무 클러스터)
+      createForestClusters(3, 8, 12);
+      
+      // 바위 지역 생성
+      createRockClusters(2, 6, 8);
+      
+      // 건물 배치 (집, 성)
+      placeBuildingRandomly(TERRAIN_TYPES.HOUSE, 5);
+      placeBuildingRandomly(TERRAIN_TYPES.CASTLE, 1);
+      placeBuildingRandomly(TERRAIN_TYPES.CHURCH, 3);
+      
+      // 마을 생성
+      createVillages(2);
+      
+      // 폐허 생성
+      createRuins(3);
+      
+      // 위험 지역 생성
+      createRandomDangerZones(2);
+      break;
+  }
   
-  // 바위 지역 생성
-  createRockClusters(3, 8, 10);
-  
-  // 건물 배치 (텐트, 집, 성)
-  placeBuildingRandomly(TERRAIN_TYPES.TENT, 8);
-  placeBuildingRandomly(TERRAIN_TYPES.HOUSE, 5);
-  placeBuildingRandomly(TERRAIN_TYPES.CASTLE, 1);
-  
-  // 벽 추가 (미로 형태)
+  // 벽 추가 (미로 형태) - 모든 맵 타입에 적용
   addMazeWalls(WALL_RATIO);
+  
+  // 위험 지역 초기화
+  dangerZones = [];
+}
+
+// Map generation: fantasy world with various terrain types
+function genMap() {
+  // 통합 맵 생성 함수 호출
+  generateIntegratedMap('mixed');
+}
+
+// 바이옴 생성 함수
+function generateBiomes() {
+  // 바이옴 중심점 설정
+  const biomes = [
+    { type: TERRAIN_TYPES.FOREST, x: Math.floor(Math.random() * MAP_W * 0.4) + MAP_W * 0.1, y: Math.floor(Math.random() * MAP_H * 0.4) + MAP_H * 0.1, radius: 20 },
+    { type: TERRAIN_TYPES.DESERT, x: Math.floor(Math.random() * MAP_W * 0.4) + MAP_W * 0.5, y: Math.floor(Math.random() * MAP_H * 0.4) + MAP_H * 0.1, radius: 15 },
+    { type: TERRAIN_TYPES.SWAMP, x: Math.floor(Math.random() * MAP_W * 0.4) + MAP_W * 0.1, y: Math.floor(Math.random() * MAP_H * 0.4) + MAP_H * 0.5, radius: 12 },
+    { type: TERRAIN_TYPES.SNOW, x: Math.floor(Math.random() * MAP_W * 0.4) + MAP_W * 0.5, y: Math.floor(Math.random() * MAP_H * 0.4) + MAP_H * 0.5, radius: 18 }
+  ];
+  
+  // 각 바이옴 생성
+  for (const biome of biomes) {
+    createBiome(biome.type, biome.x, biome.y, biome.radius);
+  }
+}
+
+// 개별 바이옴 생성 함수
+function createBiome(biomeType, centerX, centerY, radius) {
+  for (let y = Math.max(1, centerY - radius); y < Math.min(MAP_H - 1, centerY + radius); y++) {
+    for (let x = Math.max(1, centerX - radius); x < Math.min(MAP_W - 1, centerX + radius); x++) {
+      // 중심점으로부터의 거리 계산
+      const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+      
+      // 거리에 따른 확률로 바이옴 타일 배치
+      if (distance <= radius) {
+        const probability = 1 - (distance / radius);
+        
+        if (Math.random() < probability * 0.8) {
+          terrainMap[y][x] = biomeType;
+          
+          // 바이옴별 특수 지형 생성
+          if (biomeType === TERRAIN_TYPES.FOREST) {
+            // 숲 바이옴에는 나무를 더 많이 배치
+            if (Math.random() < 0.2) {
+              map[y][x] = WALL;
+              terrainMap[y][x] = TERRAIN_TYPES.TREE;
+            }
+          } else if (biomeType === TERRAIN_TYPES.DESERT) {
+            // 사막 바이옴에는 바위를 간헐적으로 배치
+            if (Math.random() < 0.05) {
+              map[y][x] = WALL;
+              terrainMap[y][x] = TERRAIN_TYPES.ROCK;
+            }
+          } else if (biomeType === TERRAIN_TYPES.SWAMP) {
+            // 늪지대 바이옴에는 물을 간헐적으로 배치
+            if (Math.random() < 0.15) {
+              map[y][x] = WALL;
+              terrainMap[y][x] = TERRAIN_TYPES.WATER;
+            }
+          } else if (biomeType === TERRAIN_TYPES.SNOW) {
+            // 눈 바이옴에는 나무를 간헐적으로 배치
+            if (Math.random() < 0.08) {
+              map[y][x] = WALL;
+              terrainMap[y][x] = TERRAIN_TYPES.TREE;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// 마을 생성 함수
+function createVillages(count) {
+  for (let i = 0; i < count; i++) {
+    // 마을 중심점 선택
+    const centerX = Math.floor(Math.random() * (MAP_W - 30)) + 15;
+    const centerY = Math.floor(Math.random() * (MAP_H - 30)) + 15;
+    const radius = Math.floor(Math.random() * 5) + 8;
+    
+    // 마을 영역 설정
+    for (let y = Math.max(1, centerY - radius); y < Math.min(MAP_H - 1, centerY + radius); y++) {
+      for (let x = Math.max(1, centerX - radius); x < Math.min(MAP_W - 1, centerX + radius); x++) {
+        // 중심점으로부터의 거리 계산
+        const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+        
+        // 마을 영역 내에 있으면 마을 지형으로 설정
+        if (distance <= radius) {
+          terrainMap[y][x] = TERRAIN_TYPES.VILLAGE;
+          
+          // 마을 내에 집과 길 배치
+          if (Math.random() < 0.2) {
+            map[y][x] = WALL;
+            terrainMap[y][x] = TERRAIN_TYPES.HOUSE;
+          }
+        }
+      }
+    }
+    
+    // 마을 중앙에 교회 배치
+    terrainMap[centerY][centerX] = TERRAIN_TYPES.CHURCH;
+    map[centerY][centerX] = WALL;
+  }
+}
+
+// 폐허 생성 함수
+function createRuins(count) {
+  for (let i = 0; i < count; i++) {
+    // 폐허 중심점 선택
+    const centerX = Math.floor(Math.random() * (MAP_W - 20)) + 10;
+    const centerY = Math.floor(Math.random() * (MAP_H - 20)) + 10;
+    const radius = Math.floor(Math.random() * 4) + 5;
+    
+    // 폐허 영역 설정
+    for (let y = Math.max(1, centerY - radius); y < Math.min(MAP_H - 1, centerY + radius); y++) {
+      for (let x = Math.max(1, centerX - radius); x < Math.min(MAP_W - 1, centerX + radius); x++) {
+        // 중심점으로부터의 거리 계산
+        const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+        
+        // 폐허 영역 내에 있으면 폐허 지형으로 설정
+        if (distance <= radius) {
+          terrainMap[y][x] = TERRAIN_TYPES.RUINS;
+          
+          // 폐허 내에 벽 잔해 배치
+          if (Math.random() < 0.3) {
+            map[y][x] = WALL;
+          }
+        }
+      }
+    }
+  }
 }
 
 // 숲 클러스터 생성 함수
@@ -784,6 +1102,22 @@ function render() {
         cell.classList.add('mountain');
       } else if (cellType === TERRAIN_TYPES.LAVA) {
         cell.classList.add('lava');
+      } else if (cellType === TERRAIN_TYPES.FOREST) {
+        cell.classList.add('forest');
+      } else if (cellType === TERRAIN_TYPES.SWAMP) {
+        cell.classList.add('swamp');
+      } else if (cellType === TERRAIN_TYPES.SNOW) {
+        cell.classList.add('snow');
+      } else if (cellType === TERRAIN_TYPES.RUINS) {
+        cell.classList.add('ruins');
+      } else if (cellType === TERRAIN_TYPES.CAVE) {
+        cell.classList.add('cave');
+      } else if (cellType === TERRAIN_TYPES.VILLAGE) {
+        cell.classList.add('village');
+      } else if (cellType === TERRAIN_TYPES.WASTELAND) {
+        cell.classList.add('wasteland');
+      } else if (cellType === TERRAIN_TYPES.DUNGEON) {
+        cell.classList.add('dungeon');
       }
       
       // Set emoji content
@@ -1072,6 +1406,15 @@ function monsterTurn() {
   
   // 몬스터 턴 후 시야 공유 상태 업데이트
   updateSightGroups();
+  
+  // 위험 지역 업데이트
+  updateDangerZones();
+  
+  // 랜덤하게 새로운 위험 지역 생성 (0.5% 확률)
+  if (Math.random() < 0.005) {
+    createRandomDangerZones(1);
+    addMsg('새로운 위험 지역이 발생했습니다!');
+  }
 }
 
 // Reload (now takes a real turn)
@@ -1192,40 +1535,73 @@ document.addEventListener('keydown', function (e) {
 function init() {
   console.log("게임 초기화 함수 시작");
   
-  // Generate map and place entities
-  console.log("맵 생성 시작");
-  genMap();
-  console.log("맵 생성 완료");
+  // 맵 선택 UI 표시
+  showMapSelectionUI();
   
-  console.log("엔티티 배치 시작");
+  console.log("게임 초기화 완료");
+}
+
+// 맵 선택 UI 표시 함수
+function showMapSelectionUI() {
+  const mapSelectContainer = document.getElementById('map-select-container');
+  const mapOptions = document.querySelectorAll('.map-option');
+  
+  // 맵 선택 UI 표시
+  mapSelectContainer.style.display = 'flex';
+  
+  // 맵 옵션 클릭 이벤트 설정
+  mapOptions.forEach(option => {
+    option.addEventListener('click', function() {
+      const mapType = this.getAttribute('data-map-type');
+      
+      // 선택한 맵 타입으로 게임 시작
+      startGameWithMapType(mapType);
+      
+      // 맵 선택 UI 숨김
+      mapSelectContainer.style.display = 'none';
+    });
+  });
+}
+
+// 선택한 맵 타입으로 게임 시작
+function startGameWithMapType(mapType) {
+  console.log(`맵 타입 '${mapType}'으로 게임 시작`);
+  
+  // 맵 생성
+  generateIntegratedMap(mapType);
+  
+  // 엔티티 배치
   placeEntities();
-  console.log("엔티티 배치 완료");
   
-  // Initialize messages
-  msg = ['Welcome to Doom Emoji RL!', 'Hunt down all monsters to win!'];
-  console.log("메시지 초기화 완료");
+  // 메시지 초기화
+  msg = ['Welcome to Doom Emoji RL!', `${getMapTypeName(mapType)} 맵에서 게임을 시작합니다!`];
   
   // 모바일 컨트롤 이벤트 설정
-  console.log("모바일 컨트롤 설정 시작");
   setupMobileControls();
-  console.log("모바일 컨트롤 설정 완료");
   
   // 무기 버튼 초기화
-  console.log("무기 버튼 초기화");
   updateWeaponButton();
   
   // 시야 공유 상태 초기화
-  console.log("시야 공유 상태 초기화");
   updateSightGroups();
   
   // 게임 루프 시작
-  console.log("게임 루프 시작");
   startGameLoop();
   
-  // Render initial game state
-  console.log("초기 게임 상태 렌더링");
+  // 초기 게임 상태 렌더링
   render();
-  console.log("게임 초기화 완료");
+}
+
+// 맵 타입 이름 반환 함수
+function getMapTypeName(mapType) {
+  switch (mapType) {
+    case 'mixed': return '혼합형';
+    case 'wilderness': return '자연 환경';
+    case 'dungeon': return '던전';
+    case 'village': return '마을';
+    case 'wasteland': return '황무지';
+    default: return '혼합형';
+  }
 }
 
 // 모바일 컨트롤 설정
@@ -2258,6 +2634,585 @@ function startGameLoop() {
       }
     }
   }, GAME_LOOP_INTERVAL);
+}
+
+// 프랙탈 노이즈 생성을 위한 유틸리티 함수
+function generateNoise(width, height, scale, octaves, persistence, lacunarity, seed) {
+  // 2D 노이즈 맵 초기화
+  const noiseMap = new Array(height);
+  for (let y = 0; y < height; y++) {
+    noiseMap[y] = new Array(width);
+  }
+  
+  // 시드 기반 랜덤 함수
+  const seededRandom = function(x, y) {
+    const dot = x * 12.9898 + y * 78.233 + seed;
+    let value = Math.sin(dot) * 43758.5453123;
+    value = value - Math.floor(value);
+    return value;
+  };
+  
+  // 보간 함수
+  const smoothstep = function(a, b, t) {
+    t = Math.max(0, Math.min(1, (t - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  
+  // 2D 값 노이즈 생성
+  const valueNoise2D = function(x, y) {
+    // 격자점 좌표
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    const x1 = x0 + 1;
+    const y1 = y0 + 1;
+    
+    // 각 격자점에서의 랜덤값
+    const v00 = seededRandom(x0, y0);
+    const v10 = seededRandom(x1, y0);
+    const v01 = seededRandom(x0, y1);
+    const v11 = seededRandom(x1, y1);
+    
+    // 보간 가중치
+    const sx = smoothstep(0, 1, x - x0);
+    const sy = smoothstep(0, 1, y - y0);
+    
+    // 수평 보간
+    const a = v00 * (1 - sx) + v10 * sx;
+    const b = v01 * (1 - sx) + v11 * sx;
+    
+    // 수직 보간
+    return a * (1 - sy) + b * sy;
+  };
+  
+  // 옥타브 노이즈 생성
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let amplitude = 1;
+      let frequency = 1;
+      let noiseValue = 0;
+      let normalizer = 0;
+      
+      // 여러 옥타브의 노이즈를 합성
+      for (let o = 0; o < octaves; o++) {
+        const sampleX = x / scale * frequency;
+        const sampleY = y / scale * frequency;
+        
+        const noise = valueNoise2D(sampleX, sampleY) * 2 - 1;
+        noiseValue += noise * amplitude;
+        normalizer += amplitude;
+        
+        amplitude *= persistence;
+        frequency *= lacunarity;
+      }
+      
+      // 정규화
+      noiseValue = noiseValue / normalizer;
+      noiseMap[y][x] = (noiseValue + 1) / 2; // 0~1 범위로 변환
+    }
+  }
+  
+  return noiseMap;
+}
+
+// 프랙탈 노이즈를 이용한 자연스러운 지형 생성
+function generateTerrainWithNoise() {
+  // 노이즈 맵 생성
+  const noiseMap = generateNoise(MAP_W, MAP_H, 20, 4, 0.5, 2, Math.random() * 10000);
+  
+  // 노이즈 값에 따른 지형 설정
+  for (let y = 1; y < MAP_H - 1; y++) {
+    for (let x = 1; x < MAP_W - 1; x++) {
+      const noiseValue = noiseMap[y][x];
+      
+      // 이미 특별한 바이옴이나 구조물이 있는 경우 건너뛰기
+      if (terrainMap[y][x] !== TERRAIN_TYPES.GRASS) continue;
+      
+      // 노이즈 값에 따른 지형 결정
+      if (noiseValue < 0.3) {
+        // 물
+        terrainMap[y][x] = TERRAIN_TYPES.WATER;
+        map[y][x] = WALL; // 물은 통과 불가능
+      } else if (noiseValue < 0.4) {
+        // 늪지대
+        terrainMap[y][x] = TERRAIN_TYPES.SWAMP;
+      } else if (noiseValue < 0.6) {
+        // 잔디 (기본값)
+        terrainMap[y][x] = TERRAIN_TYPES.GRASS;
+      } else if (noiseValue < 0.75) {
+        // 숲
+        terrainMap[y][x] = TERRAIN_TYPES.FOREST;
+        if (Math.random() < 0.3) {
+          map[y][x] = WALL;
+          terrainMap[y][x] = TERRAIN_TYPES.TREE;
+        }
+      } else {
+        // 산
+        terrainMap[y][x] = TERRAIN_TYPES.MOUNTAIN;
+        if (noiseValue > 0.85) {
+          map[y][x] = WALL;
+          terrainMap[y][x] = TERRAIN_TYPES.ROCK;
+        }
+      }
+    }
+  }
+}
+
+// 동적 위험 지역 관련 변수
+let dangerZones = [];
+const DANGER_TYPES = {
+  LAVA: { name: 'LAVA', emoji: '🌋', damage: 3, spreadChance: 0.05, duration: 20 },
+  POISON: { name: 'POISON', emoji: '☣️', damage: 1, spreadChance: 0.1, duration: 15 },
+  RADIATION: { name: 'RADIATION', emoji: '☢️', damage: 2, spreadChance: 0.03, duration: 30 }
+};
+
+// 동적 위험 지역 생성 함수
+function createDangerZone(type, x, y, radius, duration) {
+  const dangerType = DANGER_TYPES[type];
+  if (!dangerType) return;
+  
+  // 새로운 위험 지역 생성
+  const newZone = {
+    type: dangerType,
+    center: { x, y },
+    radius: radius,
+    tiles: [],
+    remainingTurns: duration || dangerType.duration,
+    lastSpreadTurn: 0
+  };
+  
+  // 초기 위험 지역 타일 설정
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      const tx = x + dx;
+      const ty = y + dy;
+      
+      if (!inMap(tx, ty)) continue;
+      
+      // 중심으로부터의 거리 계산
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance <= radius) {
+        // 거리에 따른 확률로 위험 지역 타일 설정
+        const probability = 1 - (distance / radius);
+        
+        if (Math.random() < probability * 0.7) {
+          // 위험 지역 타일 추가
+          newZone.tiles.push({ x: tx, y: ty });
+          
+          // 지형 업데이트 (시각적 표시)
+          if (type === 'LAVA') {
+            terrainMap[ty][tx] = TERRAIN_TYPES.LAVA;
+          } else if (type === 'POISON') {
+            terrainMap[ty][tx] = TERRAIN_TYPES.SWAMP;
+          } else if (type === 'RADIATION') {
+            terrainMap[ty][tx] = TERRAIN_TYPES.WASTELAND;
+          }
+        }
+      }
+    }
+  }
+  
+  // 위험 지역 등록
+  dangerZones.push(newZone);
+}
+
+// 위험 지역 업데이트 함수 (턴마다 호출)
+function updateDangerZones() {
+  // 플레이어가 위험 지역에 있는지 확인
+  for (const zone of dangerZones) {
+    // 플레이어가 위험 지역 타일에 있는지 확인
+    const playerInDanger = zone.tiles.some(tile => tile.x === player.x && tile.y === player.y);
+    
+    if (playerInDanger) {
+      // 플레이어에게 데미지
+      player.hp -= zone.type.damage;
+      addMsg(`${zone.type.name} 지역에서 ${zone.type.damage}의 데미지를 입었습니다!`);
+      
+      if (player.hp <= 0) {
+        gameOver = true;
+        addMsg('위험 지역에서 사망했습니다!');
+      }
+    }
+    
+    // 위험 지역 지속 시간 감소
+    zone.remainingTurns--;
+    
+    // 위험 지역 확산 (3턴마다)
+    if (zone.remainingTurns % 3 === 0) {
+      spreadDangerZone(zone);
+    }
+    
+    // 지속 시간이 끝난 위험 지역 제거
+    if (zone.remainingTurns <= 0) {
+      // 지형 복원
+      for (const tile of zone.tiles) {
+        terrainMap[tile.y][tile.x] = TERRAIN_TYPES.GRASS;
+      }
+    }
+  }
+  
+  // 지속 시간이 끝난 위험 지역 필터링
+  dangerZones = dangerZones.filter(zone => zone.remainingTurns > 0);
+}
+
+// 위험 지역 확산 함수
+function spreadDangerZone(zone) {
+  const newTiles = [];
+  
+  // 기존 타일에서 확산
+  for (const tile of zone.tiles) {
+    // 인접한 4방향 확인
+    const directions = [
+      { dx: 0, dy: -1 }, // 상
+      { dx: 1, dy: 0 },  // 우
+      { dx: 0, dy: 1 },  // 하
+      { dx: -1, dy: 0 }  // 좌
+    ];
+    
+    for (const dir of directions) {
+      const nx = tile.x + dir.dx;
+      const ny = tile.y + dir.dy;
+      
+      // 맵 범위 확인
+      if (!inMap(nx, ny)) continue;
+      
+      // 이미 위험 지역인지 확인
+      const alreadyDanger = zone.tiles.some(t => t.x === nx && t.y === ny) || 
+                           newTiles.some(t => t.x === nx && t.y === ny);
+      
+      if (!alreadyDanger && Math.random() < zone.type.spreadChance) {
+        // 새로운 위험 지역 타일 추가
+        newTiles.push({ x: nx, y: ny });
+        
+        // 지형 업데이트 (시각적 표시)
+        if (zone.type.name === 'LAVA') {
+          terrainMap[ny][nx] = TERRAIN_TYPES.LAVA;
+        } else if (zone.type.name === 'POISON') {
+          terrainMap[ny][nx] = TERRAIN_TYPES.SWAMP;
+        } else if (zone.type.name === 'RADIATION') {
+          terrainMap[ny][nx] = TERRAIN_TYPES.WASTELAND;
+        }
+      }
+    }
+  }
+  
+  // 새로운 타일 추가
+  zone.tiles = [...zone.tiles, ...newTiles];
+}
+
+// 랜덤 위험 지역 생성
+function createRandomDangerZones(count) {
+  const dangerTypes = Object.keys(DANGER_TYPES);
+  
+  for (let i = 0; i < count; i++) {
+    // 랜덤 위치 선택
+    let x, y;
+    let validPosition = false;
+    let attempts = 0;
+    
+    while (!validPosition && attempts < 100) {
+      x = Math.floor(Math.random() * (MAP_W - 20)) + 10;
+      y = Math.floor(Math.random() * (MAP_H - 20)) + 10;
+      
+      // 플레이어와의 거리 확인
+      const distToPlayer = Math.sqrt(Math.pow(x - player.x, 2) + Math.pow(y - player.y, 2));
+      
+      // 플레이어로부터 충분히 떨어져 있는지 확인
+      if (distToPlayer > 15) {
+        validPosition = true;
+      }
+      
+      attempts++;
+    }
+    
+    if (validPosition) {
+      // 랜덤 위험 타입 선택
+      const randomType = dangerTypes[Math.floor(Math.random() * dangerTypes.length)];
+      
+      // 위험 지역 생성
+      const radius = Math.floor(Math.random() * 3) + 3; // 3~5 범위
+      createDangerZone(randomType, x, y, radius);
+    }
+  }
+}
+
+// 미로 생성 함수 (깊이 우선 탐색)
+function generateMaze(startX, startY, width, height) {
+  // 미로 영역 초기화 (모두 벽으로)
+  for (let y = startY; y < startY + height; y++) {
+    for (let x = startX; x < startX + width; x++) {
+      if (inMap(x, y)) {
+        map[y][x] = WALL;
+        terrainMap[y][x] = TERRAIN_TYPES.WALL;
+      }
+    }
+  }
+  
+  // 미로 생성을 위한 방문 배열
+  const visited = Array(height).fill().map(() => Array(width).fill(false));
+  
+  // 깊이 우선 탐색으로 미로 생성
+  function dfs(x, y) {
+    visited[y][x] = true;
+    
+    // 실제 맵 좌표로 변환
+    const mapX = x * 2 + startX;
+    const mapY = y * 2 + startY;
+    
+    // 현재 셀을 길로 설정
+    if (inMap(mapX, mapY)) {
+      map[mapY][mapX] = FLOOR;
+      terrainMap[mapY][mapX] = TERRAIN_TYPES.DUNGEON;
+    }
+    
+    // 이동 방향 (상, 우, 하, 좌)
+    const directions = [
+      { dx: 0, dy: -1 }, // 상
+      { dx: 1, dy: 0 },  // 우
+      { dx: 0, dy: 1 },  // 하
+      { dx: -1, dy: 0 }  // 좌
+    ];
+    
+    // 방향 랜덤 섞기
+    for (let i = directions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [directions[i], directions[j]] = [directions[j], directions[i]];
+    }
+    
+    // 각 방향으로 탐색
+    for (const dir of directions) {
+      const nx = x + dir.dx;
+      const ny = y + dir.dy;
+      
+      // 범위 체크
+      if (nx < 0 || ny < 0 || nx >= Math.floor(width / 2) || ny >= Math.floor(height / 2)) continue;
+      
+      // 방문하지 않은 셀이면 이동
+      if (!visited[ny][nx]) {
+        // 중간 벽 제거 (통로 생성)
+        const wallX = mapX + dir.dx;
+        const wallY = mapY + dir.dy;
+        
+        if (inMap(wallX, wallY)) {
+          map[wallY][wallX] = FLOOR;
+          terrainMap[wallY][wallX] = TERRAIN_TYPES.DUNGEON;
+        }
+        
+        // 다음 셀로 이동
+        dfs(nx, ny);
+      }
+    }
+  }
+  
+  // 시작점에서 미로 생성 시작
+  dfs(0, 0);
+  
+  // 미로에 입구와 출구 생성
+  createMazeEntrances(startX, startY, width, height);
+}
+
+// 미로 입구와 출구 생성
+function createMazeEntrances(startX, startY, width, height) {
+  // 입구 생성 (미로 외부에서 접근 가능한 위치)
+  const entranceDirections = [
+    { dx: 0, dy: -1, side: 'top' },    // 상단
+    { dx: width, dy: 0, side: 'right' }, // 우측
+    { dx: 0, dy: height, side: 'bottom' }, // 하단
+    { dx: -1, dy: 0, side: 'left' }    // 좌측
+  ];
+  
+  // 각 방향에서 입구 생성 시도
+  for (const dir of entranceDirections) {
+    // 해당 방향에서 적절한 입구 위치 찾기
+    let entranceX, entranceY;
+    let found = false;
+    let attempts = 0;
+    
+    while (!found && attempts < 10) {
+      if (dir.side === 'top' || dir.side === 'bottom') {
+        // 상단 또는 하단 입구
+        entranceX = startX + Math.floor(Math.random() * (width - 2)) + 1;
+        entranceY = startY + (dir.side === 'top' ? 0 : height - 1);
+      } else {
+        // 좌측 또는 우측 입구
+        entranceX = startX + (dir.side === 'left' ? 0 : width - 1);
+        entranceY = startY + Math.floor(Math.random() * (height - 2)) + 1;
+      }
+      
+      // 입구 위치가 유효한지 확인
+      if (inMap(entranceX, entranceY) && 
+          inMap(entranceX + dir.dx, entranceY + dir.dy)) {
+        // 입구 생성
+        map[entranceY][entranceX] = FLOOR;
+        terrainMap[entranceY][entranceX] = TERRAIN_TYPES.DUNGEON;
+        
+        // 입구 주변도 길로 설정 (접근 가능하도록)
+        const outsideX = entranceX + dir.dx;
+        const outsideY = entranceY + dir.dy;
+        
+        if (map[outsideY][outsideX] === WALL) {
+          map[outsideY][outsideX] = FLOOR;
+          terrainMap[outsideY][outsideX] = TERRAIN_TYPES.GRASS;
+        }
+        
+        found = true;
+      }
+      
+      attempts++;
+    }
+  }
+}
+
+// 통로 시스템 생성 함수
+function createTunnelSystem(count) {
+  for (let i = 0; i < count; i++) {
+    // 시작점과 끝점 선택
+    let startX, startY, endX, endY;
+    let validPoints = false;
+    let attempts = 0;
+    
+    while (!validPoints && attempts < 100) {
+      // 시작점 선택
+      startX = Math.floor(Math.random() * (MAP_W - 20)) + 10;
+      startY = Math.floor(Math.random() * (MAP_H - 20)) + 10;
+      
+      // 끝점 선택 (시작점으로부터 일정 거리 떨어진 위치)
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 15 + Math.random() * 20;
+      endX = Math.floor(startX + Math.cos(angle) * distance);
+      endY = Math.floor(startY + Math.sin(angle) * distance);
+      
+      // 맵 범위 내인지 확인
+      if (inMap(startX, startY) && inMap(endX, endY)) {
+        validPoints = true;
+      }
+      
+      attempts++;
+    }
+    
+    if (validPoints) {
+      // 통로 생성 (A* 알고리즘)
+      createTunnel(startX, startY, endX, endY);
+    }
+  }
+}
+
+// A* 알고리즘을 이용한 통로 생성
+function createTunnel(startX, startY, endX, endY) {
+  // 휴리스틱 함수 (맨해튼 거리)
+  const heuristic = (x, y) => Math.abs(x - endX) + Math.abs(y - endY);
+  
+  // 우선순위 큐 구현 (간단한 배열로)
+  const openSet = [{ x: startX, y: startY, g: 0, h: heuristic(startX, startY) }];
+  const closedSet = new Set();
+  const cameFrom = {};
+  
+  // g 점수 (시작점으로부터의 비용)
+  const gScore = {};
+  gScore[`${startX},${startY}`] = 0;
+  
+  while (openSet.length > 0) {
+    // f 점수가 가장 낮은 노드 찾기
+    let lowestIndex = 0;
+    for (let i = 1; i < openSet.length; i++) {
+      if (openSet[i].g + openSet[i].h < openSet[lowestIndex].g + openSet[lowestIndex].h) {
+        lowestIndex = i;
+      }
+    }
+    
+    const current = openSet[lowestIndex];
+    
+    // 목적지에 도달한 경우
+    if (current.x === endX && current.y === endY) {
+      // 경로 재구성
+      let path = [];
+      let currentKey = `${current.x},${current.y}`;
+      
+      while (currentKey in cameFrom) {
+        const [x, y] = currentKey.split(',').map(Number);
+        path.push({ x, y });
+        currentKey = cameFrom[currentKey];
+      }
+      
+      // 시작점 추가
+      path.push({ x: startX, y: startY });
+      path.reverse();
+      
+      // 통로 생성
+      for (const pos of path) {
+        if (inMap(pos.x, pos.y)) {
+          map[pos.y][pos.x] = FLOOR;
+          
+          // 통로 주변 지형 설정
+          const surroundingType = Math.random() < 0.5 ? TERRAIN_TYPES.CAVE : TERRAIN_TYPES.DUNGEON;
+          terrainMap[pos.y][pos.x] = surroundingType;
+          
+          // 통로 주변 약간 넓히기 (20% 확률)
+          if (Math.random() < 0.2) {
+            const dx = Math.random() < 0.5 ? -1 : 1;
+            const dy = Math.random() < 0.5 ? -1 : 1;
+            
+            if (inMap(pos.x + dx, pos.y) && map[pos.y][pos.x + dx] === WALL) {
+              map[pos.y][pos.x + dx] = FLOOR;
+              terrainMap[pos.y][pos.x + dx] = surroundingType;
+            }
+            
+            if (inMap(pos.x, pos.y + dy) && map[pos.y + dy][pos.x] === WALL) {
+              map[pos.y + dy][pos.x] = FLOOR;
+              terrainMap[pos.y + dy][pos.x] = surroundingType;
+            }
+          }
+        }
+      }
+      
+      return;
+    }
+    
+    // 현재 노드 처리 완료
+    openSet.splice(lowestIndex, 1);
+    closedSet.add(`${current.x},${current.y}`);
+    
+    // 이웃 노드 탐색
+    const neighbors = [
+      { dx: 0, dy: -1 }, // 상
+      { dx: 1, dy: 0 },  // 우
+      { dx: 0, dy: 1 },  // 하
+      { dx: -1, dy: 0 }  // 좌
+    ];
+    
+    for (const dir of neighbors) {
+      const nx = current.x + dir.dx;
+      const ny = current.y + dir.dy;
+      
+      // 맵 범위 체크
+      if (!inMap(nx, ny)) continue;
+      
+      // 이미 처리한 노드인지 확인
+      if (closedSet.has(`${nx},${ny}`)) continue;
+      
+      // 이웃 노드까지의 비용
+      const tentativeGScore = gScore[`${current.x},${current.y}`] + 1;
+      
+      // 이웃 노드가 openSet에 없거나, 더 나은 경로를 찾은 경우
+      const neighborKey = `${nx},${ny}`;
+      if (!openSet.some(node => node.x === nx && node.y === ny) || 
+          tentativeGScore < (gScore[neighborKey] || Infinity)) {
+        // 경로 업데이트
+        cameFrom[neighborKey] = `${current.x},${current.y}`;
+        gScore[neighborKey] = tentativeGScore;
+        
+        // openSet에 없으면 추가
+        if (!openSet.some(node => node.x === nx && node.y === ny)) {
+          openSet.push({
+            x: nx,
+            y: ny,
+            g: tentativeGScore,
+            h: heuristic(nx, ny)
+          });
+        }
+      }
+    }
+  }
 }
 </script>
 </body>
