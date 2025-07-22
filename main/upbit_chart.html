@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>업비트 실시간 트레이딩 차트 (Lightweight Charts)</title>
+  <!-- TradingView Lightweight Charts CDN (최신 v4.1.0로 고정) -->
+  <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+  <!-- CryptoJS 라이브러리 (JWT 서명용) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <style>
+    body { margin:0; padding:0; font-family: 'Segoe UI', Arial, sans-serif; background:#f7f8fa; }
+    .section-title {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 20px 0 12px 0;
+      text-align: center;
+      border-radius: 12px 12px 0 0;
+      margin: 32px auto 0 auto;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 700px;
+      width: 100%;
+    }
+    .section-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .main-title {
+      font-size: clamp(1.1em, 2.5vw, 2em);
+      font-weight: 600;
+    }
+    .kakao-link {
+      display: flex;
+      align-items: center;
+      gap: 0.3em;
+      background: #fee500;
+      color: #181600;
+      border-radius: 6px;
+      padding: 0.25em 0.7em 0.25em 0.5em;
+      font-size: 0.98em;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background 0.2s;
+      margin: 10px auto 0 auto;
+      max-width: 260px;
+      justify-content: center;
+    }
+    .kakao-link:hover {
+      background: #ffe066;
+    }
+    .kakao-icon {
+      width: 1.3em;
+      height: 1.3em;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .sub-title {
+      font-size: clamp(0.9em, 1.5vw, 1.2em);
+      color: #cccccc;
+      font-weight: normal;
+      margin-top: 0.5em;
+    }
+    #expire-status {
+      margin-top: 6px;
+      font-size: 1em;
+      color: #fff;
+      font-weight: 600;
+    }
+    .chart-section { max-width: 700px; margin: 0 auto 2em auto; background: #fff; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px #e6eaf0; padding: 1.5em; }
+    .chart-controls { display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 1.2em; align-items: center; }
+    .chart-controls label { font-weight: 500; margin-right: 0.5em; }
+    .chart-controls select { font-size: 1em; padding: 0.3em 0.7em; border-radius: 5px; border: 1px solid #bbb; }
+    #chart { width: 100%; height: 400px; min-height: 300px; }
+    .loading {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    @media (max-width: 900px) {
+      .section-title, .chart-section { max-width: 98vw; }
+      .chart-section { padding: 0.7em; }
+      #chart { height: 300px; }
+    }
+    @media (max-width: 600px) {
+      .section-title {
+        font-size: 1em;
+        padding: 12px 0 8px 0;
+      }
+      .section-title-row {
+        flex-direction: column;
+        gap: 0.5em;
+      }
+      .kakao-link {
+        font-size: 0.95em;
+        padding: 0.18em 0.5em 0.18em 0.4em;
+      }
+      .chart-section, .chart-controls { font-size: 0.95em; }
+      .chart-section { padding: 0.5em; }
+      #chart { height: 220px; }
+    }
+    @media (max-width: 400px) {
+      .section-title {
+        font-size: 0.9em;
+        padding: 8px 0 4px 0;
+      }
+      .main-title { font-size: 1em; }
+      .kakao-link { font-size: 0.85em; }
+      .chart-section, .chart-controls { font-size: 0.85em; }
+      #chart { height: 140px; }
+    }
+
+    /* 트레이딩 섹션 스타일 */
+    .trading-section {
+      max-width: 700px;
+      margin: 0 auto 2em auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px #e6eaf0;
+      padding: 1.5em;
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5em;
+      padding-bottom: 0.5em;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .section-header h3 {
+      margin: 0;
+      color: #333;
+      font-size: 1.3em;
+    }
+    
+    .api-status {
+      padding: 0.3em 0.8em;
+      border-radius: 20px;
+      font-size: 0.9em;
+      font-weight: 500;
+      background: #ff6b6b;
+      color: white;
+    }
+    
+    .api-status.connected {
+      background: #51cf66;
+    }
+    
+    .api-config, .account-info, .order-section, .order-history, .trading-log {
+      margin-bottom: 2em;
+      padding: 1em;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      background: #f8f9fa;
+    }
+    
+    .api-config h4, .account-info h4, .order-section h4, .order-history h4, .trading-log h4 {
+      margin: 0 0 1em 0;
+      color: #495057;
+      font-size: 1.1em;
+    }
+    
+    .input-group {
+      margin-bottom: 1em;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .input-group label {
+      font-weight: 500;
+      margin-bottom: 0.3em;
+      color: #495057;
+    }
+    
+    .input-group input, .input-group select {
+      padding: 0.5em;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+    
+    .input-group input:focus, .input-group select:focus {
+      outline: none;
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 0.5em;
+      flex-wrap: wrap;
+    }
+    
+    .btn-primary, .btn-secondary, .btn-danger {
+      padding: 0.5em 1em;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.9em;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #007bff;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #0056b3;
+    }
+    
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #545b62;
+    }
+    
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #c82333;
+    }
+    
+    .balance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1em;
+      margin-bottom: 1em;
+    }
+    
+    .balance-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5em;
+      background: white;
+      border-radius: 4px;
+      border: 1px solid #dee2e6;
+    }
+    
+    .balance-item .label {
+      font-weight: 500;
+      color: #495057;
+    }
+    
+    .balance-item .value {
+      font-weight: 600;
+      color: #007bff;
+    }
+    
+    .coin-balances {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 1em;
+    }
+    
+    .coin-balance-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5em;
+      background: white;
+      border-radius: 4px;
+      margin-bottom: 0.5em;
+      border: 1px solid #dee2e6;
+    }
+    
+    .order-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1em;
+    }
+    
+    .order-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .order-item {
+      padding: 0.8em;
+      background: white;
+      border-radius: 4px;
+      margin-bottom: 0.5em;
+      border: 1px solid #dee2e6;
+    }
+    
+    .order-item .order-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5em;
+    }
+    
+    .order-item .order-type {
+      font-weight: 600;
+      padding: 0.2em 0.5em;
+      border-radius: 3px;
+      font-size: 0.8em;
+    }
+    
+    .order-item .order-type.bid {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .order-item .order-type.ask {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .log-content {
+      max-height: 200px;
+      overflow-y: auto;
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 0.5em;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    
+    .log-entry {
+      margin-bottom: 0.3em;
+      padding: 0.2em 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    @media (max-width: 600px) {
+      .trading-section {
+        padding: 1em;
+        margin: 0 auto 1em auto;
+      }
+      
+      .section-header {
+        flex-direction: column;
+        gap: 0.5em;
+        align-items: flex-start;
+      }
+      
+      .button-group {
+        flex-direction: column;
+      }
+      
+      .order-form {
+        grid-template-columns: 1fr;
+      }
+      
+      .balance-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="section-title">
+    <div class="section-title-row">
+      <div class="main-title">업비트 실시간 ‘진짜 추세’ 차트 – 노이즈·휩소 OUT!</div>
+    </div>
+    <a class="kakao-link" href="https://open.kakao.com/o/sy2UErbd" target="_blank" rel="noopener noreferrer">
+      <span class="kakao-icon">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="20" cy="20" r="20" fill="#FEE500"/>
+          <path d="M20 10C13.9249 10 9 13.6863 9 18.1111C9 21.0192 11.2222 23.4956 14.4444 24.6667L13.3333 29.1111C13.2222 29.5556 13.6667 29.8889 14.0556 29.6667L19.1111 26.6667C19.3981 26.6842 19.6981 26.6944 20 26.6944C26.0751 26.6944 31 23.0081 31 18.5833C31 14.1585 26.0751 10 20 10Z" fill="#181600"/>
+        </svg>
+      </span>
+      자동매매 제작의뢰
+    </a>
+    <div class="sub-title">업비트 원화마켓 실시간 차트, 지표, 알림, 무한스크롤 지원</div>
+    <div id="expire-status"></div>
+  </div>
+  <div class="chart-section">
+    <h2 style="display:none;">업비트 실시간 트레이딩 차트</h2>
+    <div class="chart-controls">
+      <label for="coin-select">코인</label>
+      <select id="coin-select"><option>로딩중...</option></select>
+      <label for="tf-select">타임프레임</label>
+      <select id="tf-select">
+        <option value="1">1분</option>
+        <option value="3">3분</option>
+        <option value="5">5분</option>
+        <option value="10">10분</option>
+        <option value="15">15분</option>
+        <option value="30">30분</option>
+        <option value="60">1시간</option>
+        <option value="240">4시간</option>
+        <option value="D">일봉</option>
+      </select>
+    </div>
+    <div id="chart"></div>
+  </div>
+
+  <!-- 업비트 API 트레이딩 섹션 추가 -->
+  <div class="trading-section">
+    <div class="section-header">
+      <h3>업비트 API 트레이딩</h3>
+      <div class="api-status" id="api-status">연결 안됨</div>
+    </div>
+    
+    <!-- API 키 설정 -->
+    <div class="api-config">
+      <h4>API 키 설정</h4>
+      <div class="input-group">
+        <label for="access-key">Access Key:</label>
+        <input type="password" id="access-key" placeholder="업비트 Access Key 입력">
+      </div>
+      <div class="input-group">
+        <label for="secret-key">Secret Key:</label>
+        <input type="password" id="secret-key" placeholder="업비트 Secret Key 입력">
+      </div>
+      <div class="button-group">
+        <button id="save-keys" class="btn-primary">키 저장</button>
+        <button id="test-connection" class="btn-secondary">연결 테스트</button>
+        <button id="clear-keys" class="btn-danger">키 삭제</button>
+      </div>
+    </div>
+
+    <!-- 계좌 정보 -->
+    <div class="account-info" id="account-info" style="display: none;">
+      <h4>계좌 정보</h4>
+      <div class="balance-grid">
+        <div class="balance-item">
+          <span class="label">총 보유 자산:</span>
+          <span class="value" id="total-balance">-</span>
+        </div>
+        <div class="balance-item">
+          <span class="label">사용 가능한 KRW:</span>
+          <span class="value" id="available-krw">-</span>
+        </div>
+        <div class="balance-item">
+          <span class="label">보유 코인:</span>
+          <span class="value" id="coin-count">-</span>
+        </div>
+      </div>
+      <div class="coin-balances" id="coin-balances">
+        <!-- 코인별 잔고가 여기에 표시됩니다 -->
+      </div>
+      <button id="refresh-balance" class="btn-secondary">잔고 새로고침</button>
+    </div>
+
+    <!-- 주문 기능 -->
+    <div class="order-section" id="order-section" style="display: none;">
+      <h4>주문</h4>
+      <div class="order-form">
+        <div class="input-group">
+          <label for="order-market">마켓:</label>
+          <select id="order-market">
+            <option value="">코인 선택</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="order-type">주문 유형:</label>
+          <select id="order-type">
+            <option value="limit">지정가</option>
+            <option value="market">시장가</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="order-side">주문 방향:</label>
+          <select id="order-side">
+            <option value="bid">매수</option>
+            <option value="ask">매도</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="order-price">가격 (KRW):</label>
+          <input type="number" id="order-price" placeholder="가격 입력" step="0.01">
+        </div>
+        <div class="input-group">
+          <label for="order-volume">수량:</label>
+          <input type="number" id="order-volume" placeholder="수량 입력" step="0.00000001">
+        </div>
+        <div class="input-group">
+          <label for="order-total">총 금액 (KRW):</label>
+          <input type="number" id="order-total" placeholder="총 금액" step="0.01" readonly>
+        </div>
+        <div class="button-group">
+          <button id="place-order" class="btn-primary">주문 실행</button>
+          <button id="preview-order" class="btn-secondary">주문 미리보기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 주문 내역 -->
+    <div class="order-history" id="order-history" style="display: none;">
+      <h4>주문 내역</h4>
+      <div class="order-list" id="order-list">
+        <!-- 주문 내역이 여기에 표시됩니다 -->
+      </div>
+      <button id="refresh-orders" class="btn-secondary">주문 내역 새로고침</button>
+    </div>
+
+    <!-- 알림 및 로그 -->
+    <div class="trading-log" id="trading-log">
+      <h4>거래 로그</h4>
+      <div class="log-content" id="log-content">
+        <!-- 거래 관련 로그가 여기에 표시됩니다 -->
+      </div>
+      <button id="clear-log" class="btn-secondary">로그 지우기</button>
+    </div>
+  </div>
+  <script>
+    // 문제 추적용 디버깅 코드 (맨 위에 삽입)
+    console.log('스크립트 시작');
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM fully loaded');
+      const select = document.getElementById('coin-select');
+      if (!select) {
+        alert('coin-select 요소를 찾을 수 없습니다!');
+        return;
+      }
+      console.log('coin-select 요소 찾음');
+      // LightweightCharts 확인
+      if (!window.LightweightCharts) {
+        alert('LightweightCharts 라이브러리가 로드되지 않았습니다!');
+        return;
+      }
+      console.log('LightweightCharts 라이브러리 확인됨');
+      // 차트 생성
+      try {
+        const chart = LightweightCharts.createChart(document.getElementById('chart'), { width: 400, height: 300 });
+        console.log('차트 생성 성공');
+      } catch (e) {
+        alert('차트 생성 중 오류: ' + e.message);
+      }
+    });
+    // 차트 인스턴스 생성
+    const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+      width: document.getElementById('chart').clientWidth,
+      height: document.getElementById('chart').clientHeight,
+      layout: { background: { color: '#fff' }, textColor: '#222' },
+      grid: { vertLines: { color: '#eee' }, horzLines: { color: '#eee' } },
+      crosshair: { mode: 1 },
+      rightPriceScale: { borderColor: '#ccc' },
+      timeScale: { borderColor: '#ccc', timeVisible: true, secondsVisible: false },
+    });
+    // 기존 일반 캔들 시리즈를 바 차트로 변경
+    const candleSeries = chart.addBarSeries({
+      upColor: '#222',
+      downColor: '#222',
+      borderUpColor: '#222',
+      borderDownColor: '#222',
+      wickUpColor: '#222',
+      wickDownColor: '#222'
+    });
+    // MA(20) 라인 시리즈 추가
+    const ma20Series = chart.addLineSeries({ color: '#222', lineWidth: 1, lineStyle: 0 });
+
+    // 켈트너채널 라인 시리즈 추가
+    const keltnerUpper = chart.addLineSeries({ color: '#222', lineWidth: 1, lineStyle: 0, priceLineVisible: false, lastValueVisible: false });
+    const keltnerMiddle = chart.addLineSeries({ color: '#222', lineWidth: 1, lineStyle: 0, priceLineVisible: false, lastValueVisible: false });
+    const keltnerLower = chart.addLineSeries({ color: '#222', lineWidth: 1, lineStyle: 0, priceLineVisible: false, lastValueVisible: false });
+    // 하이킨아시 캔들 시리즈(반투명)
+    const haSeries = chart.addCandlestickSeries({ upColor: 'rgba(200,30,30,0.7)', downColor: 'rgba(30,60,200,0.7)', borderVisible: false, wickVisible: false });
+
+    // 3SMA 함수 (입력: 배열, period, valueKey)
+    function calcSMA(data, period, valueKey = 'close') {
+      const result = [];
+      for (let i = 0; i < data.length; i++) {
+        if (i < period - 1) {
+          result.push({ time: data[i].time, value: null });
+        } else {
+          let sum = 0;
+          for (let j = 0; j < period; j++) {
+            sum += data[i - j][valueKey];
+          }
+          result.push({ time: data[i].time, value: sum / period });
+        }
+      }
+      return result;
+    }
+    // 20EMA 함수 (입력: 배열, valueKey)
+    function calcEMA(data, period, valueKey = 'value') {
+      const result = [];
+      let ema = 0;
+      const k = 2 / (period + 1);
+      for (let i = 0; i < data.length; i++) {
+        const v = data[i][valueKey];
+        if (i < period - 1 || v === null) {
+          result.push({ time: data[i].time, value: null });
+        } else if (i === period - 1) {
+          let sum = 0;
+          for (let j = 0; j < period; j++) sum += data[i - j][valueKey];
+          ema = sum / period;
+          result.push({ time: data[i].time, value: ema });
+        } else {
+          ema = v * k + ema * (1 - k);
+          result.push({ time: data[i].time, value: ema });
+        }
+      }
+      return result;
+    }
+    // ATR 계산 함수
+    function calcATR(data, period) {
+      const result = [];
+      let trArr = [];
+      for (let i = 0; i < data.length; i++) {
+        if (i === 0) {
+          trArr.push(data[i].high - data[i].low);
+        } else {
+          const tr = Math.max(
+            data[i].high - data[i].low,
+            Math.abs(data[i].high - data[i - 1].close),
+            Math.abs(data[i].low - data[i - 1].close)
+          );
+          trArr.push(tr);
+        }
+        if (i < period) {
+          result.push({ time: data[i].time, value: null });
+        } else {
+          const atr = trArr.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period;
+          result.push({ time: data[i].time, value: atr });
+        }
+      }
+      return result;
+    }
+    // 하이킨아시 변환 함수
+    function calcHeikinAshi(data) {
+      if (!data.length) return [];
+      let ha = [];
+      for (let i = 0; i < data.length; i++) {
+        const prev = ha[i - 1] || data[i];
+        const haClose = (data[i].open + data[i].high + data[i].low + data[i].close) / 4;
+        const haOpen = i === 0 ? (data[i].open + data[i].close) / 2 : (prev.open + prev.close) / 2;
+        const haHigh = Math.max(data[i].high, haOpen, haClose);
+        const haLow = Math.min(data[i].low, haOpen, haClose);
+        ha.push({ time: data[i].time, open: haOpen, high: haHigh, low: haLow, close: haClose });
+      }
+      return ha;
+    }
+    // 반응형 리사이즈
+    window.addEventListener('resize', () => {
+      chart.applyOptions({ width: document.getElementById('chart').clientWidth });
+    });
+
+    // 업비트 원화마켓 코인 목록 불러오기 (기본값: BTC)
+    async function loadUpbitCoins() {
+      const select = document.getElementById('coin-select');
+      select.innerHTML = '<option>로딩중...</option>';
+      select.disabled = true;
+      let coins = [];
+      try {
+        const res = await fetch('https://api.upbit.com/v1/market/all?isDetails=false');
+        if (!res.ok) throw new Error('API 오류');
+        const data = await res.json();
+        coins = data.filter(m => m.market.startsWith('KRW-'));
+      } catch (e) {
+        alert('코인 목록을 불러오지 못했습니다.\n(' + e.message + ')');
+        select.innerHTML = '<option>불러오기 실패</option>';
+        select.disabled = true;
+        return;
+      }
+      if (coins.length === 0) {
+        alert('코인 목록이 비어 있습니다.');
+        select.innerHTML = '<option>목록 없음</option>';
+        select.disabled = true;
+        return;
+      }
+      select.innerHTML = '';
+      coins.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.market;
+        opt.textContent = c.korean_name + ' (' + c.market.replace('KRW-','') + ')';
+        select.appendChild(opt);
+      });
+      // BTC가 있으면 기본 선택, 없으면 첫 번째 코인 선택
+      const btcOption = Array.from(select.options).find(opt => opt.value === 'KRW-BTC');
+      if (btcOption) {
+        select.value = 'KRW-BTC';
+      } else {
+        select.selectedIndex = 0;
+      }
+      select.disabled = false;
+      // change 이벤트 트리거 (option 생성 후 확실히 동작)
+      select.dispatchEvent(new Event('change'));
+    }
+
+    // 타임프레임 value를 업비트 API용으로 변환
+    function getCandleApiInfo(tf, market) {
+      if (tf === 'D') {
+        return {
+          url: `https://api.upbit.com/v1/candles/days?market=${market}&count=200`,
+          isMinute: false
+        };
+      } else {
+        return {
+          url: `https://api.upbit.com/v1/candles/minutes/${tf}?market=${market}&count=200`,
+          isMinute: true
+        };
+      }
+    }
+
+    // ISO8601 → UNIX초 변환 (항상 UTC 기준)
+    function isoToUnixSeconds(iso) {
+      // iso는 항상 UTC 기준(예: 2024-07-17T03:00:00)
+      // Z가 없으면 붙여서 UTC로 변환
+      if (!iso.endsWith('Z')) iso += 'Z';
+      return Math.floor(new Date(iso).getTime() / 1000);
+    }
+
+    let autoUpdateTimer = null;
+
+    let allCandles = [];
+    let isFetchingMore = false;
+    let noMorePastData = false;
+
+    // 캔들 데이터 fetch 및 차트에 적용 (to 파라미터로 과거 fetch 지원)
+    async function fetchCandles(to = null, prepend = false) {
+      const market = document.getElementById('coin-select').value;
+      let tf = document.getElementById('tf-select').value;
+      if (!market || !tf || market === '로딩중...' || market === '불러오기 실패' || market === '목록 없음') {
+        candleSeries.setData([]);
+        return;
+      }
+      const { url } = getCandleApiInfo(tf, market);
+      let fetchUrl = url;
+      if (to) fetchUrl += `&to=${encodeURIComponent(to)}`;
+      const chartDiv = document.getElementById('chart');
+      chartDiv.classList.add('loading');
+
+      // --- 갱신 전 뷰포트 위치/최신 여부/데이터 길이 저장 ---
+      const prevRange = chart.timeScale().getVisibleLogicalRange();
+      const wasAtLatest = isAtLatest(prevRange);
+      const prevDataLen = allCandles.length;
+
+      try {
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error('API 오류');
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          if (prepend) noMorePastData = true;
+          if (!prepend) candleSeries.setData([]);
+          if (!prepend) alert('캔들 데이터가 없습니다.');
+          return;
+        }
+        // 업비트는 최신순 정렬이므로 역순으로 변환
+        const candles = data.reverse().map(c => ({
+          time: isoToUnixSeconds(c.candle_date_time_utc), // 항상 UTC 변환
+          open: c.opening_price,
+          high: c.high_price,
+          low: c.low_price,
+          close: c.trade_price
+        }));
+        if (prepend) {
+          // 중복 time 제거
+          const existingTimes = new Set(allCandles.map(c => c.time));
+          const newCandles = candles.filter(c => !existingTimes.has(c.time));
+          allCandles = [...newCandles, ...allCandles];
+          // 오름차순 정렬
+          allCandles.sort((a, b) => a.time - b.time);
+          // 누락된 시간대 빈 봉 보정
+          tf = document.getElementById('tf-select').value;
+          allCandles = fillMissingCandles(allCandles, tf);
+          candleSeries.setData(allCandles);
+          // 3이평의 20이평 계산
+          const sma3 = calcSMA3(allCandles);
+          const sma20of3 = calcSMA20(sma3);
+          // 켈트너채널 계산 및 표시 (중심선: sma20of3)
+          const atr20 = calcATR(allCandles, 20);
+          const kcUpper = sma20of3.map((e, i) => (e.value !== null && atr20[i].value !== null) ? { time: e.time, value: e.value + 2 * atr20[i].value } : { time: e.time, value: null });
+          const kcLower = sma20of3.map((e, i) => (e.value !== null && atr20[i].value !== null) ? { time: e.time, value: e.value - 2 * atr20[i].value } : { time: e.time, value: null });
+          keltnerUpper.setData(kcUpper.filter(d => d.value !== null));
+          keltnerMiddle.setData(sma20of3.filter(d => d.value !== null));
+          keltnerLower.setData(kcLower.filter(d => d.value !== null));
+          // 하이킨아시 표시
+          haSeries.setData(calcHeikinAshi(allCandles));
+          // 돌파 감지 및 알림/로그
+          checkBreakoutAlert(allCandles, kcUpper, kcLower);
+          // prepend 후 기존 위치 복원 (데이터 개수 변화만큼 shift)
+          const newDataLen = allCandles.length;
+          const shift = newDataLen - prevDataLen;
+          if (prevRange) {
+            chart.timeScale().setVisibleLogicalRange({
+              from: prevRange.from + shift,
+              to: prevRange.to + shift
+            });
+          }
+        } else {
+          allCandles = candles;
+          candleSeries.setData(allCandles);
+          // 3이평의 20이평 계산
+          const sma3 = calcSMA3(allCandles);
+          const sma20of3 = calcSMA20(sma3);
+          // 켈트너채널 계산 및 표시 (중심선: sma20of3)
+          const atr20 = calcATR(allCandles, 20);
+          const kcUpper = sma20of3.map((e, i) => (e.value !== null && atr20[i].value !== null) ? { time: e.time, value: e.value + 2 * atr20[i].value } : { time: e.time, value: null });
+          const kcLower = sma20of3.map((e, i) => (e.value !== null && atr20[i].value !== null) ? { time: e.time, value: e.value - 2 * atr20[i].value } : { time: e.time, value: null });
+          keltnerUpper.setData(kcUpper.filter(d => d.value !== null));
+          keltnerMiddle.setData(sma20of3.filter(d => d.value !== null));
+          keltnerLower.setData(kcLower.filter(d => d.value !== null));
+          // 하이킨아시 표시
+          haSeries.setData(calcHeikinAshi(allCandles));
+          // 누락된 시간대 빈 봉 보정
+          tf = document.getElementById('tf-select').value;
+          allCandles = fillMissingCandles(allCandles, tf);
+          // 돌파 감지 및 알림/로그
+          checkBreakoutAlert(allCandles, kcUpper, kcLower);
+          // --- 갱신 후 위치 복원 ---
+          if (wasAtLatest) {
+            chart.timeScale().fitContent();
+          } else if (prevRange) {
+            chart.timeScale().setVisibleLogicalRange(prevRange);
+          }
+          noMorePastData = false;
+        }
+      } catch (e) {
+        if (!prepend) candleSeries.setData([]);
+        if (!prepend) alert('캔들 데이터를 불러오지 못했습니다.\n(' + e.message + ')');
+      } finally {
+        chartDiv.classList.remove('loading');
+        isFetchingMore = false;
+      }
+    }
+
+    // 무한 스크롤: 좌측 끝 근처로 이동 시 과거 데이터 추가 fetch
+    chart.timeScale().subscribeVisibleLogicalRangeChange(async (range) => {
+      if (isFetchingMore || noMorePastData || !allCandles.length) return;
+      // range.from이 5 이내(좌측 끝 근처)로 오면 추가 fetch
+      if (range && range.from < 5) {
+        isFetchingMore = true;
+        // 가장 오래된 봉의 UTC ISO 시각을 to 파라미터로 사용 (중복 방지: -1초)
+        const oldest = allCandles[0];
+        if (oldest && oldest.time) {
+          // to 파라미터는 항상 UTC ISO8601로, -1초 보정
+          const dt = new Date((oldest.time - 1) * 1000);
+          const iso = dt.toISOString().replace('.000','').replace(/\.[0-9]{3}/,''); // 항상 UTC
+          await fetchCandles(iso, true);
+        } else {
+          isFetchingMore = false;
+        }
+      }
+    });
+
+    // 자동 갱신 타이머 관리
+    function startAutoUpdate() {
+      if (autoUpdateTimer) clearInterval(autoUpdateTimer);
+      autoUpdateTimer = setInterval(fetchCandles, 5000);
+    }
+    function stopAutoUpdate() {
+      if (autoUpdateTimer) clearInterval(autoUpdateTimer);
+      autoUpdateTimer = null;
+    }
+
+    // 코인/타임프레임 select 이벤트 바인딩
+    document.getElementById('coin-select').addEventListener('change', () => {
+      stopAutoUpdate();
+      removeBreakoutLogIfExists();
+      fetchCandles();
+      startAutoUpdate();
+    });
+    document.getElementById('tf-select').addEventListener('change', () => {
+      stopAutoUpdate();
+      removeBreakoutLogIfExists();
+      fetchCandles();
+      startAutoUpdate();
+    });
+
+    // 최초 로딩 시 코인 목록 및 차트 표시
+    loadUpbitCoins();
+    // 최초 자동 갱신 시작 (코인 목록 로딩 후 change 이벤트에서 자동 시작됨)
+
+    // 페이지 이탈 시 타이머 해제
+    window.addEventListener('beforeunload', stopAutoUpdate);
+
+    // ===== 업비트 API 트레이딩 기능 =====
+    
+    // API 키 관리
+    let apiKeys = {
+      accessKey: localStorage.getItem('upbit_access_key') || '',
+      secretKey: localStorage.getItem('upbit_secret_key') || ''
+    };
+
+    // 로그 함수
+    function addTradingLog(message) {
+      const logContent = document.getElementById('log-content');
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      logEntry.textContent = `[${new Date().toLocaleString()}] ${message}`;
+      logContent.appendChild(logEntry);
+      logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    // API 키 저장
+    document.getElementById('save-keys').addEventListener('click', () => {
+      const accessKey = document.getElementById('access-key').value.trim();
+      const secretKey = document.getElementById('secret-key').value.trim();
+      
+      if (!accessKey || !secretKey) {
+        alert('Access Key와 Secret Key를 모두 입력해주세요.');
+        return;
+      }
+      
+      apiKeys.accessKey = accessKey;
+      apiKeys.secretKey = secretKey;
+      
+      localStorage.setItem('upbit_access_key', accessKey);
+      localStorage.setItem('upbit_secret_key', secretKey);
+      
+      addTradingLog('API 키가 저장되었습니다.');
+      updateApiStatus();
+    });
+
+    // API 키 삭제
+    document.getElementById('clear-keys').addEventListener('click', () => {
+      if (confirm('저장된 API 키를 삭제하시겠습니까?')) {
+        apiKeys.accessKey = '';
+        apiKeys.secretKey = '';
+        localStorage.removeItem('upbit_access_key');
+        localStorage.removeItem('upbit_secret_key');
+        
+        document.getElementById('access-key').value = '';
+        document.getElementById('secret-key').value = '';
+        
+        addTradingLog('API 키가 삭제되었습니다.');
+        updateApiStatus();
+        hideTradingSections();
+      }
+    });
+
+    // API 상태 업데이트
+    function updateApiStatus() {
+      const statusElement = document.getElementById('api-status');
+      if (apiKeys.accessKey && apiKeys.secretKey) {
+        statusElement.textContent = '연결됨';
+        statusElement.className = 'api-status connected';
+        showTradingSections();
+      } else {
+        statusElement.textContent = '연결 안됨';
+        statusElement.className = 'api-status';
+        hideTradingSections();
+      }
+    }
+
+    // 트레이딩 섹션 표시/숨김
+    function showTradingSections() {
+      document.getElementById('account-info').style.display = 'block';
+      document.getElementById('order-section').style.display = 'block';
+      document.getElementById('order-history').style.display = 'block';
+    }
+
+    function hideTradingSections() {
+      document.getElementById('account-info').style.display = 'none';
+      document.getElementById('order-section').style.display = 'none';
+      document.getElementById('order-history').style.display = 'none';
+    }
+
+    // JWT 토큰 생성 (업비트 API 인증용)
+    function generateJWT(payload) {
+      if (typeof CryptoJS === 'undefined') {
+        throw new Error('CryptoJS 라이브러리가 로드되지 않았습니다.');
+      }
+      
+      const header = { alg: 'HS256', typ: 'JWT' };
+      const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '');
+      const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '');
+      
+      // HMAC-SHA256으로 서명 생성
+      const signature = CryptoJS.HmacSHA256(
+        `${encodedHeader}.${encodedPayload}`,
+        apiKeys.secretKey
+      ).toString(CryptoJS.enc.Base64).replace(/=/g, '');
+      
+      const jwtToken = `${encodedHeader}.${encodedPayload}.${signature}`;
+      
+      console.log('JWT 토큰 생성:', {
+        header: header,
+        payload: payload,
+        encodedHeader: encodedHeader,
+        encodedPayload: encodedPayload,
+        signature: signature,
+        token: jwtToken
+      });
+      
+      return jwtToken;
+    }
+
+    // 업비트 API 요청 (인증 필요)
+    async function upbitApiRequest(endpoint, method = 'GET', body = null) {
+      if (!apiKeys.accessKey || !apiKeys.secretKey) {
+        throw new Error('API 키가 설정되지 않았습니다.');
+      }
+
+      const url = `https://api.upbit.com${endpoint}`;
+      const headers = {
+        'Accept': 'application/json',
+        'Access-Key': apiKeys.accessKey
+      };
+
+      if (body) {
+        headers['Content-Type'] = 'application/json';
+      }
+
+      // JWT 토큰 생성
+      const payload = {
+        access_key: apiKeys.accessKey,
+        nonce: new Date().getTime()
+      };
+      
+      if (body) {
+        const queryString = Object.keys(body)
+          .map(key => `${key}=${encodeURIComponent(body[key])}`)
+          .join('&');
+        payload.query_hash = CryptoJS.SHA512(queryString).toString();
+        payload.query_hash_alg = 'SHA512';
+      }
+
+      const jwtToken = generateJWT(payload);
+      headers['Authorization'] = `Bearer ${jwtToken}`;
+
+      addTradingLog(`API 요청: ${method} ${endpoint}`);
+      console.log('API 요청 헤더:', headers);
+      console.log('API 요청 바디:', body);
+
+      try {
+        const response = await fetch(url, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : null
+        });
+
+        console.log('API 응답 상태:', response.status, response.statusText);
+        console.log('API 응답 헤더:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API 오류 응답:', errorText);
+          throw new Error(`API 오류: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log('API 응답 데이터:', data);
+        addTradingLog(`API 요청 성공: ${endpoint}`);
+        
+        return data;
+      } catch (error) {
+        addTradingLog(`API 요청 실패: ${error.message}`);
+        console.error('API 요청 오류:', error);
+        throw error;
+      }
+    }
+
+    // 계좌 정보 조회
+    async function fetchAccountInfo() {
+      try {
+        addTradingLog('계좌 정보 조회 시작...');
+        
+        const accounts = await upbitApiRequest('/v1/accounts');
+        addTradingLog(`계좌 데이터 수신: ${accounts.length}개 항목`);
+        
+        // 디버깅: 받은 데이터 로그
+        console.log('계좌 데이터:', accounts);
+        
+        let totalBalance = 0;
+        let availableKrw = 0;
+        let coinCount = 0;
+        
+        const coinBalances = [];
+        
+        // 현재 가격 정보 가져오기
+        const tickerPromises = [];
+        const coinMarkets = [];
+        
+        accounts.forEach(account => {
+          const balance = parseFloat(account.balance);
+          const avgBuyPrice = parseFloat(account.avg_buy_price);
+          
+          addTradingLog(`${account.currency}: 잔고 ${balance}, 평균매수가 ${avgBuyPrice}`);
+          
+          if (account.currency === 'KRW') {
+            availableKrw = balance;
+            totalBalance += balance;
+            addTradingLog(`KRW 잔고: ${balance.toLocaleString()}원`);
+          } else {
+            if (balance > 0) {
+              coinCount++;
+              const market = `KRW-${account.currency}`;
+              coinMarkets.push(market);
+              
+              // 현재 가격 조회를 위한 Promise 생성
+              tickerPromises.push(
+                fetch(`https://api.upbit.com/v1/ticker?markets=${market}`)
+                  .then(res => res.json())
+                  .then(data => data[0])
+                  .catch(err => {
+                    addTradingLog(`${market} 현재가 조회 실패: ${err.message}`);
+                    return null;
+                  })
+              );
+              
+              coinBalances.push({
+                currency: account.currency,
+                balance: balance,
+                avgBuyPrice: avgBuyPrice,
+                currentValue: 0, // 임시값, 나중에 업데이트
+                market: market
+              });
+            }
+          }
+        });
+        
+        // 현재 가격 정보 조회
+        if (tickerPromises.length > 0) {
+          addTradingLog('현재 가격 정보 조회 중...');
+          const tickers = await Promise.all(tickerPromises);
+          
+          // 현재 가격으로 실제 가치 계산
+          coinBalances.forEach((coin, index) => {
+            const ticker = tickers[index];
+            if (ticker && ticker.trade_price) {
+              const currentPrice = parseFloat(ticker.trade_price);
+              const currentValue = coin.balance * currentPrice;
+              coin.currentValue = currentValue;
+              totalBalance += currentValue;
+              
+              addTradingLog(`${coin.currency}: 현재가 ${currentPrice.toLocaleString()}원, 평가금액 ${currentValue.toLocaleString()}원`);
+            } else {
+              // 현재가 조회 실패 시 평균매수가로 계산
+              const estimatedValue = coin.balance * coin.avgBuyPrice;
+              coin.currentValue = estimatedValue;
+              totalBalance += estimatedValue;
+              
+              addTradingLog(`${coin.currency}: 현재가 조회 실패, 평균매수가로 계산: ${estimatedValue.toLocaleString()}원`);
+            }
+          });
+        }
+
+        // UI 업데이트
+        document.getElementById('total-balance').textContent = `${totalBalance.toLocaleString()}원`;
+        document.getElementById('available-krw').textContent = `${availableKrw.toLocaleString()}원`;
+        document.getElementById('coin-count').textContent = coinCount;
+
+        // 코인 잔고 표시
+        const coinBalancesDiv = document.getElementById('coin-balances');
+        coinBalancesDiv.innerHTML = '';
+        
+        coinBalances.forEach(coin => {
+          const coinItem = document.createElement('div');
+          coinItem.className = 'coin-balance-item';
+          coinItem.innerHTML = `
+            <span>${coin.currency}</span>
+            <span>${coin.balance.toFixed(8)} (${coin.currentValue.toLocaleString()}원)</span>
+          `;
+          coinBalancesDiv.appendChild(coinItem);
+        });
+
+        addTradingLog(`계좌 정보 조회 완료: 총 자산 ${totalBalance.toLocaleString()}원, 보유 코인 ${coinCount}개`);
+      } catch (error) {
+        addTradingLog(`계좌 정보 조회 실패: ${error.message}`);
+        console.error('계좌 정보 조회 오류:', error);
+      }
+    }
+
+    // 주문 내역 조회
+    async function fetchOrderHistory() {
+      try {
+        const orders = await upbitApiRequest('/v1/orders', 'GET');
+        
+        const orderList = document.getElementById('order-list');
+        orderList.innerHTML = '';
+        
+        orders.slice(0, 10).forEach(order => { // 최근 10개만 표시
+          const orderItem = document.createElement('div');
+          orderItem.className = 'order-item';
+          
+          const orderDate = new Date(order.created_at).toLocaleString();
+          const price = parseFloat(order.price).toLocaleString();
+          const volume = parseFloat(order.volume).toFixed(8);
+          const total = (parseFloat(order.price) * parseFloat(order.volume)).toLocaleString();
+          
+          orderItem.innerHTML = `
+            <div class="order-header">
+              <span class="order-type ${order.side}">${order.side === 'bid' ? '매수' : '매도'}</span>
+              <span>${orderDate}</span>
+            </div>
+            <div>마켓: ${order.market}</div>
+            <div>가격: ${price}원, 수량: ${volume}</div>
+            <div>총액: ${total}원, 상태: ${order.state}</div>
+          `;
+          
+          orderList.appendChild(orderItem);
+        });
+
+        addTradingLog('주문 내역을 조회했습니다.');
+      } catch (error) {
+        addTradingLog(`주문 내역 조회 실패: ${error.message}`);
+      }
+    }
+
+    // 주문 실행
+    async function placeOrder() {
+      const market = document.getElementById('order-market').value;
+      const side = document.getElementById('order-side').value;
+      const orderType = document.getElementById('order-type').value;
+      const price = document.getElementById('order-price').value;
+      const volume = document.getElementById('order-volume').value;
+
+      if (!market || !side || !orderType || !volume) {
+        alert('모든 필수 항목을 입력해주세요.');
+        return;
+      }
+
+      if (orderType === 'limit' && !price) {
+        alert('지정가 주문의 경우 가격을 입력해주세요.');
+        return;
+      }
+
+      const orderData = {
+        market: market,
+        side: side,
+        ord_type: orderType,
+        volume: volume
+      };
+
+      if (orderType === 'limit') {
+        orderData.price = price;
+      }
+
+      try {
+        const result = await upbitApiRequest('/v1/orders', 'POST', orderData);
+        addTradingLog(`주문이 성공적으로 실행되었습니다. UUID: ${result.uuid}`);
+        
+        // 주문 폼 초기화
+        document.getElementById('order-price').value = '';
+        document.getElementById('order-volume').value = '';
+        document.getElementById('order-total').value = '';
+        
+        // 주문 내역 새로고침
+        setTimeout(fetchOrderHistory, 1000);
+      } catch (error) {
+        addTradingLog(`주문 실행 실패: ${error.message}`);
+      }
+    }
+
+    // 주문 미리보기
+    function previewOrder() {
+      const price = parseFloat(document.getElementById('order-price').value) || 0;
+      const volume = parseFloat(document.getElementById('order-volume').value) || 0;
+      const total = price * volume;
+      
+      document.getElementById('order-total').value = total.toFixed(2);
+      
+      if (total > 0) {
+        addTradingLog(`주문 미리보기: 총 금액 ${total.toLocaleString()}원`);
+      }
+    }
+
+    // 이벤트 리스너 등록
+    document.getElementById('test-connection').addEventListener('click', async () => {
+      try {
+        addTradingLog('API 연결 테스트 시작...');
+        
+        // 먼저 간단한 계좌 조회로 연결 테스트
+        const accounts = await upbitApiRequest('/v1/accounts');
+        addTradingLog(`API 연결 테스트 성공: ${accounts.length}개 계좌 항목 조회됨`);
+        
+        // 계좌 정보가 있으면 상세 정보도 조회
+        if (accounts.length > 0) {
+          await fetchAccountInfo();
+        } else {
+          addTradingLog('계좌 정보가 없습니다.');
+        }
+      } catch (error) {
+        addTradingLog(`API 연결 테스트 실패: ${error.message}`);
+        console.error('연결 테스트 오류:', error);
+      }
+    });
+
+    document.getElementById('refresh-balance').addEventListener('click', fetchAccountInfo);
+    document.getElementById('refresh-orders').addEventListener('click', fetchOrderHistory);
+    document.getElementById('place-order').addEventListener('click', placeOrder);
+    document.getElementById('preview-order').addEventListener('click', previewOrder);
+    document.getElementById('clear-log').addEventListener('click', () => {
+      document.getElementById('log-content').innerHTML = '';
+    });
+
+    // 주문 폼 이벤트
+    document.getElementById('order-price').addEventListener('input', previewOrder);
+    document.getElementById('order-volume').addEventListener('input', previewOrder);
+
+    // 코인 선택 시 주문 마켓 업데이트
+    document.getElementById('coin-select').addEventListener('change', () => {
+      const selectedCoin = document.getElementById('coin-select').value;
+      const orderMarket = document.getElementById('order-market');
+      
+      if (selectedCoin && selectedCoin !== '로딩중...' && selectedCoin !== '불러오기 실패' && selectedCoin !== '목록 없음') {
+        orderMarket.value = selectedCoin;
+      }
+    });
+
+    // 페이지 로드 시 API 키 복원 및 상태 업데이트
+    window.addEventListener('DOMContentLoaded', () => {
+      // 기존 DOM 로드 이벤트 내용...
+      
+      // API 키 복원
+      document.getElementById('access-key').value = apiKeys.accessKey;
+      document.getElementById('secret-key').value = apiKeys.secretKey;
+      updateApiStatus();
+      
+      // 주문 마켓 옵션 설정
+      const orderMarket = document.getElementById('order-market');
+      const coinSelect = document.getElementById('coin-select');
+      
+      // 코인 목록이 로드되면 주문 마켓 옵션도 업데이트
+      const updateOrderMarketOptions = () => {
+        orderMarket.innerHTML = '<option value="">코인 선택</option>';
+        Array.from(coinSelect.options).forEach(option => {
+          if (option.value && option.value !== '로딩중...' && option.value !== '불러오기 실패' && option.value !== '목록 없음') {
+            const newOption = document.createElement('option');
+            newOption.value = option.value;
+            newOption.textContent = option.textContent;
+            orderMarket.appendChild(newOption);
+          }
+        });
+      };
+      
+      // 코인 목록 로드 완료 후 주문 마켓 옵션 업데이트
+      setTimeout(updateOrderMarketOptions, 2000);
+    });
+
+    // 누락된 시간대에 빈 봉(가격 변동 없는 캔들) 자동 생성
+    function fillMissingCandles(data, tf) {
+      if (!data.length) return [];
+      let intervalSec = 60; // 기본 1분
+      if (tf === 'D') intervalSec = 86400;
+      else intervalSec = parseInt(tf) * 60;
+      const filled = [data[0]];
+      for (let i = 1; i < data.length; i++) {
+        let prev = filled[filled.length - 1];
+        let cur = data[i];
+        let expected = prev.time + intervalSec;
+        while (cur.time > expected) {
+          // 빈 봉 생성: open=close=prev.close, high/low=prev.close
+          filled.push({
+            time: expected,
+            open: prev.close,
+            high: prev.close,
+            low: prev.close,
+            close: prev.close
+          });
+          expected += intervalSec;
+          prev = filled[filled.length - 1];
+        }
+        filled.push(cur);
+      }
+      return filled;
+    }
+
+    // 3SMA 함수
+    function calcSMA3(data) {
+      const result = [];
+      for (let i = 0; i < data.length; i++) {
+        if (i < 2) {
+          result.push({ time: data[i].time, value: null });
+        } else {
+          let sum = 0;
+          for (let j = 0; j < 3; j++) {
+            sum += data[i - j].close;
+          }
+          result.push({ time: data[i].time, value: sum / 3 });
+        }
+      }
+      return result;
+    }
+    // 20SMA 함수 (입력: 3SMA 결과)
+    function calcSMA20(data) {
+      const result = [];
+      for (let i = 0; i < data.length; i++) {
+        if (i < 19 || data[i].value === null) {
+          result.push({ time: data[i].time, value: null });
+        } else {
+          let sum = 0;
+          for (let j = 0; j < 20; j++) {
+            sum += data[i - j].value;
+          }
+          result.push({ time: data[i].time, value: sum / 20 });
+        }
+      }
+      return result;
+    }
+    // 현재 뷰가 최신 구간인지 판단 (오른쪽 끝에서 2봉 이내면 최신)
+    function isAtLatest(prevRange) {
+      const range = chart.timeScale().getVisibleLogicalRange();
+      if (!range || !allCandles.length) return true;
+      const lastLogical = allCandles.length - 1;
+      return (range.to >= lastLogical - 1.5);
+    }
+
+    // 알림 상태 및 이력 표시용 변수/함수
+    let lastBreakout = 'none'; // 'none', 'upper', 'lower'
+    function formatTime(ts) {
+      const d = new Date(ts);
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0');
+    }
+    // 알림 권한 요청
+    if (window.Notification && Notification.permission !== 'granted') {
+      Notification.requestPermission();
+    }
+
+    // 상단/하단 돌파 감지 및 알림/로그
+    function checkBreakoutAlert(candles, kcUpper, kcLower) {
+      if (!candles.length || !kcUpper.length || !kcLower.length) return;
+      const last = candles[candles.length-1];
+      const upper = kcUpper[kcUpper.length-1];
+      const lower = kcLower[kcLower.length-1];
+      if (!last || !upper || !lower || upper.value === null || lower.value === null) return;
+      if (last.high > upper.value) {
+        if (lastBreakout !== 'upper') {
+          lastBreakout = 'upper';
+          if (window.Notification && Notification.permission === 'granted') {
+            new Notification('상단 돌파!', { body: `가격: ${last.high.toLocaleString()}원` });
+          }
+          addBreakoutLog('upper', last.high);
+        }
+      } else if (last.low < lower.value) {
+        if (lastBreakout !== 'lower') {
+          lastBreakout = 'lower';
+          if (window.Notification && Notification.permission === 'granted') {
+            new Notification('하단 돌파!', { body: `가격: ${last.low.toLocaleString()}원` });
+          }
+          addBreakoutLog('lower', last.low);
+        }
+      }
+    }
+    // --- JS breakout-log 개선 ---
+    // 기존 addBreakoutLog 함수 전체 교체
+    function addBreakoutLog(type, price) {
+      let logDiv = document.getElementById('breakout-log');
+      if (!logDiv) {
+        logDiv = document.createElement('div');
+        logDiv.id = 'breakout-log';
+        logDiv.style = 'margin:1em 0 0 0; font-size:1em; color:#222; background:#f7f7f7; border-radius:8px; padding:0.7em; max-width:700px; word-break:break-all;';
+        document.querySelector('.chart-section').appendChild(logDiv);
+      }
+      const now = new Date();
+      const msg = `[${formatTime(now)}] ${type === 'upper' ? '상단 돌파' : '하단 돌파'}! 가격: ${price.toLocaleString()}원`;
+      const p = document.createElement('div');
+      p.textContent = msg;
+      logDiv.prepend(p);
+    }
+    // 차트 리셋/코인 변경/타임프레임 변경 시 breakout-log가 있으면 자동 삭제
+    function removeBreakoutLogIfExists() {
+      const logDiv = document.getElementById('breakout-log');
+      if (logDiv) logDiv.remove();
+    }
+    // fetchCandles, 코인/타임프레임 변경 이벤트 등에서 차트 리셋 시 removeBreakoutLogIfExists() 호출 추가
+    // 예시(코드 내 적절한 위치에 삽입):
+    document.getElementById('coin-select').addEventListener('change', () => {
+      stopAutoUpdate();
+      removeBreakoutLogIfExists();
+      fetchCandles();
+      startAutoUpdate();
+    });
+    document.getElementById('tf-select').addEventListener('change', () => {
+      stopAutoUpdate();
+      removeBreakoutLogIfExists();
+      fetchCandles();
+      startAutoUpdate();
+    });
+    // fetchCandles 내에서도, 데이터가 없거나 차트 리셋 시 removeBreakoutLogIfExists() 호출
+
+    function adjustChartSectionPadding() {
+      const chartSection = document.querySelector('.chart-section');
+      const guide = document.querySelector('.chart-guide');
+      const breakoutLog = document.getElementById('breakout-log');
+      if (!guide && !breakoutLog) {
+        chartSection.style.paddingBottom = '0';
+      } else {
+        chartSection.style.paddingBottom = '1.5em';
+      }
+    }
+    // 안내문(.chart-guide)와 breakout-log 생성/삭제 시마다 호출
+    // 페이지 로드 후 1회, 코인/타임프레임 변경, breakout-log 추가/삭제 시 등
+    window.addEventListener('DOMContentLoaded', adjustChartSectionPadding);
+    document.getElementById('coin-select').addEventListener('change', () => {
+      stopAutoUpdate();
+      removeBreakoutLogIfExists();
+      fetchCandles();
+      startAutoUpdate();
+      setTimeout(adjustChartSectionPadding, 100); // 비동기 반영
+    });
+    document.getElementById('tf-select').addEventListener('change', () => {
+      stopAutoUpdate();
+      removeBreakoutLogIfExists();
+      fetchCandles();
+      startAutoUpdate();
+      setTimeout(adjustChartSectionPadding, 100);
+    });
+    // breakout-log 추가/삭제 시에도 adjustChartSectionPadding 호출 필요
+    // addBreakoutLog, removeBreakoutLogIfExists 함수 내에서 호출
+    function addBreakoutLog(type, price) {
+      let logDiv = document.getElementById('breakout-log');
+      if (!logDiv) {
+        logDiv = document.createElement('div');
+        logDiv.id = 'breakout-log';
+        logDiv.style = 'margin:1em 0 0 0; font-size:1em; color:#222; background:#f7f7f7; border-radius:8px; padding:0.7em; max-width:700px; word-break:break-all;';
+        document.querySelector('.chart-section').appendChild(logDiv);
+      }
+      const now = new Date();
+      const msg = `[${formatTime(now)}] ${type === 'upper' ? '상단 돌파' : '하단 돌파'}! 가격: ${price.toLocaleString()}원`;
+      const p = document.createElement('div');
+      p.textContent = msg;
+      logDiv.prepend(p);
+      adjustChartSectionPadding();
+    }
+    function removeBreakoutLogIfExists() {
+      const logDiv = document.getElementById('breakout-log');
+      if (logDiv) logDiv.remove();
+      adjustChartSectionPadding();
+    }
+  </script>
+</body>
+</html> 

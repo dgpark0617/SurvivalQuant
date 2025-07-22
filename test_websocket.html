@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket 전체 구독 테스트</title>
+</head>
+<body>
+    <h1>WebSocket 전체 구독 테스트</h1>
+    <div id="bybit-status">바이비트: 연결 대기중...</div>
+    <div id="binance-status">바이낸스: 연결 대기중...</div>
+    <div id="bybit-data"></div>
+    <div id="binance-data"></div>
+    
+    <script>
+        // 바이비트 WebSocket 테스트
+        function testBybitWebSocket() {
+            const socket = new WebSocket('wss://stream.bybit.com/v5/public/linear');
+            
+            socket.onopen = () => {
+                document.getElementById('bybit-status').innerHTML = '바이비트: 연결됨 - 전체 구독 시도 중...';
+                
+                // 전체 체결 데이터 구독 시도
+                const subscribeMsg = {
+                    "op": "subscribe",
+                    "args": ["publicTrade.*"]  // 와일드카드 구독
+                };
+                
+                socket.send(JSON.stringify(subscribeMsg));
+                console.log('바이비트 구독 메시지 전송:', subscribeMsg);
+            };
+            
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('바이비트 응답:', data);
+                
+                if (data.success) {
+                    document.getElementById('bybit-status').innerHTML = '바이비트: 전체 구독 성공! ✅';
+                } else if (data.ret_msg) {
+                    document.getElementById('bybit-status').innerHTML = '바이비트: 구독 실패 - ' + data.ret_msg;
+                }
+                
+                // 체결 데이터가 오면 표시
+                if (data.topic && data.topic.startsWith('publicTrade.')) {
+                    document.getElementById('bybit-data').innerHTML = 
+                        '<strong>바이비트 체결 데이터:</strong><br>' + 
+                        JSON.stringify(data, null, 2);
+                }
+            };
+            
+            socket.onerror = (error) => {
+                document.getElementById('bybit-status').innerHTML = '바이비트: 연결 오류 ❌';
+                console.error('바이비트 WebSocket 오류:', error);
+            };
+        }
+        
+        // 바이낸스 WebSocket 테스트
+        function testBinanceWebSocket() {
+            const socket = new WebSocket('wss://stream.binance.com:9443/ws');
+            
+            socket.onopen = () => {
+                document.getElementById('binance-status').innerHTML = '바이낸스: 연결됨 - 전체 구독 시도 중...';
+                
+                // 전체 티커 스트림 구독
+                const subscribeMsg = {
+                    "method": "SUBSCRIBE",
+                    "params": ["!ticker@arr"],  // 전체 티커 스트림
+                    "id": 1
+                };
+                
+                socket.send(JSON.stringify(subscribeMsg));
+                console.log('바이낸스 구독 메시지 전송:', subscribeMsg);
+            };
+            
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('바이낸스 응답:', data);
+                
+                if (data.result === null && data.id === 1) {
+                    document.getElementById('binance-status').innerHTML = '바이낸스: 전체 구독 성공! ✅';
+                }
+                
+                // 티커 데이터가 오면 표시
+                if (Array.isArray(data)) {
+                    document.getElementById('binance-data').innerHTML = 
+                        '<strong>바이낸스 티커 데이터 (상위 5개):</strong><br>' + 
+                        JSON.stringify(data.slice(0, 5), null, 2);
+                }
+            };
+            
+            socket.onerror = (error) => {
+                document.getElementById('binance-status').innerHTML = '바이낸스: 연결 오류 ❌';
+                console.error('바이낸스 WebSocket 오류:', error);
+            };
+        }
+        
+        // 테스트 시작
+        window.onload = () => {
+            testBybitWebSocket();
+            testBinanceWebSocket();
+        };
+    </script>
+</body>
+</html> 

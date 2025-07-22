@@ -261,7 +261,7 @@
     <div class="coin-data-section">
         <div class="section-title">
             <div class="section-title-row">
-                <div class="main-title">실시간 코인 거래대금 순위</div>
+                <div class="main-title">실시간 코인 거래대금 순위 (바이낸스)</div>
             </div>
             <a class="kakao-link" href="https://open.kakao.com/o/sy2UErbd" target="_blank" rel="noopener noreferrer" style="margin: 10px auto 0 auto; display: flex; align-items: center; justify-content: center; max-width: 260px;">
                 <span class="kakao-icon">
@@ -272,15 +272,15 @@
                 </span>
                 자동매매 제작의뢰
             </a>
-            <div class="sub-title">거래대금 기준으로 실시간 순위를 확인하세요</div>
+            <div class="sub-title">거래대금 기준으로 실시간 순위를 확인하세요 (USD)</div>
             <div id="expire-status" style="margin-top:6px; font-size:1em; color:#fff; font-weight:600;"></div>
             <div class="update-time" id="update-time"></div>
         </div>
         <div class="coin-table-header">
             <div class="coin-rank">순위</div>
             <div class="coin-symbol">심볼</div>
-            <div class="coin-price">가격</div>
-            <div class="coin-volume sortable-header" id="sort-amount">거래량
+            <div class="coin-price">가격(USD)</div>
+            <div class="coin-volume sortable-header" id="sort-amount">거래량(USD)
                 <span class="sort-arrow" id="arrow-amount">▲▼</span>
             </div>
             <div class="coin-change sortable-header" id="sort-count">체결
@@ -319,11 +319,320 @@
         }
         let socket = null;
         let coinData = new Map();
+        let currentSubscribedMarkets = new Set(); // 현재 구독 중인 마켓 추적
+        let marketUpdateTimer = null; // 마켓 업데이트 타이머
+        let usdToKrwRate = 1300; // 기본 환율 (1 USD = 1300 KRW)
+        
         // 정렬 상태 관리
         let sortState = {
             key: 'amount', // amount, count, rate
             direction: 'desc' // 'asc' or 'desc'
         };
+        
+        // 달러-원화 환율 가져오기
+        async function getExchangeRate() {
+            try {
+                // 간단한 환율 API 사용 (무료)
+                const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+                const data = await response.json();
+                usdToKrwRate = data.rates.KRW;
+                console.log('현재 환율:', usdToKrwRate);
+            } catch (error) {
+                console.error('환율 가져오기 실패, 기본값 사용:', error);
+                // 기본값 유지
+            }
+        }
+        
+        // 24시간 거래량 기준 상위 마켓 업데이트
+        async function updateTopMarkets() {
+            try {
+                const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+                const data = await response.json();
+                
+                // USDT 마켓만 필터링
+                const usdtMarkets = data.symbols
+                    .filter(symbol => symbol.quoteAsset === 'USDT' && symbol.status === 'TRADING')
+                    .map(symbol => symbol.symbol);
+                
+                // 24시간 거래량 기준으로 상위 50개 선별
+                const tickerResponse = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+                const tickers = await tickerResponse.json();
+                
+                // USDT 마켓만 필터링하고 거래량 기준 내림차순 정렬 후 상위 50개 선택
+                const newTopMarkets = tickers
+                    .filter(ticker => usdtMarkets.includes(ticker.symbol))
+                    .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+                    .slice(0, 50)
+                    .map(ticker => ({
+                        market: ticker.symbol,
+                        korean_name: getKoreanName(ticker.symbol.replace('USDT', '')),
+                        symbol: ticker.symbol.replace('USDT', '')
+                    }));
+                
+                // 새로운 상위 마켓과 현재 구독 중인 마켓 비교
+                const newMarketSet = new Set(newTopMarkets.map(m => m.market));
+                const currentMarketSet = new Set(currentSubscribedMarkets);
+                
+                // 구독 목록이 변경되었는지 확인
+                if (!setsAreEqual(newMarketSet, currentMarketSet)) {
+                    console.log('상위 50위권 변동 감지, WebSocket 구독 목록 갱신');
+                    
+                    // 기존 WebSocket 연결 종료
+                    if (socket) {
+                        socket.close();
+                    }
+                    
+                    // 새로운 마켓 목록으로 WebSocket 재연결
+                    currentSubscribedMarkets = newMarketSet;
+                    await connectWebSocket(newTopMarkets);
+                }
+                
+            } catch (error) {
+                console.error('Failed to update top markets:', error);
+            }
+        }
+        
+        // Set 비교 함수
+        function setsAreEqual(set1, set2) {
+            if (set1.size !== set2.size) return false;
+            for (let item of set1) {
+                if (!set2.has(item)) return false;
+            }
+            return true;
+        }
+        
+        // 바이낸스 코인 한글 이름 매핑
+        function getKoreanName(symbol) {
+            const koreanNames = {
+                'BTC': '비트코인',
+                'ETH': '이더리움',
+                'BNB': '바이낸스코인',
+                'XRP': '리플',
+                'ADA': '에이다',
+                'DOGE': '도지코인',
+                'MATIC': '폴리곤',
+                'SOL': '솔라나',
+                'DOT': '폴카닷',
+                'SHIB': '시바이누',
+                'TRX': '트론',
+                'LTC': '라이트코인',
+                'UNI': '유니스왑',
+                'AVAX': '아발란체',
+                'LINK': '체인링크',
+                'ATOM': '코스모스',
+                'XLM': '스텔라루멘',
+                'ALGO': '알고랜드',
+                'VET': '비체인',
+                'ICP': '인터넷컴퓨터',
+                'FIL': '파일코인',
+                'THETA': '세타토큰',
+                'XMR': '모네로',
+                'ETC': '이더리움클래식',
+                'EOS': '이오스',
+                'AAVE': '에이브',
+                'MKR': '메이커다오',
+                'COMP': '컴파운드',
+                'SUSHI': '스시스왑',
+                'CRV': '커브',
+                'YFI': '연파이낸스',
+                'SNX': '신세틱스',
+                'BAL': '밸런서',
+                'REN': '렌',
+                'ZRX': '0x',
+                'BAND': '밴드프로토콜',
+                'NMR': '뉴메레어',
+                'REP': '어거',
+                'LRC': '루프링',
+                'BAT': '베이직어텐션토큰',
+                'ZEC': '지캐시',
+                'DASH': '대시',
+                'WAVES': '웨이브',
+                'QTUM': '퀀텀',
+                'NEO': '네오',
+                'ONT': '온톨로지',
+                'IOTA': '아이오타',
+                'XEM': '넴',
+                'STEEM': '스팀',
+                'HIVE': '하이브',
+                'HBD': '하이브달러',
+                'BTS': '비트쉐어',
+                'MANA': '디센트럴랜드',
+                'SAND': '샌드박스',
+                'AXS': '엑시인피니티',
+                'CHZ': '칠리즈',
+                'HOT': '홀로체인',
+                'ENJ': '엔진코인',
+                'ANKR': '앵커',
+                'ONE': '하모니',
+                'IOTX': '아이오텍스',
+                'VTHO': '베토르',
+                'WIN': '윈코인',
+                'TFUEL': '세타퓨엘',
+                'COTI': '코티',
+                'CELO': '셀로',
+                'ALPHA': '알파파이낸스',
+                'AUDIO': '오디우스',
+                'RLC': '아이젝',
+                'STORJ': '스토리지',
+                'SKL': '스케일',
+                'OCEAN': '오션프로토콜',
+                'DYDX': '디와이디엑스',
+                'IMX': '이뮤터블엑스',
+                'AR': '아르위브',
+                'RNDR': '렌더토큰',
+                'OP': '옵티미즘',
+                'ARB': '아비트럼',
+                'INJ': '인젝티브',
+                'TIA': '셀레스티아',
+                'SEI': '세이',
+                'SUI': '수이',
+                'APT': '앱토스',
+                'NEAR': '니어프로토콜',
+                'FTM': '팬텀',
+                'ROSE': '올레이',
+                'FLOW': '플로우',
+                'KSM': '쿠사마',
+                'DOT': '폴카닷',
+                'KAVA': '카바',
+                'ZIL': '질리카',
+                'RVN': '레이븐코인',
+                'HBAR': '헤데라',
+                'NANO': '나노',
+                'XDC': '엑스디시',
+                'VET': '비체인',
+                'ICX': '아이콘',
+                'WAXP': '왁스',
+                'CHR': '크로미아',
+                'CKB': '너보스',
+                'CSPR': '캐스퍼',
+                'MINA': '미나',
+                'GLMR': '문빔',
+                'MOVR': '문리버',
+                'ACA': '아카라',
+                'ASTR': '아스타',
+                'PHA': '피하',
+                'KAR': '카라',
+                'KINT': '킨트',
+                'KMA': '카마',
+                'KSM': '쿠사마',
+                'PICA': '피카',
+                'PICASSO': '피카소',
+                'PINK': '핑크',
+                'PIRATE': '파이렛',
+                'PIXEL': '픽셀',
+                'PLANET': '플래닛',
+                'PLAY': '플레이',
+                'PLOT': '플롯',
+                'PLU': '플루토',
+                'PNG': '팽',
+                'POL': '폴',
+                'POLK': '폴크',
+                'POLS': '폴카스타터',
+                'POLY': '폴리매쓰',
+                'POND': '마를린',
+                'PONGO': '퐁고',
+                'POOL': '메타풀',
+                'POP': '팝',
+                'PORTO': 'FC 포르투',
+                'POWR': '파워렛저',
+                'PROM': '프로메테우스',
+                'PROS': '프로스퍼',
+                'PSG': '파리 생제르맹',
+                'PUNDIX': '펀디엑스',
+                'PURSE': '퍼스',
+                'PYR': '바이러스',
+                'QI': '베타파이낸스',
+                'QNT': '퀀트',
+                'QTUM': '퀀텀',
+                'QUICK': '퀵스왑',
+                'RAD': '레디컬',
+                'RARE': '슈퍼레어',
+                'RAY': '레이디움',
+                'REEF': '리프',
+                'REN': '렌',
+                'REP': '어거',
+                'REQ': '리퀘스트',
+                'REV': '레버',
+                'RFR': '리퍼리움',
+                'RLC': '아이젝',
+                'ROSE': '올레이',
+                'RSR': '리저브라이트',
+                'RUNE': '토르체인',
+                'RVN': '레이븐코인',
+                'SAND': '샌드박스',
+                'SANTOS': '산토스 FC',
+                'SC': '시아코인',
+                'SCRT': '시크릿',
+                'SFP': '세이프팔',
+                'SHIB': '시바이누',
+                'SKL': '스케일',
+                'SLP': '스무스러브포션',
+                'SNX': '신세틱스',
+                'SOL': '솔라나',
+                'SPELL': '스펠토큰',
+                'SRM': '세럼',
+                'STEEM': '스팀',
+                'STMX': '스톰엑스',
+                'STORJ': '스토리지',
+                'STPT': '에스티피',
+                'STRAX': '스트라티스',
+                'STX': '스택스',
+                'SUI': '수이',
+                'SUN': '선',
+                'SUSHI': '스시스왑',
+                'SXP': '솔라',
+                'SYN': '시너지',
+                'SYS': '시스코인',
+                'T': '쓰레숄드',
+                'TFUEL': '세타퓨엘',
+                'THETA': '세타토큰',
+                'TKO': '토코크립토',
+                'TLM': '에일리언월드',
+                'TOKE': '토크',
+                'TOMO': '토모체인',
+                'TORN': '토네이도캐시',
+                'TRB': '텔러',
+                'TROY': '트로이',
+                'TRU': '트루파이',
+                'TRX': '트론',
+                'TVK': '테라비타',
+                'TWT': '트러스트월렛',
+                'UMA': '우마',
+                'UNI': '유니스왑',
+                'USDC': 'USD코인',
+                'USDT': '테더',
+                'UTK': '유토크',
+                'VET': '비체인',
+                'VGX': '보이저',
+                'VTHO': '베토르',
+                'WAVES': '웨이브',
+                'WAXP': '왁스',
+                'WBTC': '래핑비트코인',
+                'WIN': '윈코인',
+                'WING': '윙',
+                'WRX': '와주',
+                'WTC': '월튼체인',
+                'XDC': '엑스디시',
+                'XEC': '이캐시',
+                'XEM': '넴',
+                'XLM': '스텔라루멘',
+                'XMR': '모네로',
+                'XRP': '리플',
+                'XTZ': '테조스',
+                'XVG': '버지',
+                'XVS': '비너스',
+                'YFI': '연파이낸스',
+                'YFII': 'DFI머니',
+                'YGG': '일드길드',
+                'ZEC': '지캐시',
+                'ZEN': '호라이즌',
+                'ZIL': '질리카',
+                'ZRX': '0x'
+            };
+            
+            return koreanNames[symbol] || symbol;
+        }
+        
         // 정렬 화살표 업데이트
         function updateSortArrows() {
             const keys = ['amount', 'count', 'rate'];
@@ -369,39 +678,29 @@
                 updateCoinList();
             };
         }
-        async function getMarketCodes() {
-            try {
-                const response = await fetch('https://api.upbit.com/v1/market/all?isDetails=true');
-                const markets = await response.json();
-                return markets
-                    .filter(market => market.market.startsWith('KRW-'))
-                    .map(market => ({
-                        market: market.market,
-                        korean_name: market.korean_name,
-                        symbol: market.market.replace('KRW-', '')
-                    }));
-            } catch (error) {
-                console.error('Failed to fetch market codes:', error);
-                return [];
-            }
-        }
         function formatNumber(value) {
             if (value >= 1000000000000) {
-                return (value / 1000000000000).toFixed(1) + '조원';
-            } else if (value >= 100000000) {
-                return (value / 100000000).toFixed(1) + '억원';
-            } else if (value >= 10000000) {
-                return (value / 10000000).toFixed(1) + '천만원';
-            } else if (value >= 10000) {
-                return (value / 10000).toFixed(1) + '만원';
+                return '$' + (value / 1000000000000).toFixed(1) + 'T';
+            } else if (value >= 1000000000) {
+                return '$' + (value / 1000000000).toFixed(1) + 'B';
+            } else if (value >= 1000000) {
+                return '$' + (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+                return '$' + (value / 1000).toFixed(1) + 'K';
+            } else {
+                return '$' + value.toFixed(2);
             }
-            return value.toLocaleString() + '원';
         }
         function formatPrice(value) {
             if (value >= 1000000) {
-                return (value / 10000).toFixed(1) + '만원';
+                return '$' + (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+                return '$' + (value / 1000).toFixed(1) + 'K';
+            } else if (value >= 1) {
+                return '$' + value.toFixed(2);
+            } else {
+                return '$' + value.toFixed(4);
             }
-            return value.toLocaleString() + '원';
         }
         function cleanOldData() {
             const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
@@ -419,9 +718,9 @@
                 }
             }
         }
-        async function connectWebSocket() {
-            const marketInfos = await getMarketCodes();
-            socket = new WebSocket("wss://api.upbit.com/websocket/v1");
+        async function connectWebSocket(marketInfos) {
+            socket = new WebSocket("wss://stream.binance.com:9443/ws");
+            
             marketInfos.forEach(info => {
                 if (!coinData.has(info.symbol)) {
                     coinData.set(info.symbol, {
@@ -436,39 +735,46 @@
                     });
                 }
             });
+            
             socket.onopen = () => {
-                const msg = JSON.stringify([
-                    { ticket: "trade" },
-                    {
-                        type: "trade",
-                        codes: marketInfos.map(info => info.market)
-                    }
-                ]);
-                socket.send(msg);
-            };
-            socket.onmessage = (event) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const data = JSON.parse(reader.result);
-                    updateTradeData(data);
+                // 바이낸스 실시간 거래 데이터 구독
+                const subscribeMsg = {
+                    "method": "SUBSCRIBE",
+                    "params": marketInfos.map(info => `${info.market.toLowerCase()}@trade`),
+                    "id": 1
                 };
-                reader.readAsText(event.data);
+                socket.send(JSON.stringify(subscribeMsg));
             };
+            
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.e === 'trade') {
+                        updateTradeData(data);
+                    }
+                } catch (error) {
+                    console.error('Error parsing WebSocket data:', error);
+                }
+            };
+            
             socket.onerror = (error) => {
                 console.error("WebSocket Error:", error);
             };
+            
             socket.onclose = () => {
                 setTimeout(connectWebSocket, 5000);
             };
         }
         function updateTradeData(data) {
-            const code = data.code;
-            const symbol = code.replace("KRW-", "");
-            const currentPrice = data.trade_price;
+            const symbol = data.s.replace('USDT', '');
+            const currentPrice = parseFloat(data.p);
+            const tradeVolume = parseFloat(data.q);
+            const tradeValue = currentPrice * tradeVolume;
+            
             if (!coinData.has(symbol)) {
                 coinData.set(symbol, {
                     symbol: symbol,
-                    korean_name: symbol,
+                    korean_name: getKoreanName(symbol),
                     price: currentPrice,
                     basePrice: currentPrice,
                     baseTime: new Date(),
@@ -477,14 +783,16 @@
                     count: 0
                 });
             }
+            
             const coin = coinData.get(symbol);
             if (coin.basePrice === null) {
                 coin.basePrice = currentPrice;
                 coin.baseTime = new Date();
             }
+            
             coin.price = currentPrice;
-            coin.volume += data.trade_volume;
-            coin.amount += currentPrice * data.trade_volume;
+            coin.volume += tradeVolume;
+            coin.amount += tradeValue;
             coin.count++;
             updateCoinList();
         }
@@ -548,7 +856,10 @@
         }
         window.onload = () => {
             showExpireStatus();
-            connectWebSocket();
+            // 초기 마켓 업데이트 실행
+            updateTopMarkets();
+            // 5분마다 마켓 업데이트
+            marketUpdateTimer = setInterval(updateTopMarkets, 5 * 60 * 1000);
             updateTime();
             setInterval(updateTime, 1000);
             setInterval(cleanOldData, 30000);
@@ -558,6 +869,9 @@
         window.onbeforeunload = () => {
             if (socket) {
                 socket.close();
+            }
+            if (marketUpdateTimer) {
+                clearInterval(marketUpdateTimer);
             }
         };
     </script>

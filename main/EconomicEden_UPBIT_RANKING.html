@@ -319,11 +319,74 @@
         }
         let socket = null;
         let coinData = new Map();
+        let currentSubscribedMarkets = new Set(); // 현재 구독 중인 마켓 추적
+        let marketUpdateTimer = null; // 마켓 업데이트 타이머
+        
         // 정렬 상태 관리
         let sortState = {
             key: 'amount', // amount, count, rate
             direction: 'desc' // 'asc' or 'desc'
         };
+        
+        // 24시간 거래대금 기준 상위 마켓 업데이트
+        async function updateTopMarkets() {
+            try {
+                const response = await fetch('https://api.upbit.com/v1/market/all?isDetails=true');
+                const markets = await response.json();
+                
+                // KRW 마켓만 필터링
+                const krwMarkets = markets.filter(market => market.market.startsWith('KRW-'));
+                
+                // 24시간 거래량 기준으로 상위 50개 선별
+                const marketCodes = krwMarkets.map(market => market.market);
+                const tickerResponse = await fetch(`https://api.upbit.com/v1/ticker?markets=${marketCodes.join(',')}`);
+                const tickers = await tickerResponse.json();
+                
+                // 거래량 기준 내림차순 정렬 후 상위 50개 선택
+                const newTopMarkets = tickers
+                    .sort((a, b) => b.acc_trade_price_24h - a.acc_trade_price_24h)
+                    .slice(0, 50)
+                    .map(ticker => {
+                        const market = markets.find(m => m.market === ticker.market);
+                        return {
+                            market: market.market,
+                            korean_name: market.korean_name,
+                            symbol: market.market.replace('KRW-', '')
+                        };
+                    });
+                
+                // 새로운 상위 마켓과 현재 구독 중인 마켓 비교
+                const newMarketSet = new Set(newTopMarkets.map(m => m.market));
+                const currentMarketSet = new Set(currentSubscribedMarkets);
+                
+                // 구독 목록이 변경되었는지 확인
+                if (!setsAreEqual(newMarketSet, currentMarketSet)) {
+                    console.log('상위 50위권 변동 감지, WebSocket 구독 목록 갱신');
+                    
+                    // 기존 WebSocket 연결 종료
+                    if (socket) {
+                        socket.close();
+                    }
+                    
+                    // 새로운 마켓 목록으로 WebSocket 재연결
+                    currentSubscribedMarkets = newMarketSet;
+                    await connectWebSocket(newTopMarkets);
+                }
+                
+            } catch (error) {
+                console.error('Failed to update top markets:', error);
+            }
+        }
+        
+        // Set 비교 함수
+        function setsAreEqual(set1, set2) {
+            if (set1.size !== set2.size) return false;
+            for (let item of set1) {
+                if (!set2.has(item)) return false;
+            }
+            return true;
+        }
+        
         // 정렬 화살표 업데이트
         function updateSortArrows() {
             const keys = ['amount', 'count', 'rate'];
@@ -369,22 +432,6 @@
                 updateCoinList();
             };
         }
-        async function getMarketCodes() {
-            try {
-                const response = await fetch('https://api.upbit.com/v1/market/all?isDetails=true');
-                const markets = await response.json();
-                return markets
-                    .filter(market => market.market.startsWith('KRW-'))
-                    .map(market => ({
-                        market: market.market,
-                        korean_name: market.korean_name,
-                        symbol: market.market.replace('KRW-', '')
-                    }));
-            } catch (error) {
-                console.error('Failed to fetch market codes:', error);
-                return [];
-            }
-        }
         function formatNumber(value) {
             if (value >= 1000000000000) {
                 return (value / 1000000000000).toFixed(1) + '조원';
@@ -419,8 +466,7 @@
                 }
             }
         }
-        async function connectWebSocket() {
-            const marketInfos = await getMarketCodes();
+        async function connectWebSocket(marketInfos) {
             socket = new WebSocket("wss://api.upbit.com/websocket/v1");
             marketInfos.forEach(info => {
                 if (!coinData.has(info.symbol)) {
@@ -548,7 +594,10 @@
         }
         window.onload = () => {
             showExpireStatus();
-            connectWebSocket();
+            // 초기 마켓 업데이트 실행
+            updateTopMarkets();
+            // 5분마다 마켓 업데이트
+            marketUpdateTimer = setInterval(updateTopMarkets, 5 * 60 * 1000);
             updateTime();
             setInterval(updateTime, 1000);
             setInterval(cleanOldData, 30000);
@@ -558,6 +607,9 @@
         window.onbeforeunload = () => {
             if (socket) {
                 socket.close();
+            }
+            if (marketUpdateTimer) {
+                clearInterval(marketUpdateTimer);
             }
         };
     </script>
