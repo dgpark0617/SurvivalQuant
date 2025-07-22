@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Binance BTC/USDT 이동평균 및 추세 (사용자 선택)</title>
+  <style>
+    body { font-family: monospace; }
+    h1 { font-size: 1em; margin-bottom: 0.5em; }
+    #output div {
+      line-height: 1.4em;
+    }
+    .label {
+      display: inline-block;
+      width: 20ch;  /* 넉넉하게 설정해 한 줄 표시 */
+      font-weight: bold;
+    }
+    .trend-up { color: #f44336; font-weight: bold; }
+    .trend-down { color: #1976d2; font-weight: bold; }
+    label, select {
+      margin-right: 1em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Binance BTC/USDT 이동평균 및 추세</h1>
+
+  <label for="timeframe-select">봉 간격:</label>
+  <select id="timeframe-select">
+    <option value="1m">1분</option>
+    <option value="3m">3분</option>
+    <option value="5m" selected>5분</option>
+  </select>
+
+  <label for="short-ma-select">단기 이동평균:</label>
+  <select id="short-ma-select">
+    <option value="3">3</option>
+    <option value="5" selected>5</option>
+    <option value="7">7</option>
+  </select>
+
+  <label for="long-ma-select">장기 이동평균:</label>
+  <select id="long-ma-select">
+    <option value="10">10</option>
+    <option value="20" selected>20</option>
+    <option value="30">30</option>
+  </select>
+
+  <button id="apply-btn">적용</button>
+
+  <div id="output" style="margin-top:1em;"></div>
+  <div id="trend" style="margin-top:0.5em;"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ccxt@4.1.31/dist/ccxt.browser.js"></script>
+  <script>
+    function simpleMA(data, period) {
+      if (data.length < period) return null;
+      const slice = data.slice(data.length - period);
+      const sum = slice.reduce((a, b) => a + b, 0);
+      return sum / period;
+    }
+
+    function to2(num) {
+      return num !== null ? num.toFixed(2) : '데이터 부족';
+    }
+
+    const binance = new ccxt.binance({ options: { defaultType: 'future' } });
+
+    const outputDiv = document.getElementById('output');
+    const trendDiv = document.getElementById('trend');
+    const timeframeSelect = document.getElementById('timeframe-select');
+    const shortMASelect = document.getElementById('short-ma-select');
+    const longMASelect = document.getElementById('long-ma-select');
+    const applyBtn = document.getElementById('apply-btn');
+
+    let autoRefreshInterval = null;
+    let currentTimeframe = timeframeSelect.value;
+    let currentShortMA = parseInt(shortMASelect.value);
+    let currentLongMA = parseInt(longMASelect.value);
+
+    async function fetchAndShow(timeframe, shortMA, longMA) {
+      try {
+        const ohlcv = await binance.fetchOHLCV('BTC/USDT', timeframe, undefined, 100);
+        const closes = ohlcv.map(x => x[4]);
+
+        const maShort = simpleMA(closes, shortMA);
+        const maLong = simpleMA(closes, longMA);
+
+        const latest = ohlcv[ohlcv.length - 1];
+        const [ts, open, high, low, close, volume] = latest;
+        const barTime = new Date(ts).toLocaleString();
+        const nowStr = new Date().toLocaleTimeString();
+
+        const lines = [
+          {label: '데이터 시간:', value: barTime},
+          {label: '현재 시간:', value: nowStr},
+          {label: '시가:', value: to2(open)},
+          {label: '고가:', value: to2(high)},
+          {label: '저가:', value: to2(low)},
+          {label: '종가:', value: to2(close)},
+          {label: `단기 이동평균(${shortMA}):`, value: to2(maShort)},
+          {label: `장기 이동평균(${longMA}):`, value: to2(maLong)},
+        ];
+
+        outputDiv.innerHTML = '';
+        lines.forEach(({label, value}) => {
+          const line = document.createElement('div');
+          const labelSpan = document.createElement('span');
+          labelSpan.className = 'label';
+          labelSpan.textContent = label;
+          line.appendChild(labelSpan);
+          line.appendChild(document.createTextNode(value));
+          outputDiv.appendChild(line);
+        });
+
+        if (maShort !== null && maLong !== null) {
+          if (maShort > maLong) {
+            trendDiv.innerHTML = '<span class="trend-up">추세: 상승</span>';
+          } else if (maShort < maLong) {
+            trendDiv.innerHTML = '<span class="trend-down">추세: 하락</span>';
+          } else {
+            trendDiv.textContent = '추세: 동일';
+          }
+        } else {
+          trendDiv.textContent = '';
+        }
+      } catch (e) {
+        outputDiv.textContent = '오류: ' + e.message;
+        trendDiv.textContent = '';
+      }
+    }
+
+    applyBtn.addEventListener('click', () => {
+      currentTimeframe = timeframeSelect.value;
+      currentShortMA = parseInt(shortMASelect.value);
+      currentLongMA = parseInt(longMASelect.value);
+
+      fetchAndShow(currentTimeframe, currentShortMA, currentLongMA);
+
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+      autoRefreshInterval = setInterval(() => {
+        fetchAndShow(currentTimeframe, currentShortMA, currentLongMA);
+      }, 5000);
+    });
+  </script>
+</body>
+</html>
