@@ -1,0 +1,13 @@
+# 업비트 API 연결을 위한 필수 라이브러리
+ccxt==4.1.77
+requests==2.31.0
+websocket-client==1.6.4
+cryptography==41.0.7
+PyJWT==2.8.0
+
+# GUI 및 데이터 처리
+tkinter
+pandas==2.1.4
+
+# 로깅 및 유틸리티
+python-dotenv==1.0.0 

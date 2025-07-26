@@ -67,24 +67,6 @@ class UpbitCommander(tk.Tk):
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
 
-        # 링크 프레임 (API 입력부 상단)
-        self.link_frame = tk.Frame(self)
-        self.link_frame.pack(pady=(20, 10), padx=40, anchor='w')
-        
-        # 설명 텍스트
-        info_label = tk.Label(self.link_frame, text="코인 자동매매 프로그램 제작문의", fg="gray", font=("Arial", 9))
-        info_label.pack(side='left', padx=(0, 10))
-        
-        # 블로그 링크
-        blog_label = tk.Label(self.link_frame, text="📝 블로그", fg="blue", cursor="hand2")
-        blog_label.pack(side='left', padx=(0, 10))
-        blog_label.bind("<Button-1>", lambda e: self.open_blog())
-        
-        # 오픈채팅방 링크
-        chat_label = tk.Label(self.link_frame, text="💬 오픈채팅방", fg="blue", cursor="hand2")
-        chat_label.pack(side='left', padx=(0, 10))
-        chat_label.bind("<Button-1>", lambda e: self.open_chat())
-        
         # API Key Frame
         self.api_frame = tk.Frame(self)
         self.api_frame.pack(pady=(20, 10), padx=40, anchor='w')
@@ -105,7 +87,7 @@ class UpbitCommander(tk.Tk):
             variable=self.auto_sell_enabled
         )
         self.sell_checkbox.grid(row=3, column=0, columnspan=2, pady=4, sticky='w')
-        
+
         # Account Info Frame
         self.account_frame = tk.Frame(self)
         self.account_frame.pack(pady=8, padx=40, anchor='w')
@@ -623,19 +605,16 @@ class UpbitCommander(tk.Tk):
             
             # 기존 데이터와 병합하여 n%, x% 보존
             if self.real_ticker_data:
-                # 기존 ticker_data의 n%, x%, min_x%, SL_Price, TP_Price 값 보존
+                # 기존 ticker_data의 n%, x%, min_x% 값 보존
                 existing_data = {}
                 for item in self.ticker_data:
                     existing_data[item['Ticker']] = {
                         'n%': item.get('n%', 0), 
                         'x%': item.get('x%', 0),
-                        'min_x%': item.get('min_x%', 2.0),
-                        'SL_Price': item.get('SL_Price', 0),
-                        'TP_Price': item.get('TP_Price', 0),
-                        'tr%': item.get('tr%', 2.0)
+                        'min_x%': item.get('min_x%', 2.0)
                     }
                 
-                # 새 데이터에 기존 설정값 적용
+                # 새 데이터에 기존 최저/최대 수익률 및 설정값 적용
                 for new_item in self.real_ticker_data:
                     ticker = new_item['Ticker']
                     if ticker in existing_data:
@@ -643,9 +622,6 @@ class UpbitCommander(tk.Tk):
                         new_item['n%'] = existing_data[ticker]['n%']
                         new_item['x%'] = existing_data[ticker]['x%']
                         new_item['min_x%'] = existing_data[ticker]['min_x%']
-                        new_item['SL_Price'] = existing_data[ticker]['SL_Price']
-                        new_item['TP_Price'] = existing_data[ticker]['TP_Price']
-                        new_item['tr%'] = existing_data[ticker]['tr%']
                     else:
                         # 새로운 ticker는 현재 수익률로 초기화
                         current_roe = new_item['c%']
@@ -779,15 +755,16 @@ class UpbitCommander(tk.Tk):
             self.logger.error(f"현재가 조회 실패: {ticker} - {str(e)}")
         return 0
 
-    def open_blog(self):
-        """블로그 링크 열기"""
-        import webbrowser
-        webbrowser.open("https://blog.naver.com/economic_eden")
-        
-    def open_chat(self):
-        """오픈채팅방 링크 열기"""
-        import webbrowser
-        webbrowser.open("https://open.kakao.com/o/sy2UErbd")
+    def safe_api_call(self, api_func, *args, **kwargs):
+        """안전한 API 호출 래퍼"""
+        try:
+            return api_func(*args, **kwargs)
+        except ccxt.NetworkError as e:
+            self.logger.error(f"네트워크 오류: {str(e)}")
+            return None
+        except ccxt.ExchangeError as e:
+            self.logger.error(f"거래소 오류: {str(e)}")
+            return None
 
 if __name__ == "__main__":
     app = UpbitCommander()

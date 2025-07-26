@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Binance BTC/USDT 이동평균 및 추세 (사용자 선택)</title>
+  
+  <!-- ======================================== -->
+  <!-- 사용기간 설정 - 여기서 만료 날짜를 수정하세요 -->
+  <!-- ======================================== -->
+  <!-- 
+  만료 날짜 형식: 'YYYY-MM-DDTHH:MM:SS'
+  예시: '2025-07-30T23:59:59' (2025년 7월 30일 23시 59분 59초까지)
+  
+  현재 설정: 2025년 7월 30일까지
+  -->
+  <script>
+    // 사용기간 설정 - 이 부분을 수정하세요
+    const EXPIRATION_DATE = '2025-07-30T23:59:59';
+    const KAKAO_LINK = 'https://open.kakao.com/o/sy2UErbd';
+    const MAIN_TITLE = '시그널메이커: 이동평균 교차 전략';
+    const SUB_TITLE = '실시간 이동평균 교차로 매수 타이밍을 포착하세요';
+  </script>
+  <style>
+    /* 모바일 우선 디자인 (모든 디바이스 통용) */
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 18px;  /* 모바일 기준 크기 */
+      max-width: 480px;  /* 모바일 화면 너비 제한 */
+      margin: 0 auto;  /* 중앙 정렬 */
+      padding: 0;  /* 여백 제거 */
+      background: #f5f6fa;
+    }
+
+    /* 광고 헤더 섹션 */
+    .ad-header {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 20px 0 12px 0;
+      text-align: center;
+      border-radius: 12px 12px 0 0;
+      margin: 0;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .ad-header .main-title {
+      font-size: clamp(1.1em, 2.5vw, 1.5em);
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .kakao-link {
+      display: flex;
+      align-items: center;
+      gap: 0.3em;
+      background: #fee500;
+      color: #181600;
+      border-radius: 6px;
+      padding: 0.25em 0.7em 0.25em 0.5em;
+      font-size: 0.98em;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background 0.2s;
+      margin: 10px auto 0 auto;
+      max-width: 260px;
+    }
+
+    .kakao-link:hover {
+      background: #ffe066;
+    }
+
+    .kakao-icon {
+      width: 1.3em;
+      height: 1.3em;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .ad-header .sub-title {
+      font-size: clamp(0.9em, 1.5vw, 1em);
+      color: #cccccc;
+      font-weight: normal;
+      margin-top: 8px;
+    }
+
+    .usage-period {
+      font-size: clamp(0.8em, 1vw, 0.9em);
+      color: #ffffff;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+
+    .update-time {
+      font-size: clamp(0.8em, 1vw, 0.9em);
+      color: #999;
+      margin-top: 6px;
+    }
+
+    /* 메인 콘텐츠 컨테이너 */
+    .main-content {
+      background: #fff;
+      border-radius: 0 0 12px 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    /* 설정 요소 완전한 스타일 리셋 */
+    .setting-row select,
+    .setting-row button {
+      height: 32px !important;
+      padding: 4px 8px !important;
+      border: 1px solid #ccc !important;
+      border-radius: 3px !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      font-size: inherit !important;
+      line-height: 1 !important;
+      vertical-align: middle !important;
+      display: inline-block !important;
+    }
+
+    .setting-row button {
+      background: #007bff !important;
+      color: white !important;
+      cursor: pointer !important;
+    }
+
+    .setting-row select {
+      background: white !important;
+      color: #333 !important;
+    }
+    h1 { 
+      font-size: 20px;  /* 모바일 기준 제목 크기 */
+      margin-bottom: 0.5em; 
+    }
+    #output div {
+      line-height: 2em;  /* 모바일 기준 줄 간격 */
+      font-size: 18px;  /* 모바일 기준 텍스트 크기 */
+    }
+    .label {
+      display: inline-block;
+      width: 35ch;  /* 모바일 기준 너비 */
+      font-weight: bold;
+      font-size: 18px;  /* 모바일 기준 크기 */
+    }
+    .trend-up { color: #f44336; font-weight: bold; }
+    .trend-down { color: #1976d2; font-weight: bold; }
+    label, select {
+      margin-right: 1em;
+      font-size: 18px;  /* 모바일 기준 크기 */
+      min-height: 44px;  /* 터치 최소 높이 */
+      padding: 8px;  /* 터치 영역 */
+    }
+  </style>
+</head>
+<body>
+  <!-- 광고 헤더 섹션 -->
+      <div class="ad-header">
+      <div class="main-title" id="main-title">BTC/USDT 이동평균 매수 신호</div>
+      <a class="kakao-link" id="kakao-link" href="https://open.kakao.com/o/sy2UErbd" target="_blank" rel="noopener noreferrer">
+      <span class="kakao-icon">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="20" cy="20" r="20" fill="#FEE500"/>
+          <path d="M20 10C13.9249 10 9 13.6863 9 18.1111C9 21.0192 11.2222 23.4956 14.4444 24.6667L13.3333 29.1111C13.2222 29.5556 13.6667 29.8889 14.0556 29.6667L19.1111 26.6667C19.3981 26.6842 19.6981 26.6944 20 26.6944C26.0751 26.6944 31 23.0081 31 18.5833C31 14.1585 26.0751 10 20 10Z" fill="#181600"/>
+        </svg>
+      </span>
+      자동매매 제작의뢰
+    </a>
+          <div class="sub-title" id="sub-title">실시간 이동평균 교차로 매수 타이밍을 포착하세요</div>
+    <div class="usage-period" id="usage-period">사용기간 D-30 (2025-08-20까지)</div>
+    <div class="update-time" id="update-time"></div>
+  </div>
+
+  <!-- 메인 콘텐츠 -->
+  <div class="main-content">
+    <h1>Binance BTC/USDT 이동평균 및 추세</h1>
+
+    <div style="margin-bottom: 15px;">
+      <div style="font-weight: bold; margin-bottom: 5px;">⚙️ 설정 정보</div>
+      <div style="border-bottom: 1px solid #ddd; margin-bottom: 8px;"></div>
+      <div class="setting-row" style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+        <span>봉 간격:</span>
+        <span>
+          <select id="timeframe-select">
+            <option value="1m">1분</option>
+            <option value="3m">3분</option>
+            <option value="5m" selected>5분</option>
+          </select>
+        </span>
+      </div>
+      <div class="setting-row" style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+        <span>단기 이동평균:</span>
+        <span>
+          <select id="short-ma-select">
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="7">7</option>
+          </select>
+        </span>
+      </div>
+      <div class="setting-row" style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+        <span>장기 이동평균:</span>
+        <span>
+          <select id="long-ma-select">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="30">30</option>
+          </select>
+        </span>
+      </div>
+      <div class="setting-row" style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+        <span>적용:</span>
+        <span>
+          <button id="apply-btn">적용</button>
+        </span>
+      </div>
+    </div>
+
+    <div id="output" style="margin-top:1em;"></div>
+    <div id="trend" style="margin-top:0.5em;"></div>
+    <div id="notification-status" style="margin-top:0.5em; font-size:0.9em; color:#666;"></div>
+    <div id="chart-container" style="margin-top:1em; border: 1px solid #ddd; padding: 5px; background: #fff; width: 100%; max-width: 460px; overflow: hidden; box-sizing: border-box;">
+      <canvas id="price-chart" style="width: 100%; height: auto; max-height: 300px; aspect-ratio: 1;"></canvas>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ccxt@4.1.31/dist/ccxt.browser.js"></script>
+  <script>
+    function simpleMA(data, period) {
+      if (data.length < period) return null;
+      const slice = data.slice(data.length - period);
+      const sum = slice.reduce((a, b) => a + b, 0);
+      return sum / period;
+    }
+
+    function to2(num) {
+      return num !== null ? num.toFixed(2) : '데이터 부족';
+    }
+
+    const binance = new ccxt.binance({ options: { defaultType: 'future' } });
+
+    const outputDiv = document.getElementById('output');
+    const trendDiv = document.getElementById('trend');
+    const notificationStatusDiv = document.getElementById('notification-status');
+    const chartCanvas = document.getElementById('price-chart');
+    const timeframeSelect = document.getElementById('timeframe-select');
+    const shortMASelect = document.getElementById('short-ma-select');
+    const longMASelect = document.getElementById('long-ma-select');
+    const applyBtn = document.getElementById('apply-btn');
+
+    let autoRefreshInterval = null;
+    let currentTimeframe = timeframeSelect.value;
+    let currentShortMA = parseInt(shortMASelect.value);
+    let currentLongMA = parseInt(longMASelect.value);
+    let message_sent = 0; // 매수 알림 발송 상태 추적
+
+    // 화면 알림 시스템 초기화
+    notificationStatusDiv.textContent = '화면 알림 모드로 설정되었습니다.';
+
+    // 모바일 우선 디자인 - 고정 폰트 크기
+    // 모든 디바이스에서 모바일 형태 유지
+    document.documentElement.style.fontSize = '18px';
+
+    // 사용기간 관리 - 상단에서 설정한 값 사용
+    const expireDate = new Date(EXPIRATION_DATE);
+    
+    function getExpireStatus() {
+      const now = new Date();
+      const diff = expireDate - now;
+      if (diff < 0) return { expired: true, text: '사용기간 만료' };
+      const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+      return { expired: false, text: `사용기간 D-${days} (${expireDate.getFullYear()}-${String(expireDate.getMonth()+1).padStart(2,'0')}-${String(expireDate.getDate()).padStart(2,'0')}까지)` };
+    }
+
+    // 만료 상태 표시
+    function showExpireStatus() {
+      const status = getExpireStatus();
+      const expireElem = document.getElementById('usage-period');
+      if (expireElem) expireElem.textContent = status.text;
+      if (status.expired) {
+        document.body.innerHTML = `<div style="text-align:center; margin-top:100px; font-size:1.5em; color:#c00;">이 서비스는 사용기간이 만료되었습니다.<br><br>관리자에게 문의하세요.</div>`;
+        throw new Error('서비스 만료');
+      }
+    }
+
+    // 업데이트 시간 표시
+    function updateTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleString('ko-KR', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit',
+        hour12: false 
+      });
+      const updateElem = document.getElementById('update-time');
+      if (updateElem) updateElem.textContent = `(${timeStr} 기준)`;
+    }
+
+    // 상단 설정값 적용
+    function applyTopSettings() {
+      const mainTitleElem = document.getElementById('main-title');
+      const subTitleElem = document.getElementById('sub-title');
+      const kakaoLinkElem = document.getElementById('kakao-link');
+      
+      if (mainTitleElem) mainTitleElem.textContent = MAIN_TITLE;
+      if (subTitleElem) subTitleElem.textContent = SUB_TITLE;
+      if (kakaoLinkElem) kakaoLinkElem.href = KAKAO_LINK;
+    }
+
+    // 초기 실행
+    applyTopSettings();
+    showExpireStatus();
+    updateTime();
+    setInterval(updateTime, 1000); // 1초마다 시간 업데이트
+
+    // 차트 그리기 함수
+    function drawChart(ohlcv, shortMA, longMA) {
+      const ctx = chartCanvas.getContext('2d');
+      
+      // 모바일 기준 차트 크기 (고정)
+      const container = document.getElementById('chart-container');
+      const availableWidth = Math.min(460, container.clientWidth - 10); // 모바일 기준 최대 너비
+      const containerHeight = availableWidth; // 정사각형 유지
+      
+      // 캔버스 크기 설정
+      chartCanvas.width = availableWidth;
+      chartCanvas.height = containerHeight;
+      
+      const width = chartCanvas.width;
+      const height = chartCanvas.height;
+      
+      // 캔버스 초기화
+      ctx.clearRect(0, 0, width, height);
+      
+      if (ohlcv.length === 0) return;
+      
+      // 데이터 범위 계산
+      const prices = ohlcv.flatMap(candle => [candle[2], candle[3], candle[4]]); // high, low, close
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      const priceRange = maxPrice - minPrice;
+      
+      // 차트 영역 설정 (정사각형 최적화)
+      const padding = Math.max(30, Math.min(50, width * 0.12)); // 정사각형에 맞는 패딩
+      const chartWidth = width - 2 * padding;
+      const chartHeight = height - 2 * padding;
+      
+      // 캔들 수 제한 (모바일 최적화)
+      const maxCandles = Math.min(ohlcv.length, Math.floor(chartWidth / 8)); // 최소 8px 캔들 너비 보장
+      const displayCandles = ohlcv.slice(-maxCandles); // 최근 캔들만 표시
+      const candleWidth = chartWidth / maxCandles;
+      
+      // 그리드 그리기
+      ctx.strokeStyle = '#f0f0f0';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = padding + (chartHeight / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(width - padding, y);
+        ctx.stroke();
+      }
+      
+      // 캔들 그리기 (제한된 수)
+      displayCandles.forEach((candle, index) => {
+        const [timestamp, open, high, low, close] = candle;
+        const x = padding + index * candleWidth + candleWidth / 2;
+        
+        // 캔들 색상 (상승: 빨강, 하락: 파랑)
+        const isUp = close >= open;
+        ctx.fillStyle = isUp ? '#f44336' : '#1976d2';
+        ctx.strokeStyle = isUp ? '#d32f2f' : '#1565c0';
+        
+        // 캔들 몸통 (반응형 크기)
+        const openY = padding + chartHeight - ((open - minPrice) / priceRange) * chartHeight;
+        const closeY = padding + chartHeight - ((close - minPrice) / priceRange) * chartHeight;
+        const bodyHeight = Math.max(1, Math.abs(closeY - openY)); // 최소 높이 보장
+        const bodyY = Math.min(openY, closeY);
+        const bodyWidth = Math.max(1, candleWidth * 0.6); // 캔들 몸통 너비
+        
+        ctx.fillRect(x - bodyWidth/2, bodyY, bodyWidth, bodyHeight);
+        ctx.strokeRect(x - bodyWidth/2, bodyY, bodyWidth, bodyHeight);
+        
+        // 심지 (wick) - 반응형 두께
+        const highY = padding + chartHeight - ((high - minPrice) / priceRange) * chartHeight;
+        const lowY = padding + chartHeight - ((low - minPrice) / priceRange) * chartHeight;
+        const wickWidth = Math.max(1, candleWidth * 0.1); // 심지 두께
+        
+        ctx.lineWidth = wickWidth;
+        ctx.beginPath();
+        ctx.moveTo(x, highY);
+        ctx.lineTo(x, lowY);
+        ctx.stroke();
+        ctx.lineWidth = 1; // 기본 두께로 복원
+      });
+      
+      // 이동평균선 그리기 (해외 표준 색상)
+      if (shortMA && shortMA.length > 0) {
+        ctx.strokeStyle = '#FF0000'; // 빨강 (단기)
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const shortMADisplay = shortMA.slice(-maxCandles);
+        shortMADisplay.forEach((value, index) => {
+          if (value !== null) {
+            const x = padding + index * candleWidth + candleWidth / 2;
+            const y = padding + chartHeight - ((value - minPrice) / priceRange) * chartHeight;
+            if (index === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+        });
+        ctx.stroke();
+      }
+      
+      if (longMA && longMA.length > 0) {
+        ctx.strokeStyle = '#0000FF'; // 파랑 (장기)
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const longMADisplay = longMA.slice(-maxCandles);
+        longMADisplay.forEach((value, index) => {
+          if (value !== null) {
+            const x = padding + index * candleWidth + candleWidth / 2;
+            const y = padding + chartHeight - ((value - minPrice) / priceRange) * chartHeight;
+            if (index === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+        });
+        ctx.stroke();
+      }
+      
+      // 범례 그리기 (터치 친화적 크기)
+      ctx.fillStyle = '#333';
+      const chartFontSize = Math.max(16, Math.min(20, width * 0.035)); // 차트용 폰트 크기 더 증가
+      ctx.font = `${chartFontSize}px monospace`;
+      ctx.fillText('단기MA (빨강)', 10, chartFontSize + 5);
+      ctx.fillText('장기MA (파랑)', 10, chartFontSize * 2 + 5);
+    }
+
+    async function fetchAndShow(timeframe, shortMA, longMA) {
+      try {
+        const ohlcv = await binance.fetchOHLCV('BTC/USDT', timeframe, undefined, 100);
+        const closes = ohlcv.map(x => x[4]);
+
+        // 이동평균 계산 (전체 기간)
+        const shortMAValues = [];
+        const longMAValues = [];
+        
+        for (let i = 0; i < closes.length; i++) {
+          if (i >= shortMA - 1) {
+            const shortSlice = closes.slice(i - shortMA + 1, i + 1);
+            shortMAValues.push(simpleMA(shortSlice, shortMA));
+          } else {
+            shortMAValues.push(null);
+          }
+          
+          if (i >= longMA - 1) {
+            const longSlice = closes.slice(i - longMA + 1, i + 1);
+            longMAValues.push(simpleMA(longSlice, longMA));
+          } else {
+            longMAValues.push(null);
+          }
+        }
+
+        const maShort = simpleMA(closes, shortMA);
+        const maLong = simpleMA(closes, longMA);
+
+        const latest = ohlcv[ohlcv.length - 1];
+        const [ts, open, high, low, close, volume] = latest;
+        const barTime = new Date(ts).toLocaleString();
+        const nowStr = new Date().toLocaleTimeString();
+
+        outputDiv.innerHTML = `
+          <div style="margin-bottom: 15px;">
+            <div style="font-weight: bold; margin-bottom: 5px;">⏰ 시간 정보</div>
+            <div style="border-bottom: 1px solid #ddd; margin-bottom: 8px;"></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>데이터 시간:</span>
+              <span>${barTime}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>현재 시간:</span>
+              <span>${nowStr}</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 15px;">
+            <div style="font-weight: bold; margin-bottom: 5px;">💰 가격 정보</div>
+            <div style="border-bottom: 1px solid #ddd; margin-bottom: 8px;"></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>현재 가격:</span>
+              <span>${to2(close)}</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 15px;">
+            <div style="font-weight: bold; margin-bottom: 5px;">📈 지표 정보</div>
+            <div style="border-bottom: 1px solid #ddd; margin-bottom: 8px;"></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>단기 이동평균(${shortMA}):</span>
+              <span>${to2(maShort)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>장기 이동평균(${longMA}):</span>
+              <span>${to2(maLong)}</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 15px;">
+            <div style="font-weight: bold; margin-bottom: 5px;">🎯 조건 정보</div>
+            <div style="border-bottom: 1px solid #ddd; margin-bottom: 8px;"></div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>추세:</span>
+              <span id="trend-status">계산 중...</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>매수 조건:</span>
+              <span id="buy-condition">계산 중...</span>
+            </div>
+          </div>
+        `;
+
+        // 조건 정보 업데이트
+        const trendStatusElem = document.getElementById('trend-status');
+        const buyConditionElem = document.getElementById('buy-condition');
+        
+        if (maShort !== null && maLong !== null) {
+          if (maShort > maLong) {
+            if (trendStatusElem) trendStatusElem.innerHTML = '<span style="color: #28a745; font-weight: bold;">상승</span>';
+            
+            // 상승 상태에서 종가가 단기이동평균선보다 높고, 아직 알림을 보내지 않았다면
+            if (close > maShort && message_sent === 0) {
+              // 화면 알림 발송
+              message_sent = 1;
+              notificationStatusDiv.innerHTML = '<span style="color: #f44336; font-weight: bold; font-size: 1.2em;">🚨 매수 신호! 🚨</span><br>현재가: ' + to2(close) + ' | 단기MA: ' + to2(maShort) + ' | 장기MA: ' + to2(maLong);
+              
+              // 화면 깜빡임 효과
+              document.body.style.backgroundColor = '#fff3cd';
+              setTimeout(() => {
+                document.body.style.backgroundColor = '#f8f9fa';
+              }, 1000);
+            }
+            
+            // 매수 조건 상태 업데이트
+            if (buyConditionElem) {
+              if (close > maShort) {
+                buyConditionElem.innerHTML = '<span style="color: #28a745; font-weight: bold;">현재가 > 단기MA (조건 만족)</span>';
+              } else {
+                buyConditionElem.innerHTML = '<span style="color: #ffc107; font-weight: bold;">현재가 ≤ 단기MA (조건 대기)</span>';
+              }
+            }
+          } else if (maShort < maLong) {
+            if (trendStatusElem) trendStatusElem.innerHTML = '<span style="color: #dc3545; font-weight: bold;">하락</span>';
+            message_sent = 0; // 하락 상태가 되면 알림 상태 리셋
+            notificationStatusDiv.textContent = '알림 상태 리셋됨 - 다음 매수 기회 대기 중';
+            
+            // 매수 조건 상태 업데이트
+            if (buyConditionElem) {
+              buyConditionElem.innerHTML = '<span style="color: #6c757d; font-weight: bold;">하락 추세 (매수 대기)</span>';
+            }
+          } else {
+            if (trendStatusElem) trendStatusElem.innerHTML = '<span style="color: #6c757d; font-weight: bold;">동일</span>';
+            if (buyConditionElem) {
+              buyConditionElem.innerHTML = '<span style="color: #6c757d; font-weight: bold;">추세 불명확</span>';
+            }
+          }
+        } else {
+          if (trendStatusElem) trendStatusElem.textContent = '계산 중...';
+          if (buyConditionElem) buyConditionElem.textContent = '계산 중...';
+          notificationStatusDiv.textContent = '';
+        }
+        
+        // 차트 그리기
+        drawChart(ohlcv, shortMAValues, longMAValues);
+        
+        // 모바일 우선 디자인 - 차트 크기 고정
+        // 화면 크기 변경 시에도 모바일 형태 유지
+        
+      } catch (e) {
+        outputDiv.textContent = '오류: ' + e.message;
+        trendDiv.textContent = '';
+        notificationStatusDiv.textContent = '';
+      }
+    }
+
+    applyBtn.addEventListener('click', () => {
+      currentTimeframe = timeframeSelect.value;
+      currentShortMA = parseInt(shortMASelect.value);
+      currentLongMA = parseInt(longMASelect.value);
+
+      fetchAndShow(currentTimeframe, currentShortMA, currentLongMA);
+
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+      autoRefreshInterval = setInterval(() => {
+        fetchAndShow(currentTimeframe, currentShortMA, currentLongMA);
+      }, 3000);
+    });
+  </script>
+</body>
+</html>

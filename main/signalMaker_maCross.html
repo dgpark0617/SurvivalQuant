@@ -49,6 +49,7 @@
 
   <div id="output" style="margin-top:1em;"></div>
   <div id="trend" style="margin-top:0.5em;"></div>
+  <div id="notification-status" style="margin-top:0.5em; font-size:0.9em; color:#666;"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/ccxt@4.1.31/dist/ccxt.browser.js"></script>
   <script>
@@ -67,6 +68,7 @@
 
     const outputDiv = document.getElementById('output');
     const trendDiv = document.getElementById('trend');
+    const notificationStatusDiv = document.getElementById('notification-status');
     const timeframeSelect = document.getElementById('timeframe-select');
     const shortMASelect = document.getElementById('short-ma-select');
     const longMASelect = document.getElementById('long-ma-select');
@@ -76,6 +78,10 @@
     let currentTimeframe = timeframeSelect.value;
     let currentShortMA = parseInt(shortMASelect.value);
     let currentLongMA = parseInt(longMASelect.value);
+    let message_sent = 0; // 매수 알림 발송 상태 추적
+
+    // 화면 알림 시스템 초기화
+    notificationStatusDiv.textContent = '화면 알림 모드로 설정되었습니다.';
 
     async function fetchAndShow(timeframe, shortMA, longMA) {
       try {
@@ -115,17 +121,34 @@
         if (maShort !== null && maLong !== null) {
           if (maShort > maLong) {
             trendDiv.innerHTML = '<span class="trend-up">추세: 상승</span>';
+            
+            // 상승 상태에서 종가가 단기이동평균선보다 높고, 아직 알림을 보내지 않았다면
+            if (close > maShort && message_sent === 0) {
+              // 화면 알림 발송
+              message_sent = 1;
+              notificationStatusDiv.innerHTML = '<span style="color: #f44336; font-weight: bold; font-size: 1.2em;">🚨 매수 신호! 🚨</span><br>현재가: ' + to2(close) + ' | 단기MA: ' + to2(maShort) + ' | 장기MA: ' + to2(maLong);
+              
+              // 화면 깜빡임 효과
+              document.body.style.backgroundColor = '#fff3cd';
+              setTimeout(() => {
+                document.body.style.backgroundColor = '#f8f9fa';
+              }, 1000);
+            }
           } else if (maShort < maLong) {
             trendDiv.innerHTML = '<span class="trend-down">추세: 하락</span>';
+            message_sent = 0; // 하락 상태가 되면 알림 상태 리셋
+            notificationStatusDiv.textContent = '알림 상태 리셋됨 - 다음 매수 기회 대기 중';
           } else {
             trendDiv.textContent = '추세: 동일';
           }
         } else {
           trendDiv.textContent = '';
+          notificationStatusDiv.textContent = '';
         }
       } catch (e) {
         outputDiv.textContent = '오류: ' + e.message;
         trendDiv.textContent = '';
+        notificationStatusDiv.textContent = '';
       }
     }
 
