@@ -89,4 +89,72 @@ def get_heikin_ashi_df(stock_code, pages=10):
 if __name__ == "__main__":
     stock_code = '005930'  # 원하는 종목코드로 변경
     df = get_heikin_ashi_df(stock_code, pages=10)
+
     print(df.tail(30))
+
+'''
+## 코드를 더 단축시키고, 지수이동평균으로 하이킨아시 시가계산의 원리를 근사로 구현한 방식. 
+## 더 적은 캔들(10개 미만)만 있어도 휼륭하게 근사값으로 작용한다. 
+## 준비과정의 코드가 더 적음. 이 방식으로 진행할 것. 
+
+import pandas as pd
+import requests
+import io
+
+pd.set_option('display.max_rows', None)
+
+def get_heikin_ashi_df_ewm(stock_code, pages=3):
+    all_dfs = []
+    headers = {'User-Agent': 'Mozilla/5.0'}
+
+    for page in range(1, pages + 1):
+        url = f'https://finance.naver.com/item/sise_day.naver?code={stock_code}&page={page}'
+        response = requests.get(url, headers=headers)
+        response.encoding = 'euc-kr'
+        dfs = pd.read_html(io.StringIO(response.text))
+        df = dfs[0]
+        all_dfs.append(df)
+
+    merged_df = pd.concat(all_dfs, ignore_index=True)
+    cleaned_df = merged_df.dropna()
+
+    cleaned_df = cleaned_df.rename(columns=lambda x: x.strip())
+    cleaned_df = cleaned_df[['날짜', '시가', '고가', '저가', '종가', '거래량']]
+
+    for col in ['시가', '고가', '저가', '종가', '거래량']:
+        cleaned_df[col] = cleaned_df[col].astype(str).str.replace(',', '').astype(float)
+
+    cleaned_df = cleaned_df.sort_values('날짜').reset_index(drop=True)
+
+    # Heikin-Ashi 종가 계산
+    cleaned_df['HAC'] = (cleaned_df['시가'] + cleaned_df['고가'] + cleaned_df['저가'] + cleaned_df['종가']) / 4
+
+    # EWM 근사 방식으로 HAO 계산 (기간=3, alpha=0.5)
+    cleaned_df['HAC_EWM'] = cleaned_df['HAC'].ewm(alpha=0.5, adjust=False).mean().shift(1)
+    # 첫 행은 (시가 + 종가) / 2로 초기화
+    cleaned_df.loc[0, 'HAC_EWM'] = (cleaned_df.loc[0, '시가'] + cleaned_df.loc[0, '종가']) / 2
+
+    # Heikin-Ashi 고가/저가 계산
+    cleaned_df['HAH'] = cleaned_df[['고가', 'HAC_EWM', 'HAC']].max(axis=1)
+    cleaned_df['HAL'] = cleaned_df[['저가', 'HAC_EWM', 'HAC']].min(axis=1)
+
+    # 양봉/음봉
+    cleaned_df['HAD'] = (cleaned_df['HAC'] > cleaned_df['HAC_EWM']).astype(int)
+
+    cleaned_df['date'] = cleaned_df['날짜']
+    cleaned_df['Open'] = cleaned_df['시가']
+    cleaned_df['High'] = cleaned_df['고가']
+    cleaned_df['Low'] = cleaned_df['저가']
+    cleaned_df['Close'] = cleaned_df['종가']
+    cleaned_df['Volume'] = cleaned_df['거래량']
+    cleaned_df['HAO'] = cleaned_df['HAC_EWM']
+
+    final_cols = ['date', 'HAD', 'HAO', 'HAH', 'HAL', 'HAC', 'Open', 'High', 'Low', 'Close', 'Volume']
+    result_df = cleaned_df[final_cols]
+    return result_df
+
+if __name__ == "__main__":
+    stock_code = '005930'
+    df = get_heikin_ashi_df_ewm(stock_code, pages=10)
+    print(df.tail(30))
+'''
