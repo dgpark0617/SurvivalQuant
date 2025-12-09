@@ -1,50 +1,64 @@
-import os  # 운영체제 관련 기능을 사용하기 위한 모듈 (환경변수 읽기 등)
-import asyncio  # 비동기 프로그래밍을 위한 모듈 (ADK의 많은 함수가 비동기로 동작함)
-from dotenv import load_dotenv  # .env 파일에서 환경변수를 로드하기 위한 라이브러리
+import os
+import asyncio
+from dotenv import load_dotenv
 
-# Google Vertex AI ADK 관련 라이브러리 임포트
+# Google Vertex AI ADK 관련 라이브러리
 try:
     from google.genai import types
     from google.adk.agents import Agent
     from vertexai.agent_engines import AdkApp
     import vertexai
 except ImportError:
-    print("Google ADK 라이브러리가 설치되지 않았습니다. requirements.txt를 확인해주세요.")
+    print("Google ADK 라이브러리가 설치되지 않았습니다.")
     exit(1)
 
-# 환경 설정 로드
 load_dotenv()
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
 LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
 MODEL_NAME = "gemini-2.0-flash-001"
 
+# --- [1] 도구(Tool) 정의 ---
+# 실무에서는 이런 함수들을 모아서 'Tool'로 등록합니다.
+def calculator(a: float, b: float, operation: str) -> float:
+    """
+    간단한 사칙연산을 수행하는 도구입니다.
+    
+    Args:
+        a: 첫 번째 숫자
+        b: 두 번째 숫자
+        operation: 연산자 ('+', '-', '*', '/')
+    """
+    if operation == '+': return a + b
+    if operation == '-': return a - b
+    if operation == '*': return a * b
+    if operation == '/': return a / b if b != 0 else 0
+    return 0
+
+# --- [2] 앱 생성 함수 ---
 def create_adk_app():
-    """
-    나만의 개인 비서(Personal Assistant) 에이전트를 생성합니다.
-    """
     if not PROJECT_ID:
         raise ValueError("GOOGLE_CLOUD_PROJECT 환경 변수가 설정되지 않았습니다.")
 
     vertexai.init(project=PROJECT_ID, location=LOCATION)
 
-    # 1. 비서의 성격 및 역할 정의 (System Instructions)
-    # 이곳이 에이전트의 '영혼'을 불어넣는 곳입니다.
-    system_instruction = """
-    당신은 사용자의 컴퓨터에서 동작하는 유능한 AI 개인 비서(Personal Assistant)입니다.
-    
-    [당신의 역할]
-    1. 사용자의 업무와 일상을 적극적으로 돕습니다.
-    2. 질문에 대해 명확하고 실용적인 답변을 제공합니다.
-    3. 단순히 정보를 나열하기보다, 사용자가 취해야 할 행동(Actionable Item)을 제안합니다.
-    4. 친근하지만 전문적인 태도(Professional & Friendly)를 유지합니다.
-    
-    [현재 환경]
-    - 당신은 Google Vertex AI ADK 기반으로 작동 중입니다.
-    - 사용자의 로컬 환경에서 실행되고 있음을 인지하세요.
+    # 페르소나 정의 (System Instruction)
+    # 이곳에 비서의 성격, 말투, 금기사항 등을 상세히 적습니다.
+    persona = """
+    [Identity]
+    당신은 'Jarvis'와 같은 지능형 개인 비서입니다.
+    사용자의 업무 효율을 극대화하고, 복잡한 작업을 단순화하는 것이 목표입니다.
+
+    [Tone & Manner]
+    - 전문적이고 신뢰감 있는 태도를 유지하세요.
+    - 답변은 간결하고 명확하게(Brevity) 하세요.
+    - 사용자가 시키지 않아도 필요한 정보가 있다면 먼저 제안(Proactive)하세요.
+    - 한국어로 대화하세요.
+
+    [Capabilities]
+    - 당신은 도구(Tools)를 사용할 수 있습니다. 질문에 답하기 위해 계산이나 검색이 필요하면 주저 없이 도구를 호출하세요.
     """
 
-    # 2. 안전 설정 (Safety Settings)
-    # 개인 비서로서 너무 엄격한 필터링보다는 유연한 대화를 위해 임계값을 낮춥니다.
+    # 안전 설정
     safety_settings = [
         types.SafetySetting(
             category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
@@ -52,64 +66,54 @@ def create_adk_app():
         ),
     ]
 
-    # 3. 생성 설정 (Generation Config)
-    generate_content_config = types.GenerateContentConfig(
-        safety_settings=safety_settings,
-        temperature=0.7,  # 약간의 창의성을 위해 0.7로 상향
-        max_output_tokens=2048, # 긴 답변도 가능하게 확장
-        top_p=0.95,
-    )
+    # 도구 등록 (Tools)
+    # ADK에서는 함수를 리스트 형태로 전달하여 툴로 등록합니다.
+    tools = [calculator]
 
-    # 4. 에이전트 정의
+    # 에이전트 정의
     agent = Agent(
         model=MODEL_NAME,
-        name='personal_assistant',  # 이름 변경
-        generate_content_config=generate_content_config,
-        # ADK 최신 버전에서는 instructions 파라미터나 system_instruction을 지원합니다.
-        # (라이브러리 버전에 따라 다를 수 있으므로, 프롬프트 엔지니어링으로 처리할 수도 있음)
+        name='my_personal_assistant',
+        generate_content_config=types.GenerateContentConfig(
+            safety_settings=safety_settings,
+            temperature=0.5, # 비서이므로 너무 창의적이지 않게(정확도 중시)
+        ),
+        # instruction 파라미터에 페르소나 주입
+        instruction=persona,
+        tools=tools # 도구 장착
     )
 
-    # 5. 앱 생성
     app = AdkApp(agent=agent)
-    
     return app
 
 async def run_chat_session():
-    """
-    개인 비서와의 대화 세션
-    """
     try:
         app = create_adk_app()
-        print(f"🤖 안녕하세요! 당신의 AI 비서 '{app.agent.name}'가 준비되었습니다.")
+        print(f"🤖 시스템 가동. 비서 '{app.agent.name}' 대기 중입니다.")
         
-        user_id = "master_user" # 사용자를 '주인님'으로 인식하도록 ID 설정
+        user_id = "master_user"
         session = await app.async_create_session(user_id=user_id)
         
-        # 첫 인사 메시지 보내기 (System Instruction이 잘 먹혔는지 확인용)
-        # (일반적으로는 사용자가 먼저 말을 걸지만, 비서가 먼저 인사할 수도 있음)
-        
-        print("\n--- 대화 시작 (종료: 'exit') ---")
+        print("\n(종료하려면 'exit' 입력)")
         while True:
-            user_input = input("\n나: ")
+            user_input = input("\nMaster: ")
             if user_input.lower() in ['exit', 'quit', 'q']:
-                print("AI: 좋은 하루 되세요! 언제든 다시 불러주세요.")
+                print("Assistant: 시스템을 종료합니다.")
                 break
                 
-            print("비서: ", end="", flush=True)
-            
-            # System Instruction을 매 턴마다 강제할 수는 없으므로, 
-            # 첫 세션 생성 시나 Agent 정의 시 주입되는 것이 가장 좋습니다.
-            # 여기서는 순수 대화만 오고 갑니다.
+            print("Assistant: ", end="", flush=True)
             async for event in app.async_stream_query(
                 user_id=user_id,
                 session_id=session.id,
                 message=user_input
             ):
+                # 툴 호출이 발생하면 ADK가 자동으로 처리하거나, 
+                # 이벤트 로그에 FunctionCall 정보가 뜹니다.
                 print(event, end="") 
             print()
 
     except Exception as e:
-        print(f"\n[오류] 비서 시스템에 문제가 발생했습니다: {e}")
+        print(f"\n[System Error] {e}")
 
 if __name__ == "__main__":
     asyncio.run(run_chat_session())
