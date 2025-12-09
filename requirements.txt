@@ -6,8 +6,11 @@ cryptography==41.0.7
 PyJWT==2.8.0
 
 # GUI 및 데이터 처리
-tkinter
 pandas==2.1.4
 
 # 로깅 및 유틸리티
-python-dotenv==1.0.0 
+python-dotenv==1.0.0
+
+# Google Vertex AI Agent Development Kit (ADK)
+google-cloud-aiplatform>=1.43.0
+# ADK 관련 패키지가 별도로 필요한 경우를 대비해 최신 버전 유지

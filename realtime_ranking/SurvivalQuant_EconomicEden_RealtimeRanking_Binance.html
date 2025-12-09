@@ -3,24 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>실시간 코인 거래대금 순위 (바이낸스)</title>
-    
-    <!-- ======================================== -->
-    <!-- 사용기간 설정 - 여기서 만료 날짜를 수정하세요 -->
-    <!-- ======================================== -->
-    <!-- 
-    만료 날짜 형식: 'YYYY-MM-DDTHH:MM:SS'
-    예시: '2025-07-31T23:59:59' (2025년 7월 31일 23시 59분 59초까지)
-    
-    현재 설정: 2025년 7월 31일까지
-    -->
-    <script>
-      // 사용기간 설정 - 이 부분을 수정하세요
-      const EXPIRATION_DATE = '2025-07-31T23:59:59';
-      const KAKAO_LINK = 'https://open.kakao.com/o/sy2UErbd';
-      const MAIN_TITLE = '실시간 코인 랭킹 (바이낸스)';
-      const SUB_TITLE = '다양한 기준으로 코인별 실시간 순위를 확인하세요!';
-    </script>
+    <title>Coin Data Module (Mobile First)</title>
     <style>
         html, body {
             height: 100%;
@@ -33,17 +16,15 @@
             background: #f5f6fa;
             color: #222;
             min-height: 100vh;
-            max-width: 480px;  /* 모바일 화면 너비 제한 */
-            margin: 0 auto;  /* 중앙 정렬 */
-            padding: 0;  /* 여백 제거 */
         }
         .coin-data-section {
             background: #fff;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            margin: 0;  /* 상단 여백 제거 */
+            margin: 32px auto 0 auto;
             width: 100%;
-            max-width: 480px;  /* 모바일 최대 너비 */
+            max-width: 1200px;
+            min-width: 320px;
             padding: 0;
             display: flex;
             flex-direction: column;
@@ -59,41 +40,6 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-
-        /* 정렬 버튼 컨테이너 */
-        .sort-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 16px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .sort-button {
-            padding: 8px 16px;
-            border: 1px solid #dee2e6;
-            background: #fff;
-            color: #495057;
-            border-radius: 6px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .sort-button.active {
-            background: #007bff;
-            color: #fff;
-            border-color: #007bff;
-        }
-
-        .sort-button:hover {
-            background: #e9ecef;
-        }
-
-        .sort-button.active:hover {
-            background: #0056b3;
         }
         .section-title-row {
             display: flex;
@@ -139,112 +85,185 @@
             color: #999;
             margin-top: 6px;
         }
-        /* 카드형 코인 아이템 */
-        .coin-card {
+        .coin-table-header {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 0;
+            border-bottom: 1.5px solid #e9ecef;
+            font-weight: 500;
+            color: #4e54c8;
+            background: #f8f9fa;
+            border-radius: 0;
+            min-height: 36px;
+            font-size: clamp(0.9em, 1.2vw, 1.1em);
+        }
+        .coin-table-header > div,
+        .coin-item > div {
+            flex: 1 1 0;
+            min-width: 0;
+            padding: 0.5em 0.2em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+        }
+        .coin-table-header .coin-rank,
+        .coin-item .coin-rank {
+            flex-basis: 40px;
+            max-width: 50px;
+            text-align: center;
+            justify-content: center;
+        }
+        .coin-table-header .coin-symbol,
+        .coin-item .coin-symbol {
+            flex-basis: 180px;
+            max-width: 220px;
+            text-align: left;
+            justify-content: flex-start;
+            gap: 0.5em;
+        }
+        .coin-table-header .coin-price,
+        .coin-table-header .coin-volume,
+        .coin-table-header .coin-change,
+        .coin-table-header .coin-rate,
+        .coin-item .coin-price,
+        .coin-item .coin-volume,
+        .coin-item .coin-change,
+        .coin-item .coin-rate {
+            flex-basis: 110px;
+            max-width: 130px;
+            text-align: right;
+            justify-content: flex-end;
+        }
+        .coin-item {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            min-height: 36px;
+            font-size: clamp(0.9em, 1.2vw, 1.1em);
+            border-bottom: 1px solid #f0f0f0;
             background: #fff;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            margin: 8px 16px;
-            padding: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
         }
-
-        .coin-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
-
-        .coin-card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
-
-        .coin-rank-symbol {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .coin-rank {
-            background: #007bff;
-            color: #fff;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
+        .coin-item:last-child { border-bottom: none; }
+        .coin-item > div {
+            flex: 1 1 0;
+            min-width: 0;
+            text-align: center;
+            padding: 0.5em 0.2em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            font-size: 14px;
         }
-
-        .coin-symbol {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            font-size: 16px;
-        }
-
         .coin-logo {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
+            flex-shrink: 0;
         }
-
-        .coin-price {
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .coin-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 12px;
-        }
-
-        .detail-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .detail-label {
-            font-size: 12px;
-            color: #666;
-            font-weight: 500;
-        }
-
-        .detail-value {
-            font-size: 14px;
-            font-weight: 600;
-            color: #333;
-        }
-
+        .coin-rate .rate-value { font-size: inherit; }
+        .coin-rate .rate-time { font-size: 0.85em; color: #888; margin-left: 2px; }
         .positive { color: #00b894; }
         .negative { color: #ff7675; }
         #coin-list {
             display: flex;
             flex-direction: column;
             width: 100%;
-            padding: 8px 0;
         }
-        /* 기존 정렬 관련 스타일 제거 - 카드형에서는 불필요 */
-        /* 모바일 우선 디자인 - 미디어 쿼리 제거 */
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.08em;
+        }
+        .sort-arrow {
+            font-size: 0.7em;
+            width: 0.7em;
+            height: 0.7em;
+            display: inline-block;
+            vertical-align: middle;
+            color: #bbb;
+            transition: color 0.2s;
+        }
+        .sortable-header.active .sort-arrow {
+            color: #4e54c8;
+        }
+        @media (max-width: 900px) {
+            .coin-table-header .coin-symbol, .coin-item .coin-symbol {
+                flex-basis: 120px;
+                max-width: 140px;
+            }
+            .coin-price, .coin-volume, .coin-change, .coin-rate {
+                flex-basis: 80px;
+                max-width: 90px;
+            }
+            .coin-logo {
+                width: 18px;
+                height: 18px;
+            }
+        }
+        @media (max-width: 600px) {
+            .coin-table-header .coin-symbol, .coin-item .coin-symbol {
+                flex-basis: 80px;
+                max-width: 100px;
+            }
+            .coin-price, .coin-volume, .coin-change, .coin-rate {
+                flex-basis: 60px;
+                max-width: 70px;
+            }
+            .coin-logo {
+                width: 14px;
+                height: 14px;
+            }
+            .section-title {
+                font-size: 1em;
+                padding: 12px 0 8px 0;
+            }
+            .section-title-row {
+                flex-direction: column;
+                gap: 0.5em;
+            }
+            .kakao-link {
+                font-size: 0.95em;
+                padding: 0.18em 0.5em 0.18em 0.4em;
+            }
+            .coin-table-header, .coin-item {
+                font-size: clamp(0.8em, 2vw, 1em);
+                min-height: 28px;
+            }
+        }
+        @media (max-width: 400px) {
+            .coin-table-header .coin-symbol, .coin-item .coin-symbol {
+                flex-basis: 50px;
+                max-width: 60px;
+            }
+            .coin-price, .coin-volume, .coin-change, .coin-rate {
+                flex-basis: 38px;
+                max-width: 45px;
+            }
+            .coin-logo {
+                width: 10px;
+                height: 10px;
+            }
+            .coin-table-header, .coin-item {
+                font-size: 0.7em;
+                min-height: 20px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="coin-data-section">
         <div class="section-title">
             <div class="section-title-row">
-                <div class="main-title" id="main-title">실시간 코인 거래대금 순위 (바이낸스)</div>
+                <div class="main-title">실시간 코인 거래대금 순위 (바이낸스)</div>
             </div>
-            <a class="kakao-link" id="kakao-link" href="https://open.kakao.com/o/sy2UErbd" target="_blank" rel="noopener noreferrer" style="margin: 10px auto 0 auto; display: flex; align-items: center; justify-content: center; max-width: 260px;">
+            <a class="kakao-link" href="https://open.kakao.com/o/sy2UErbd" target="_blank" rel="noopener noreferrer" style="margin: 10px auto 0 auto; display: flex; align-items: center; justify-content: center; max-width: 260px;">
                 <span class="kakao-icon">
                     <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="20" cy="20" r="20" fill="#FEE500"/>
@@ -253,22 +272,34 @@
                 </span>
                 자동매매 제작의뢰
             </a>
-            <div class="sub-title" id="sub-title">거래대금 기준으로 실시간 순위를 확인하세요 (USD)</div>
+            <div class="sub-title">거래대금 기준으로 실시간 순위를 확인하세요 (USD)</div>
             <div id="expire-status" style="margin-top:6px; font-size:1em; color:#fff; font-weight:600;"></div>
             <div class="update-time" id="update-time"></div>
         </div>
-                                <div class="sort-buttons">
-                            <button class="sort-button active" id="sort-amount">거래량순</button>
-                            <button class="sort-button" id="sort-count">체결건수순</button>
-                            <button class="sort-button" id="sort-rate">변화율순</button>
-                        </div>
+        <div class="coin-table-header">
+            <div class="coin-rank">순위</div>
+            <div class="coin-symbol">심볼</div>
+            <div class="coin-price">가격(USD)</div>
+            <div class="coin-volume sortable-header" id="sort-amount">거래량(USD)
+                <span class="sort-arrow" id="arrow-amount">▲▼</span>
+            </div>
+            <div class="coin-change sortable-header" id="sort-count">체결
+                <span class="sort-arrow" id="arrow-count">▲▼</span>
+            </div>
+            <div class="coin-rate sortable-header" id="sort-rate">변화율
+                <span class="sort-arrow" id="arrow-rate">▲▼</span>
+            </div>
+        </div>
         <div id="coin-list">
-            <!-- 코인 카드가 여기에 동적으로 추가됩니다 -->
+            <!-- 코인 데이터가 여기에 동적으로 추가됩니다 -->
         </div>
     </div>
     <script>
-        // 사용기간 관리 - 상단에서 설정한 값 사용
-        const expireDate = new Date(EXPIRATION_DATE);
+        // =============================
+        // [여기만 수정] 마감기한을 변경하세요!
+        // 예시: 2025-07-31
+        const expireDate = new Date('2025-08-30T23:59:59');
+        // =============================
         function getExpireStatus() {
             const now = new Date();
             const diff = expireDate - now;
@@ -602,19 +633,21 @@
             return koreanNames[symbol] || symbol;
         }
         
-        // 정렬 버튼 업데이트
-        function updateSortButtons() {
-            const buttons = ['amount', 'count', 'rate'];
-            buttons.forEach(key => {
-                const button = document.getElementById('sort-' + key);
-                if (sortState.key === key) {
-                    button.classList.add('active');
+        // 정렬 화살표 업데이트
+        function updateSortArrows() {
+            const keys = ['amount', 'count', 'rate'];
+            keys.forEach(k => {
+                const arrow = document.getElementById('arrow-' + k);
+                const header = document.getElementById('sort-' + k);
+                if (sortState.key === k) {
+                    header.classList.add('active');
+                    arrow.textContent = sortState.direction === 'asc' ? '▲' : '▼';
                 } else {
-                    button.classList.remove('active');
+                    header.classList.remove('active');
+                    arrow.textContent = '▲▼';
                 }
             });
         }
-
         // 정렬 이벤트 바인딩
         function bindSortEvents() {
             document.getElementById('sort-amount').onclick = function() {
@@ -766,23 +799,20 @@
         function updateCoinList() {
             const coinList = document.getElementById('coin-list');
             coinList.innerHTML = '';
-            
             // 정렬 기준에 따라 정렬
             let sortedCoins = Array.from(coinData.values());
-                                if (sortState.key === 'amount') {
-                        sortedCoins.sort((a, b) => sortState.direction === 'asc' ? a.amount - b.amount : b.amount - a.amount);
-                    } else if (sortState.key === 'count') {
-                        sortedCoins.sort((a, b) => sortState.direction === 'asc' ? a.count - b.count : b.count - a.count);
-                    } else if (sortState.key === 'rate') {
-                        sortedCoins.sort((a, b) => {
-                            const aRate = (a.price !== null && a.basePrice !== null && a.basePrice !== 0) ? (a.price - a.basePrice) / a.basePrice : 0;
-                            const bRate = (b.price !== null && b.basePrice !== null && b.basePrice !== 0) ? (b.price - b.basePrice) / b.basePrice : 0;
-                            return sortState.direction === 'asc' ? aRate - bRate : bRate - aRate;
-                        });
-                    }
-            
-            updateSortButtons();
-            
+            if (sortState.key === 'amount') {
+                sortedCoins.sort((a, b) => sortState.direction === 'asc' ? a.amount - b.amount : b.amount - a.amount);
+            } else if (sortState.key === 'count') {
+                sortedCoins.sort((a, b) => sortState.direction === 'asc' ? a.count - b.count : b.count - a.count);
+            } else if (sortState.key === 'rate') {
+                sortedCoins.sort((a, b) => {
+                    const aRate = (a.price !== null && a.basePrice !== null && a.basePrice !== 0) ? (a.price - a.basePrice) / a.basePrice : 0;
+                    const bRate = (b.price !== null && b.basePrice !== null && b.basePrice !== 0) ? (b.price - b.basePrice) / b.basePrice : 0;
+                    return sortState.direction === 'asc' ? aRate - bRate : bRate - aRate;
+                });
+            }
+            updateSortArrows();
             sortedCoins.forEach((coin, index) => {
                 const timeSinceBase = coin.baseTime ? Math.floor((new Date() - coin.baseTime) / 1000) : 0;
                 let timeDisplay;
@@ -791,49 +821,28 @@
                 } else {
                     timeDisplay = `${Math.floor(timeSinceBase / 60)}분 ${timeSinceBase % 60}초`;
                 }
-                
                 let priceChangeRate = 0;
                 let rateClass = '';
                 if (coin.price !== null && coin.basePrice !== null && coin.basePrice !== 0) {
                     priceChangeRate = ((coin.price - coin.basePrice) / coin.basePrice * 100).toFixed(2);
                     rateClass = priceChangeRate > 0 ? 'positive' : (priceChangeRate < 0 ? 'negative' : '');
                 }
-                
-                const coinCard = document.createElement('div');
-                coinCard.className = 'coin-card';
-                coinCard.innerHTML = `
-                    <div class="coin-card-header">
-                        <div class="coin-rank-symbol">
-                            <div class="coin-rank">${index + 1}</div>
-                            <div class="coin-symbol">
-                                <img class="coin-logo" src="https://static.upbit.com/logos/${coin.symbol}.png" 
-                                     onerror="this.src='https://static.upbit.com/logos/none.png'"
-                                     alt="${coin.symbol}">
-                                ${coin.korean_name} (${coin.symbol})
-                            </div>
-                        </div>
-                        <div class="coin-price">${coin.price ? formatPrice(coin.price) : '-'}</div>
+                const coinItem = document.createElement('div');
+                coinItem.className = 'coin-item';
+                coinItem.innerHTML = `
+                    <div class="coin-rank">${index + 1}</div>
+                    <div class="coin-symbol">
+                        <img class="coin-logo" src="https://static.upbit.com/logos/${coin.symbol}.png" 
+                             onerror="this.src='https://static.upbit.com/logos/none.png'"
+                             alt="${coin.symbol}">
+                        ${coin.korean_name} (${coin.symbol})
                     </div>
-                    <div class="coin-details">
-                        <div class="detail-item">
-                            <div class="detail-label">거래량</div>
-                            <div class="detail-value">${formatNumber(coin.amount)}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">체결건수</div>
-                            <div class="detail-value">${coin.count}건</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">변화율</div>
-                            <div class="detail-value ${rateClass}">${priceChangeRate}%</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">기준시간</div>
-                            <div class="detail-value">${timeDisplay}</div>
-                        </div>
-                    </div>
+                    <div class="coin-price">${coin.price ? formatPrice(coin.price) : '-'}</div>
+                    <div class="coin-volume">${formatNumber(coin.amount)}</div>
+                    <div class="coin-change">${coin.count}건</div>
+                    <div class="coin-rate"><span class="rate-value ${rateClass}">${priceChangeRate}%</span> <span class="rate-time">(${timeDisplay})</span></div>
                 `;
-                coinList.appendChild(coinCard);
+                coinList.appendChild(coinItem);
             });
         }
         function updateTime() {
@@ -845,19 +854,7 @@
             });
             document.getElementById('update-time').textContent = `(${timeStr} 기준)`;
         }
-        // 상단 설정값 적용
-        function applyTopSettings() {
-            const mainTitleElem = document.getElementById('main-title');
-            const subTitleElem = document.getElementById('sub-title');
-            const kakaoLinkElem = document.getElementById('kakao-link');
-            
-            if (mainTitleElem) mainTitleElem.textContent = MAIN_TITLE;
-            if (subTitleElem) subTitleElem.textContent = SUB_TITLE;
-            if (kakaoLinkElem) kakaoLinkElem.href = KAKAO_LINK;
-        }
-
         window.onload = () => {
-            applyTopSettings();
             showExpireStatus();
             // 초기 마켓 업데이트 실행
             updateTopMarkets();
@@ -867,7 +864,7 @@
             setInterval(updateTime, 1000);
             setInterval(cleanOldData, 30000);
             bindSortEvents();
-            updateSortButtons();
+            updateSortArrows();
         };
         window.onbeforeunload = () => {
             if (socket) {
