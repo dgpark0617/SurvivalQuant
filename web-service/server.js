@@ -34,17 +34,16 @@ app.prepare().then(() => {
   let GameEngine, parseCommand;
   
   try {
-    if (dev) {
-      try {
-        // ts-node 설정 (tsconfig.server.json 사용)
-        require('ts-node').register({
-          project: './tsconfig.server.json',
-          transpileOnly: true
-        });
-      } catch (error) {
-        console.warn('ts-node를 찾을 수 없습니다. npm install --save-dev ts-node를 실행하세요.');
-        throw error;
-      }
+    // 프로덕션과 개발 환경 모두에서 ts-node 사용
+    try {
+      // ts-node 설정 (tsconfig.server.json 사용)
+      require('ts-node').register({
+        project: './tsconfig.server.json',
+        transpileOnly: true
+      });
+    } catch (error) {
+      console.error('ts-node를 찾을 수 없습니다. npm install ts-node를 실행하세요.');
+      throw error;
     }
     
     // 게임 엔진 import
