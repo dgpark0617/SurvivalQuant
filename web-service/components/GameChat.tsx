@@ -143,14 +143,14 @@ export default function GameChat({ socket, player }: GameChatProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-black text-green-400 font-mono">
+    <div className="flex flex-col h-full bg-black text-green-400 font-mono relative">
       {/* 간단한 헤더 */}
-      <div className="px-4 py-2 border-b border-green-800 text-xs">
+      <div className="px-4 py-2 border-b border-green-800 text-xs flex-shrink-0">
         {player && `플레이어: ${player.name} | 레벨: ${player.level} | HP: ${player.hp}/${player.maxHp} | MP: ${player.mp}/${player.maxMp} | 골드: ${player.gold}`}
       </div>
       
-      {/* 메시지 영역 */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-1 text-sm">
+      {/* 메시지 영역 - 입력창 위에 배치, 스크롤 가능 */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-1 text-sm pb-20">
         {messages.map((msg, index) => {
           const isMyMessage = msg.type === 'chat' && msg.player === player?.name;
           const isOtherMessage = msg.type === 'chat' && msg.player && msg.player !== player?.name;
@@ -185,8 +185,12 @@ export default function GameChat({ socket, player }: GameChatProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 입력 영역 */}
-      <form onSubmit={handleSubmit} className="px-4 py-2 border-t border-green-800 flex gap-2 items-center">
+      {/* 입력 영역 - 하단 고정 (모바일 키보드 대응) */}
+      <form 
+        onSubmit={handleSubmit} 
+        className="fixed bottom-0 left-0 right-0 px-4 py-2 border-t border-green-800 flex gap-2 items-center bg-black z-10"
+        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+      >
         <span className="text-green-500">$</span>
         <input
           type="text"
