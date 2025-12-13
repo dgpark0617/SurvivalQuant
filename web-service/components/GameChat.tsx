@@ -145,12 +145,12 @@ export default function GameChat({ socket, player }: GameChatProps) {
   return (
     <div className="flex flex-col h-full bg-black text-green-400 font-mono relative">
       {/* 간단한 헤더 */}
-      <div className="px-4 py-2 border-b border-green-800 text-xs flex-shrink-0">
+      <div className="px-2 py-1 border-b border-green-800 text-[10px] sm:text-xs flex-shrink-0">
         {player && `플레이어: ${player.name} | 레벨: ${player.level} | HP: ${player.hp}/${player.maxHp} | MP: ${player.mp}/${player.maxMp} | 골드: ${player.gold}`}
       </div>
       
       {/* 메시지 영역 - 입력창 위에 배치, 스크롤 가능 */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-1 text-sm pb-20">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-0.5 sm:space-y-1 text-[11px] sm:text-sm pb-16 sm:pb-20">
         {messages.map((msg, index) => {
           const isMyMessage = msg.type === 'chat' && msg.player === player?.name;
           const isOtherMessage = msg.type === 'chat' && msg.player && msg.player !== player?.name;
@@ -188,22 +188,22 @@ export default function GameChat({ socket, player }: GameChatProps) {
       {/* 입력 영역 - 하단 고정 (모바일 키보드 대응) */}
       <form 
         onSubmit={handleSubmit} 
-        className="fixed bottom-0 left-0 right-0 px-4 py-2 border-t border-green-800 flex gap-2 items-center bg-black z-10"
+        className="fixed bottom-0 left-0 right-0 px-2 sm:px-4 py-1.5 sm:py-2 border-t border-green-800 flex gap-1 sm:gap-2 items-center bg-black z-10"
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
       >
-        <span className="text-green-500">$</span>
+        <span className="text-green-500 text-[11px] sm:text-sm">$</span>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="flex-1 bg-black text-green-400 focus:outline-none font-mono"
+          className="flex-1 bg-black text-green-400 focus:outline-none font-mono text-[11px] sm:text-sm"
           placeholder="명령어 입력 (채팅은 그냥 입력, 명령어는 .로 시작)"
           disabled={!player}
           autoFocus
         />
         <button
           type="submit"
-          className="px-4 py-2 bg-green-800 hover:bg-green-700 text-green-400 font-mono text-sm border border-green-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 sm:px-4 py-1.5 sm:py-2 bg-green-800 hover:bg-green-700 text-green-400 font-mono text-[10px] sm:text-sm border border-green-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={!player || !input.trim()}
         >
           전송
