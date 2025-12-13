@@ -202,6 +202,15 @@ function parseCommand(input: string): ParsedCommand {
     };
   }
   
+  // 외치기 명령어
+  if (isShoutCommand(command)) {
+    return {
+      action: GameAction.SHOUT,
+      args: args,
+      original: input
+    };
+  }
+  
   // 명령어가 아닌 경우 일반 채팅으로 처리
   return {
     action: GameAction.CHAT,
@@ -305,6 +314,11 @@ function isLookAtCommand(cmd: string): boolean {
 function isMapCommand(cmd: string): boolean {
   const mapCommands = ['지도', '맵'];
   return mapCommands.includes(cmd);
+}
+
+function isShoutCommand(cmd: string): boolean {
+  const shoutCommands = ['외치기', '외침', '전체채팅'];
+  return shoutCommands.includes(cmd);
 }
 
 function isSkillCommand(cmd: string): boolean {

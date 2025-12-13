@@ -41,8 +41,12 @@ export default function GameChat({ socket, player }: GameChatProps) {
     });
 
     // 채팅 메시지
-    socket.on('chat:message', (data: { player: string; message: string; timestamp: string }) => {
-      addMessage('chat', data.message, data.player);
+    socket.on('chat:message', (data: { player: string; message: string; timestamp: string; type?: string }) => {
+      if (data.type === 'shout') {
+        addMessage('chat', `[외침] ${data.message}`, data.player);
+      } else {
+        addMessage('chat', data.message, data.player);
+      }
     });
 
     // 에러 메시지
@@ -115,12 +119,23 @@ export default function GameChat({ socket, player }: GameChatProps) {
 
     const command = input.trim();
 
-    // 명령어인지 채팅인지 구분 (간단하게 '/'로 시작하면 명령어)
-    if (command.startsWith('/')) {
-      // 명령어 전송
-      socket.emit('game:command', { command: command.substring(1) });
+    // 명령어인지 채팅인지 구분 (모바일 친화적으로 '.'로 시작하면 명령어)
+    if (command.startsWith('.')) {
+      const cmd = command.substring(1);
+      // 외치기 명령어는 특별 처리
+      if (cmd.startsWith('외치기 ') || cmd.startsWith('외침 ') || cmd.startsWith('전체채팅 ')) {
+        const message = cmd.split(' ').slice(1).join(' ');
+        if (message) {
+          socket.emit('game:command', { command: cmd });
+        } else {
+          addMessage('system', '외칠 메시지를 입력해주세요. (예: .외치기 안녕하세요!)');
+        }
+      } else {
+        // 다른 명령어 전송
+        socket.emit('game:command', { command: cmd });
+      }
     } else {
-      // 일반 채팅 전송
+      // 일반 채팅 전송 (같은 맵의 플레이어에게만)
       socket.emit('chat:message', { message: command });
     }
 
@@ -171,17 +186,24 @@ export default function GameChat({ socket, player }: GameChatProps) {
       </div>
 
       {/* 입력 영역 */}
-      <form onSubmit={handleSubmit} className="px-4 py-2 border-t border-green-800 flex gap-2">
+      <form onSubmit={handleSubmit} className="px-4 py-2 border-t border-green-800 flex gap-2 items-center">
         <span className="text-green-500">$</span>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           className="flex-1 bg-black text-green-400 focus:outline-none font-mono"
-          placeholder="명령어 입력 (채팅은 그냥 입력, 명령어는 /로 시작)"
+          placeholder="명령어 입력 (채팅은 그냥 입력, 명령어는 .로 시작)"
           disabled={!player}
           autoFocus
         />
+        <button
+          type="submit"
+          className="px-4 py-2 bg-green-800 hover:bg-green-700 text-green-400 font-mono text-sm border border-green-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={!player || !input.trim()}
+        >
+          전송
+        </button>
       </form>
     </div>
   );

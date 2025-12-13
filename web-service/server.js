@@ -121,8 +121,17 @@ app.prepare().then(() => {
             message: result.message
           });
           
+          // 외치기 명령어인 경우 모든 플레이어에게 전송
+          if (parsed.action === 'shout') {
+            io.emit("chat:message", {
+              player: result.data?.player || '알 수 없음',
+              message: result.data?.message || result.message,
+              timestamp: new Date().toISOString(),
+              type: 'shout'
+            });
+          }
           // 브로드캐스트가 필요한 경우
-          if (result.broadcast) {
+          else if (result.broadcast) {
             socket.broadcast.emit("game:update", {
               type: parsed.action,
               data: result.data,
@@ -151,15 +160,26 @@ app.prepare().then(() => {
       }
     });
 
-    // 채팅 메시지 처리
+    // 채팅 메시지 처리 (같은 위치의 플레이어에게만 전송)
     socket.on("chat:message", (data) => {
       try {
         const player = gameEngine.getPlayer(socket.id);
         if (player) {
-          io.emit("chat:message", {
-            player: player.name,
-            message: data.message,
-            timestamp: new Date().toISOString()
+          // 같은 위치의 플레이어들 찾기
+          const playersInLocation = gameEngine.getPlayersInLocation(player.location);
+          
+          // 같은 위치의 플레이어들에게만 메시지 전송
+          playersInLocation.forEach(p => {
+            const playerSocket = Array.from(io.sockets.sockets.values()).find(
+              s => s.id === p.id
+            );
+            if (playerSocket) {
+              playerSocket.emit("chat:message", {
+                player: player.name,
+                message: data.message,
+                timestamp: new Date().toISOString()
+              });
+            }
           });
         }
       } catch (error) {

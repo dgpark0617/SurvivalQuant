@@ -221,6 +221,9 @@ class GameEngine {
       case GameAction.SKILL:
         return this.handleSkill(playerId, command.args.join(' '));
         
+      case GameAction.SHOUT:
+        return this.handleShout(playerId, command.args.join(' '));
+        
       case GameAction.CHAT:
         // 일반 채팅은 Socket.io에서 직접 처리
         return {
@@ -823,6 +826,44 @@ class GameEngine {
     }
     
     return this.skillSystem.useSkill(playerId, skillName);
+  }
+  
+  /**
+   * 외치기 처리 (전체 채팅)
+   */
+  handleShout(playerId: string, message: string): GameResult {
+    const player = this.gameState.getPlayer(playerId);
+    if (!player) {
+      return {
+        success: false,
+        message: '플레이어를 찾을 수 없습니다.'
+      };
+    }
+    
+    if (!message || message.trim().length === 0) {
+      return {
+        success: false,
+        message: '외칠 메시지를 입력해주세요. (예: .외치기 안녕하세요!)'
+      };
+    }
+    
+    return {
+      success: true,
+      message: `[외침] ${player.name}: ${message.trim()}`,
+      broadcast: true,
+      data: {
+        type: 'shout',
+        player: player.name,
+        message: message.trim()
+      }
+    };
+  }
+  
+  /**
+   * 특정 위치의 플레이어들 조회
+   */
+  getPlayersInLocation(locationId: string): Player[] {
+    return this.gameState.getPlayersInLocation(locationId);
   }
   
   /**

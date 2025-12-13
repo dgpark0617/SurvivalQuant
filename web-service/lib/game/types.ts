@@ -217,6 +217,7 @@ export enum GameAction {
   MAP = 'map',                   // 지도 보기
   SKILL = 'skill',               // 스킬 사용
   CHAT = 'chat',                 // 일반 채팅
+  SHOUT = 'shout',               // 외치기 (전체 채팅)
   UNKNOWN = 'unknown'
 }
 
