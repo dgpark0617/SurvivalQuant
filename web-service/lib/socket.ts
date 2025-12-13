@@ -31,15 +31,16 @@ export function initSocket(): Socket {
   });
 
   // 연결 상태 로깅
-  socket.on('connect', () => {
-    console.log('Socket.io 연결 성공:', socket.id);
+  const currentSocket = socket; // 로컬 변수에 저장하여 타입 안전성 확보
+  currentSocket.on('connect', () => {
+    console.log('Socket.io 연결 성공:', currentSocket.id);
   });
 
-  socket.on('connect_error', (error) => {
+  currentSocket.on('connect_error', (error) => {
     console.error('Socket.io 연결 오류:', error);
   });
 
-  socket.on('disconnect', () => {
+  currentSocket.on('disconnect', () => {
     console.log('Socket.io 연결 해제');
   });
   
