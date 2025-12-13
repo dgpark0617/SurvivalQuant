@@ -820,7 +820,7 @@ export class MapSystem {
    * 시작 위치 반환 (새 플레이어용)
    */
   getStartLocation(): Location | null {
-    return this.gameState.getLocation('town_square');
+    return this.gameState.getLocation('town_square') ?? null;
   }
   
   /**
