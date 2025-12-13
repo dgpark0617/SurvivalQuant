@@ -1,11 +1,16 @@
 import './globals.css'
+import { ReactNode } from 'react'
 
 export const metadata = {
   title: '롤플레이 게임',
   description: '실시간 채팅 기반 롤플레이 게임',
 }
 
-export default function RootLayout({ children }) {
+interface RootLayoutProps {
+  children: ReactNode
+}
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="ko">
       <body>{children}</body>
