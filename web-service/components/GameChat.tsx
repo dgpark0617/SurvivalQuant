@@ -136,28 +136,37 @@ export default function GameChat({ socket, player }: GameChatProps) {
       
       {/* 메시지 영역 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-1 text-sm">
-        {messages.map((msg, index) => (
-          <div key={index} className="whitespace-pre-wrap">
-            {msg.type === 'chat' && msg.player && (
-              <span className="text-cyan-400">{msg.player}: </span>
-            )}
-            <span
-              className={
-                msg.type === 'system'
-                  ? 'text-yellow-400'
-                  : msg.type === 'game'
-                  ? 'text-green-400'
-                  : msg.type === 'combat'
-                  ? 'text-red-400'
-                  : msg.player === player?.name
-                  ? 'text-cyan-400'
-                  : 'text-green-300'
-              }
-            >
-              {msg.message}
-            </span>
-          </div>
-        ))}
+        {messages.map((msg, index) => {
+          const isMyMessage = msg.type === 'chat' && msg.player === player?.name;
+          const isOtherMessage = msg.type === 'chat' && msg.player && msg.player !== player?.name;
+          
+          return (
+            <div key={index} className="whitespace-pre-wrap">
+              {msg.type === 'chat' && msg.player && (
+                <span className={isMyMessage ? 'text-blue-400 font-bold' : 'text-cyan-400'}>
+                  {isMyMessage ? '[나] ' : `[${msg.player}] `}
+                </span>
+              )}
+              <span
+                className={
+                  msg.type === 'system'
+                    ? 'text-yellow-400'
+                    : msg.type === 'game'
+                    ? 'text-green-400'
+                    : msg.type === 'combat'
+                    ? 'text-red-400'
+                    : isMyMessage
+                    ? 'text-blue-300'
+                    : isOtherMessage
+                    ? 'text-cyan-300'
+                    : 'text-green-400'
+                }
+              >
+                {msg.message}
+              </span>
+            </div>
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
