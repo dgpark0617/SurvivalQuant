@@ -6,6 +6,7 @@
 import { GameState } from './state';
 import { CombatSystem } from './combat';
 import { SpawnSystem } from './spawn';
+import { SkillSystem } from './skills';
 
 export class TickSystem {
   private gameState: GameState;
